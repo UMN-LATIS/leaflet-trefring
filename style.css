@@ -51,7 +51,11 @@ th #table_header{
     cursor:crosshair;
 }
 
-.material-icons.md-18 { font-size: 20px; }
+.material-icons.md-18{
+	padding-top: 3px;
+	font-size: 1.7em;
+}
+
 
 #save{
 	text-decoration: none;

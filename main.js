@@ -175,52 +175,112 @@ $(document).ready(function () {
         markerLayer.addLayer(marker_list[i])
     }
 
+    function skipYear(){
+        points[index] = {'year':year, 'measurable': false}
+        year++
+        index++
+    }
+
+    function undo(){
+        if(index){
+            if(points[index-1].latLng != undefined){
+                markerLayer.removeLayer(marker_list[index-1])
+                console.log(year)
+                if(points[index-1].point){
+                    if(!points[index-1].earlywood){
+                        year--
+                    }
+                    half_year--
+                    earlywood = !earlywood
+                }
+                if(point_num){
+                    point_num--
+                }
+            }
+            else{
+                year--
+            }
+            if(data_collect){
+                createMouseLineFrom(points[index-2].latLng)
+            }
+            points[index-1] = {}
+            index--
+            console.log(points)
+        }
+    }
+
+    function beginCollect(btn){
+        console.log(btn)
+        btn.state('end-collect')
+        L.DomUtil.addClass(map._container,'crosshair-cursor-enabled');
+
+        $(map._container).click(function startLine(e){
+            var latLng = map.mouseEventToLatLng(e)
+
+            map.dragging.disable()
+
+            if(point_num){
+                points[index] = {"point":point_num,"year":year, "earlywood": earlywood, "latLng":latLng, "measurable": true}
+            }
+            else{
+                points[index] = {"point":point_num,"latLng":latLng, "measurable": false}
+            }
+
+            newLatLng(index, latLng)
+
+            createMouseLineFrom(latLng)
+
+            if(point_num){
+                half_year++
+                if(half_year%2){
+                    earlywood = false
+                }
+                else{
+                    earlywood = true
+                    year++
+                }
+            }
+
+            index++
+            point_num++
+
+            data_collect = true
+        })
+    }
+
+    function endCollect(btn){
+        $(map._container).off('click')
+        btn.state('begin-collect')
+        data_collect = false;
+        L.DomUtil.removeClass(map._container,'crosshair-cursor-enabled');
+        map.dragging.enable()
+        mouseLine.clearLayers()
+
+        console.log(points)
+
+        point_num = 0;  //reset the point number to 0
+    }
+
     var skipButton = L.easyButton ({
         states: [
         {
             stateName:  'skip-year',
-            icon:       '<i class="material-icons md-18">redo</i>',
-            title:      'Add a gap year',
+            icon:       '<i class="material-icons md-18">update</i>',
+            title:      'Add a gap year (Alt+S)',
             onClick: function(btn, map){
-                points[index] = {'year':year, 'measurable': false}
-                year++
-                index++
+                skipYear()
             }
         }]
     })
 
-    var deleteButton = L.easyButton ({
+    var undoButton = L.easyButton ({
         states: [
         {
-            stateName:  'delete-marker',
-            icon:       '<i class="material-icons md-18">delete</i>',
-            title:      'Delete the last point',
+            stateName:  'undo',
+            icon:       '<i class="material-icons md-18">undo</i>',
+            title:      'Undo (Alt+Z)',
             onClick: function(btn, map){
-                if(index){
-                    if(points[index-1].latLng != undefined){
-                        markerLayer.removeLayer(marker_list[index-1])
-                        console.log(year)
-                        if(points[index-1].point){
-                            if(!points[index-1].earlywood){
-                                year--
-                            }
-                            half_year--
-                            earlywood = !earlywood
-                        }
-                        if(point_num){
-                            point_num--
-                        }
-                    }
-                    else{
-                        year--
-                    }
-                    if(data_collect){
-                        createMouseLineFrom(points[index-2].latLng)
-                    }
-                    points[index-1] = {}
-                    index--
-                    console.log(points)
-                }
+                undo()
             }
         }]
     })
@@ -229,67 +289,45 @@ $(document).ready(function () {
         states: [
         {
             stateName:  'begin-collect',
-            icon:       '<i class="material-icons md-18">timeline</i>',
-            title:      'Begin data collection',
+            icon:       '<i class="material-icons md-18">add_circle_outline</i>',
+            title:      'Begin data collection (Alt+C)',
             onClick: function(btn, map){
-                btn.state('end-collect')
-                L.DomUtil.addClass(map._container,'crosshair-cursor-enabled');
-
-                $(map._container).click(function startLine(e){
-                    var latLng = map.mouseEventToLatLng(e)
-
-                    map.dragging.disable()
-
-                    if(point_num){
-                        points[index] = {"point":point_num,"year":year, "earlywood": earlywood, "latLng":latLng, "measurable": true}
-                    }
-                    else{
-                        points[index] = {"point":point_num,"latLng":latLng, "measurable": false}
-                    }
-
-                    newLatLng(index, latLng)
-
-                    createMouseLineFrom(latLng)
-
-                    if(point_num){
-                        half_year++
-                        if(half_year%2){
-                            earlywood = false
-                        }
-                        else{
-                            earlywood = true
-                            year++
-                        }
-                    }
-
-                    index++
-                    point_num++
-
-                    data_collect = true
-                })
+                beginCollect(btn)
             }
         },
         {
             stateName:  'end-collect',
-            icon:       '&#10006',
-            title:      'End data collection',
+            icon:       '<i class="material-icons md-18">add_circle</i>',
+            title:      'End data collection (Alt+C)',
             onClick: function(btn, map){
-                $(map._container).off('click')
-                btn.state('begin-collect')
-                data_collect = false;
-                L.DomUtil.removeClass(map._container,'crosshair-cursor-enabled');
-                map.dragging.enable()
-                mouseLine.clearLayers()
-
-                console.log(points)
-
-                point_num = 0;  //reset the point number to 0
+                endCollect(btn)
             }
         }]
     })
 
-    var toolbar = L.easyBar([collectButton, skipButton, deleteButton])
+    console.log(collectButton._currentState.stateName)
+
+    var toolbar = L.easyBar([collectButton, skipButton, undoButton])
     toolbar.addTo(map)
+
+
+    function doc_keyUp(e) {
+        if(e.altKey && (e.keyCode == 83 || e.keycode == 115)){
+            skipYear();
+        }
+        if(e.altKey && (e.keyCode == 90 || e.keycode == 122)){
+            undo();
+        }
+        if(e.altKey && (e.keyCode == 67 || e.keycode == 99)){
+            if(collectButton._currentState.stateName == 'begin-collect'){
+                beginCollect(collectButton)
+            }
+            else{
+                endCollect(collectButton)
+            }
+        }
+    }
+    document.addEventListener('keyup', doc_keyUp, false);
 
 
     document.getElementById('load_data').onclick = function(){
