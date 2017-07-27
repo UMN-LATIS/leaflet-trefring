@@ -1,0 +1,56 @@
+<!DOCTYPE htmml>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="initial-scale=1">
+	<title>Tree Rings</title>
+
+    <link rel="stylesheet" href="index_style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap-theme.min.css" >
+    <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css">
+    <link rel="stylesheet" href="node_modules/leaflet-fullscreen/dist/leaflet.fullscreen.css">
+
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+
+    <script src="node_modules/leaflet/dist/leaflet.js"></script>
+    <script src="node_modules/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
+    <script src="Leaflet.elevator.js"></script>
+
+    <script src="node_modules/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
+	<script src="node_modules/leaflet-easybutton/src/easy-button.js"></script>
+
+    <link rel="stylesheet" href="node_modules/leaflet-minimap/dist/Control.MiniMap.min.css" />
+    <link rel="stylesheet" href="node_modules/leaflet-easybutton/src/easy-button.css" />
+
+</head>
+
+<body>
+<!--
+    <a href="#" id="save" download="data.json">Save Data</a>
+    <input type="file" id="selectFiles"/>
+    <button id="import">Import Data</button>
+-->
+
+
+    <div id="map"></div>
+    <div id="grid">
+        <div id="button_area">
+            <button id="load_data">Update Data Sheet</button>
+            <br>
+            <a href="#" id="save" download="data.json">Save Data</a>
+            <input type="file" id="selectFiles"/>
+            <button id="import">Import Data</button>
+        </div>
+        <div id="data_area">
+                <table id="table">
+                </table>
+        </div>
+        <div id="footer_area"></div>
+    </div>
+
+</body>
+</html>
+<script type="application/javascript" src="main.js"></script>
