@@ -5,26 +5,29 @@
 	<meta name="viewport" content="initial-scale=1">
 	<title>Tree Rings</title>
 
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="node_modules/font-awesome-4.7.0/css/font-awesome.css">
 
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap-theme.min.css" >
+
     <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css">
     <link rel="stylesheet" href="node_modules/leaflet-fullscreen/dist/leaflet.fullscreen.css">
+    <link rel="stylesheet" href="node_modules/leaflet-minimap/dist/Control.MiniMap.min.css" />
+    <link rel="stylesheet" href="node_modules/leaflet-easybutton/src/easy-button.css" />
+    <link rel="stylesheet" href="node_modules/leaflet-dialog/Leaflet.Dialog.css">
+
+    <link rel="stylesheet" href="style.css">
 
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
 
     <script src="node_modules/leaflet/dist/leaflet.js"></script>
     <script src="node_modules/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
-    <script src="Leaflet.elevator.js"></script>
-
     <script src="node_modules/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
-	<script src="node_modules/leaflet-easybutton/src/easy-button.js"></script>
-
-    <link rel="stylesheet" href="node_modules/leaflet-minimap/dist/Control.MiniMap.min.css" />
-    <link rel="stylesheet" href="node_modules/leaflet-easybutton/src/easy-button.css" />
-
+    <script src="node_modules/leaflet-easybutton/src/easy-button.js"></script>
+    <script src="node_modules/leaflet-dialog/Leaflet.Dialog.js"></script>
+    
+    <script src="Leaflet.elevator.js"></script>
 </head>
 
 <body>
@@ -34,22 +37,20 @@
     <button id="import">Import Data</button>
 -->
 
+    <div id="button_area">
+        <a href="#" id="save" download="data.json"><i class="material-icons md-18">save</i></a>
+        <div class="file-upload">
+            <label for="file">
+                <i id="upload_button" class="material-icons md-18">file_upload</i>
+            </label>
 
-    <div id="map"></div>
-    <div id="grid">
-        <div id="button_area">
-            <button id="load_data">Update Data Sheet</button>
-            <br>
-            <a href="#" id="save" download="data.json">Save Data</a>
-            <input type="file" id="selectFiles"/>
-            <button id="import">Import Data</button>
+             <input type="file" id="file" onchange="loadFile()"/>
         </div>
-        <div id="data_area">
-                <table id="table">
-                </table>
-        </div>
-        <div id="footer_area"></div>
+
+       
     </div>
+    <div id="map_container"><div id="map"></div></div>
+    
 
 </body>
 </html>
