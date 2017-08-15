@@ -21,11 +21,11 @@
 	box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
-#save{
+#save, #download{
 	color: #78909C;
 }
 
-#save:hover{
+#save:hover, #download:hover{
 	color: #80CBC4;
 }
 
@@ -47,13 +47,13 @@
 	background: #eee;
 }
 
-.leaflet-container.crosshair-cursor-enabled {
-    cursor:crosshair;
-}
-
 .material-icons.md-18{
 	padding-top: 3px;
 	font-size: 1.7em;
+}
+
+table{
+	font-family: courier;
 }
 
 #map .easy-button-button{

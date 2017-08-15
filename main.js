@@ -7,7 +7,9 @@
         zoomSnap: 0,
         crs: L.CRS.Simple,
         drawControl: true,
-        layers: []
+        layers: [],
+        doubleClickZoom: false,
+        zoomControl: false
     }).setView([0, 0], 0);
 
     var image = L.tileLayer.elevator(function(coords, tile, done) {
@@ -51,13 +53,27 @@
 
         //left bound of the map
         if(mousePos.x <= 40 && mousePos.y > 450 && oldMousePos.x > mousePos.x){
-            map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
+            //map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
+            map.panBy([-150, 0]);
         }
         //right bound of the map
         if(mousePos.x + 40 > mapSize.x && mousePos.y > 100 && oldMousePos.x < mousePos.x){
-            map.panTo([mapCenter.lat, (mapCenter.lng + .015)]);
+            //map.panTo([mapCenter.lat, (mapCenter.lng + .015)]);
+            map.panBy([150, 0]);
+        }
+        //upper bound of the map
+        if(mousePos.x + 40 < mapSize.x && mousePos.y < 40 && oldMousePos.y > mousePos.y){
+            //map.panTo([mapCenter.lat, (mapCenter.lng + .015)]);
+            map.panBy([0, -40]);
+        }
+        //lower bound of the map
+        if(mousePos.x >= 40 && mousePos.y > mapSize.y - 40 && oldMousePos.y < mousePos.y){
+            //map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
+            map.panBy([0, 40]);
         }
     })
+
+    //document.getElementById('map').style.cursor = 'default';
 
 
 
@@ -72,7 +88,8 @@
                 done(error, tile)
             }
         })(done, error, tile);
-        tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+        //tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+        tile.src = params.Key;
         src = tile.src;
         return tile.src;
     },
@@ -139,17 +156,21 @@
 
     var points = {};    //JSON with all the point data
 
-    var point_num = 0;      //point #
+    var start_point = true;      //whether it's the start point or not
     var year = 0;           //year
-    var half_year = 0;      //half year
     var earlywood = true;   //earlywood or latewood
     var index = 0;      //points index
+
     var a = 0;          //annotation index
     var cut_point = -1;
+
+    var last_marker_latLng = undefined;
 
     var marker_list = new Array();  //list of all markers, marker list maps to points JSON (same index)
     var lines = new Array();        //list of all the lines, lines maps to points JSON      
     var annotations = new Array();
+    var undoStack = new Array();
+    var redoStack = new Array();
 
     var annotationLayer = L.layerGroup().addTo(map);
     var markerLayer = L.layerGroup().addTo(map);    //map layer for markers
@@ -161,6 +182,10 @@
     var cut_active = false;
     var data_open = false;
     var annotation_delete_active = false;
+    var add_data_active = false;
+    var add_break_active = false;
+    var set_start_year_active = false;
+    var set_end_year_active = false;
 
 
 
@@ -175,9 +200,57 @@
         //plot the data back onto the map
         Object.values(points).map(function(e, i){
             if(e.latLng != undefined){
-                newLatLng(i, e.latLng);
+                newLatLng(points, i, e.latLng);
             }
         });
+    }
+
+    function undo(){
+        if(undoStack.length > 0){
+            redoBtn.enable();
+            var restore_points = Object.values(points).map(e => e);
+            redoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points});
+            dataJSON = undoStack.pop();
+
+            points = {};
+            dataJSON.points.map((e, i) => points[i] = e);
+
+            index = dataJSON.index;
+            year = dataJSON.year;
+            earlywood = dataJSON.earlywood;
+
+            reloadLayers();
+
+            if(undoStack.length == 0){
+                undoBtn.disable();
+            }
+        }
+    }
+
+    function createUndoPoint(){
+        undoBtn.enable();
+        var restore_points = Object.values(points).map(e => e);
+        undoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points });
+    }
+
+    function redo(){
+        undoBtn.enable();
+        restore_points = Object.values(points).map(e => e);
+        undoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points});
+        dataJSON = redoStack.pop();
+
+        points = {};
+        dataJSON.points.map((e, i) => points[i] = e);
+
+        index = dataJSON.index;
+        year = dataJSON.year;
+        earlywood = dataJSON.earlywood;
+
+        reloadLayers();
+
+        if(redoStack.length == 0){
+            redoBtn.disable();
+        }
     }
 
     //createMouseLineFrom(latLng) will create h-bars from the given latlng to the mouse pointer
@@ -219,39 +292,66 @@
 
     //deleting a data point from the json
     function deleteDataPoint(i){
-        if(points[i].earlywood && points[i+1].earlywood != undefined){
-            j = i+1;
+        createUndoPoint();
+
+        if(points[i].start || points[i].break){
+            second_points = Object.values(points).splice(i+1, index-1);
+            second_points.map(function(e){
+                points[i] = e;
+                i++;
+            });
+            index = index - 1;
+            delete points[index];
         }
-        else if(points[i-1].earlywood != undefined){
-            j = i;
-            i--;
+        else if(points[i].skip){
+            second_points = Object.values(points).splice(i+1, index-1);
+            second_points.map(function(e){
+                e.year--;
+                points[i] = e;
+                i++
+            });
+            index = index - 1;
+            delete points[index];
         }
-        //get the second half of the data
-        second_points = Object.values(points).splice(j+1, index-1);
-        second_points.map(function(e){
-            e.year--;
-            points[i] = e;
-            i++;
-        })
-        index = i-1;
-        delete points[i];
-        delete points[i+1];
+        else{
+            if(points[i].earlywood && points[i+1].earlywood != undefined){
+                j = i+1;
+            }
+            else if(points[i-1].earlywood != undefined){
+                j = i;
+                i--;
+            }
+            //get the second half of the data
+            second_points = Object.values(points).splice(j+1, index-1);
+            second_points.map(function(e){
+                e.year--;
+                points[i] = e;
+                i++;
+            })
+            index = i-1;
+            delete points[i];
+            delete points[i+1];
+        }
 
         console.log(points);
 
+        console.log(markerLayer);
         reloadLayers();
+        
 
         deleteDisable();
     }
 
     function cutDataPoints(i, j){
+        createUndoPoint();
+
         if(i > j){
             trimmed_points = Object.values(points).splice(i, index-1);
             var k = 0;
             points = {};
             trimmed_points.map(function(e){
                 if(!k){
-                    points[k] = {"point": 0,"latLng": e.latLng, "measurable": false};
+                    points[k] = {"start": true,"latLng": e.latLng, "measurable": false};
                 }   
                 else{    
                     points[k] = e;
@@ -275,48 +375,246 @@
         cutDisable();
     }
 
+    function addDataPoint(i){
+        var new_points = points
+        var second_points = Object.values(points).splice(i+1, index-1);
+        var first_point = true;
+        var k = i+1;
+        var year_adjusted = points[i+1].year
+
+        $(map._container).click(function(e){
+            var latLng = map.mouseEventToLatLng(e);
+            map.dragging.disable();
+
+            data_collect = true;
+            createMouseLineFrom(latLng);
+
+            if(first_point){
+                new_points[k] = {'start': false, 'skip': false, 'break': false, 'year': year_adjusted, 'earlywood': true, 'latLng':latLng};
+                newLatLng(new_points, k, latLng);
+                k++;
+                first_point = false;
+            }
+            else{
+                new_points[k] = {'start': false, 'skip': false, 'break': false, 'year': year_adjusted, 'earlywood': false, 'latLng':latLng};
+                year_adjusted++;
+                newLatLng(new_points, k, latLng);
+                k++;
+                second_points.map(function(e){
+                    e.year++;
+                    new_points[k] = e;
+                    k++;
+                })
+                $(map._container).off('click');
+
+                createUndoPoint();
+
+                points = new_points;
+                index = k;
+                year++;
+
+                reloadLayers();
+                addDataDisable();
+            }
+        });
+    }
+
+    function addSkipPoint(i){
+        createUndoPoint();
+
+        var second_points = Object.values(points).splice(i+1, index-1);
+        points[i+1] = {'start': false, 'skip': true, 'break': false, 'year': points[i].year+1};
+        k=i+2;
+        second_points.map(function(e){
+            e.year++
+            points[k] = e;
+            k++;
+        })
+        $(map._container).off('click');
+        index = k;
+        year++;
+
+        reloadLayers();
+        addSkipDisable();
+    }
+
+    function addBreakPoint(i){
+        var new_points = points
+        var second_points = Object.values(points).splice(i+1, index-1);
+        var first_point = true;
+        var k = i+1;
+
+        $(map._container).click(function(e){
+            var latLng = map.mouseEventToLatLng(e);
+            map.dragging.disable();
+
+            data_collect = true;
+            createMouseLineFrom(latLng);
+
+            if(first_point){
+                new_points[k] = {'start': false, 'skip': false, 'break': true, 'latLng':latLng};
+                newLatLng(new_points, k, latLng);
+                k++;
+                first_point = false;
+            }
+            else{
+                new_points[k] = {'start': true, 'skip': false, 'break': false, 'latLng':latLng};
+                newLatLng(new_points, k, latLng);
+                k++;
+                second_points.map(function(e){
+                    new_points[k] = e;
+                    k++;
+                })
+                $(map._container).off('click');
+
+                createUndoPoint();
+
+                points = new_points;
+                index = k;
+
+                reloadLayers();
+                addBreakDisable();
+            }
+        });
+    }
+
+    var setStartYearDialog = L.control.dialog({'size': [270, 65], 'anchor': [80, 50], 'initOpen': false})
+        .setContent('Year: <input type="number" size="4" maxlength="4" id="year_input"/>' +
+                    '<button id="year_submit">enter</button>')
+        .addTo(map);
+
+    setStartYearDialog.lock();
+
+    function setYear(i){    
+        if(points[i].start){
+            setStartYearDialog.open();           
+
+            document.getElementById('year_submit').addEventListener('click', function(){
+                new_year = document.getElementById('year_input').value;
+                setStartYearDialog.close();
+
+                createUndoPoint();
+
+                i++
+                
+                while(points[i] != undefined){
+                    if(points[i].start || points[i].break){
+                    }
+                    else if(points[i].earlywood){
+                        points[i].year = new_year;
+                    }
+                    else{
+                        points[i].year = new_year++;
+                    }
+                    i++;
+                }
+                reloadLayers();
+                setStartYearDisable();
+            }, false);
+        }   
+    }
+
+
+    var setEndYearDialog = L.control.dialog({'size': [270, 65], 'anchor': [80, 50], 'initOpen': false})
+        .setContent('Year: <input type="number" size="4" maxlength="4" id="end_year_input"/>' +
+                    '<button id="end_year_submit">enter</button>')
+        .addTo(map);
+
+    setEndYearDialog.lock();
+
+    function setEndYear(i){    
+        if(!(points[i+1] != undefined) || points[i+1].break || points[i+1].start){
+            setEndYearDialog.open();           
+
+            document.getElementById('end_year_submit').addEventListener('click', function(){
+                new_year = document.getElementById('end_year_input').value;
+                setEndYearDialog.close();
+
+                createUndoPoint();
+                
+                if(i == index){
+                    year = new_year;
+                }
+
+                while(points[i] != undefined){
+                    if(points[i].start || points[i].break){
+                    }
+                    else if(points[i].earlywood){
+                        points[i].year = new_year--;
+                    }
+                    else{
+                        points[i].year = new_year;
+                    }
+                    i--;
+                }
+                reloadLayers();
+                setStartYearDisable();
+            }, false);
+        }   
+    }
+
     //newLatLng(i, latlng) takes the index for the points object and a latlng that should be added to the map with a marker
     //this function is also used when a json file is loaded by the user
 
-    function newLatLng(i, latLng){
+    function newLatLng(p, i, latLng){
         leafLatLng = L.latLng(latLng);   //leaflet is stupid and only uses latlngs that are created through L.latlng
 
         //check if index is the start point
-        if(!points[i].point){
-            var marker = L.marker(latLng, {icon: dark_navy_icon, draggable: true, title: "Start Point"});
+        if(p[i].start){
+            var marker = L.marker(leafLatLng, {icon: dark_navy_icon, draggable: true, title: "Start Point"});
         }
         //check if point is earlywood
-        else if(points[i].earlywood){
-            var marker = L.marker(latLng, {icon: dark_green_icon, draggable: true, title: "Year " + points[i].year + ", earlywood"});         
+        else if(p[i].break){
+            var marker = L.marker(leafLatLng, {icon: dark_navy_icon, draggable: true, title: "Break Point"})
+        }
+        else if(p[i].earlywood){
+            var marker = L.marker(leafLatLng, {icon: dark_green_icon, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
         }
         //otherwise it's latewood
         else{
-            var marker = L.marker(latLng, {icon: dark_red_icon, draggable: true, title: "Year " + points[i].year + ", latewood"});
+            var marker = L.marker(leafLatLng, {icon: dark_red_icon, draggable: true, title: "Year " + p[i].year + ", latewood"});
+        }
+
+        if(p[i-1] != undefined && p[i-1].skip){
+            if(i-1){
+                average = L.latLng([(leafLatLng.lat + last_marker_latLng.lat)/2, (leafLatLng.lng + last_marker_latLng.lng)/2]);
+            }
+            else{
+                average = L.latLng([leafLatLng.lat, (leafLatLng.lng - .001)]);
+            }
+            skip_marker = L.marker(average, {icon: blue_grey_light_icon, draggable: true, title: "Year " + p[i-1].year + ", None"});
+            skip_marker.on('click', function(e){
+                if(delete_active){
+                    deleteDataPoint(i-1);
+                }
+            });
+            
+            marker_list[i-1] = skip_marker;
+            markerLayer.addLayer(marker_list[i-1]);    
         }
 
         marker_list[i] = marker;     //add created marker to marker_list
 
         //tell marker what to do when being draged
         marker_list[i].on('dragend', function(e){
-            points[i].latLng = e.target._latlng;     //get the new latlng of the mouse pointer
-            console.log(points);
+            p[i].latLng = e.target._latlng;     //get the new latlng of the mouse pointer
+            console.log(p);
 
             //adjusting the line from the previous and preceeding point if they exist
-            if(points[i-1] != undefined && points[i-1].latLng != undefined){
+            if(p[i-1] != undefined && p[i-1].latLng != undefined && !p[i].start){
                 lineLayer.removeLayer(lines[i]);
-                lines[i] = L.polyline([points[i-1].latLng, e.target._latlng], {color: '#37474F'});
+                lines[i] = L.polyline([p[i-1].latLng, e.target._latlng], {color: '#37474F'});
                 lineLayer.addLayer(lines[i]);
             }
-            if(points[i+1] != undefined && points[i+1].latLng != undefined){
+            if(p[i+1] != undefined && p[i+1].latLng != undefined && lines[i+1] != undefined){
                 lineLayer.removeLayer(lines[i+1]);
-                lines[i+1] = L.polyline([e.target._latlng, points[i+1].latLng], {color: '#37474F'});
+                lines[i+1] = L.polyline([e.target._latlng, p[i+1].latLng], {color: '#37474F'});
                 lineLayer.addLayer(lines[i+1]);
             }
         });
 
         marker_list[i].on('click', function(e){
             if(delete_active){
-                console.log(i);
                 deleteDataPoint(i);
             }
             if(cut_active){
@@ -327,51 +625,62 @@
                     cut_point = i;
                 }
             }
+            if(add_data_active){
+                if(p[i].earlywood){
+                    alert("must select latewood or start point")
+                }
+                else{
+                    addDataPoint(i);
+                }
+            }
+            if(add_skip_active){
+                addSkipPoint(i);
+            }
+            if(add_break_active){
+                addBreakPoint(i);
+            }
+            if(set_start_year_active){
+                setYear(i);
+            }
+            if(set_end_year_active){
+                setEndYear(i);
+            }
         })
 
         //drawing the line if the previous point exists
-        if(points[i-1] != undefined && points[i-1].latLng != undefined && points[i-1].point < points[i].point){
-            lines[i] = L.polyline([points[i-1].latLng, leafLatLng], {color: '#37474F'});
+        if(p[i-1] != undefined && !p[i-1].skip && !p[i].start){
+            lines[i] = L.polyline([p[i-1].latLng, leafLatLng], {color: '#37474F'});
             lineLayer.addLayer(lines[i]);
         }
 
+        last_marker_latLng = leafLatLng;
         markerLayer.addLayer(marker_list[i]);    //add the marker to the marker layer
     }
 
     //easybutton function to add gap years in the data
     function skipYear(){
-        points[index] = {'year':year, 'measurable': false}; //no point or latlng
-        year++;
-        index++;
-    }
+        createUndoPoint();
 
-    function missingYear(){
-        points[index] = {'year':year, 'latLng': L.latLng([99, 99]), 'measurable': true};
+        points[index] = {'start': false, 'skip': true, 'break': false, 'year':year}; //no point or latlng
         year++;
         index++;
     }
 
     //easybutton function for undoing the last created marker
-    function undo(){
+    function deleteLast(){
         //check if anything exists
         if(index){
             //check index-1 because current index is still empty
             //if point exists we need to remove the point and marker
             if(points[index-1].latLng != undefined){
                 markerLayer.removeLayer(marker_list[index-1]); //remove marker
-                console.log(year);
                 //figure out if the year is early or late and adjust accordingly
-                if(points[index-1].point){
+                if(!points[index-1].start){
                     if(!points[index-1].earlywood){
                         year--;
                     }
-                    half_year--;
                     earlywood = !earlywood;
                     lineLayer.removeLayer(lines[index-1]);
-                }
-                //don't decrement point past 0
-                if(point_num){
-                    point_num--;
                 }
             }
             //if there's no point we just decrement the year
@@ -382,37 +691,68 @@
             if(data_collect){
                 createMouseLineFrom(points[index-2].latLng);
             }
-            points[index-1] = {};    //erase data in points
+            delete points[index-1];    //erase data in points
             index--;
             console.log(points);
         }
     }
 
+    function breakEnable(){
+        breakBtn.state('active');
+
+        data_collect = true;
+            
+        $(map._container).click(function(e){
+            var latLng = map.mouseEventToLatLng(e);
+
+            createMouseLineFrom(latLng)
+
+            createUndoPoint();
+
+            map.dragging.disable();
+            points[index] = {'start': false, 'skip': false, 'break': true, 'latLng':latLng};
+            newLatLng(points, index, latLng);
+            first_point = false;
+            index++;
+            breakDisable();
+            collectEnable();
+        });
+    }
+
+    function breakDisable(){
+        $(map._container).off('click');
+        breakBtn.state('inactive');
+        map.dragging.enable();
+    }
+
     //easybutton function to being data collection, btn a multi-state button object
     function collectEnable(){
-        collectBtn.state('active');    //change the state of the button
+        collectBtn.state('active');    //change the state of the 
+
+        //map.dragging.disable();  //leaflet doesn't differentiate between a click and a drag
+
+        document.getElementById('map').style.cursor = "pointer";
 
         $(map._container).click(function startLine(e){
             var latLng = map.mouseEventToLatLng(e);
 
-            map.dragging.disable();  //leaflet doesn't differentiate between a click and a drag
+            createUndoPoint();
 
-            if(point_num){
-                points[index] = {"point":point_num,"year":year, "earlywood": earlywood, "latLng":latLng, "measurable": true};
+            if(start_point){
+                points[index] = {'start': true, 'skip': false, 'break': false, 'latLng':latLng};
+                start_point = false;
             }
-            //first point will not have year or earlywood
             else{
-                points[index] = {"point":point_num,"latLng":latLng, "measurable": false};
+                points[index] = {'start': false, 'skip': false, 'break': false, 'year':year, 'earlywood': earlywood, 'latLng':latLng};
             }
 
-            newLatLng(index, latLng); //call newLatLng with current index and new latlng 
+            newLatLng(points, index, latLng); //call newLatLng with current index and new latlng 
 
             createMouseLineFrom(latLng); //create the next mouseline from the new latlng
 
             //avoid incrementing earlywood for start point
-            if(point_num){
-                half_year++;
-                if(half_year%2){
+            if(!points[index].start){
+                if(earlywood){
                     earlywood = false;
                 }
                 else{
@@ -422,8 +762,6 @@
             }
 
             index++;
-            point_num++;
-
             data_collect = true;     //don't remember why but we need to activate data_collect after one point is made
         });
     }
@@ -435,70 +773,16 @@
         data_collect = false;   //turn data_collect off
         map.dragging.enable();  //turn map dragging back on
         mouseLine.clearLayers(); //clear the mouseline
+        //document.getElementById('map').style.cursor = 'default';
 
-        console.log(points);
-
-        point_num = 0;  //reset the point number to 0
+        start_point = true;
     }
 
-    var setYearDialog = L.control.dialog({'size': [300, 90], 'anchor': [120, 50], 'initOpen': false})
-        .setContent('First year: <input type="number" size="4" maxlength="4" id="year_input_begining"/>' +
-                    '<button id="year_submit_begining">enter</button>' + '<br>' +
-                    'Last year: <input type="number" size="4" maxlength="4" id="year_input_ending"/>' +
-                    '<button id="year_submit_ending">enter</button>')
-        .addTo(map);
-    setYearDialog.freeze();
-
-    document.getElementById('year_submit_begining').addEventListener('click', setYearBegining, false);
-    document.getElementById('year_submit_ending').addEventListener('click', setYearEnding, false);
-
-    function setYearBegining(){
-        new_year = document.getElementById('year_input_begining').value;
-        console.log(year);
-        setYearDialog.close();
-        setYearBtn.state('inactive');
-
-        year = Number(new_year);
-
-        for(i = 0; i < index; i++){
-            if(points[i].year != undefined){
-                if(points[i].earlywood){
-                    points[i].year = year;
-                }
-                else{
-                    points[i].year = year++;
-                }
-            }
-        }
-        reloadLayers();
-    }
-
-    function setYearEnding(){
-        new_year = document.getElementById('year_input_ending').value;
-        console.log(year);
-        setYearDialog.close();
-        setYearBtn.state('inactive');
-
-        last_year = Number(new_year);
-        year = last_year;
-
-        for(i = index-1; i > 0; i--){
-            if(points[i].year != undefined){
-                if(points[i].earlywood){
-                    points[i].year = last_year--;
-                }
-                else{
-                    points[i].year = last_year;
-                }
-            }
-        }
-        reloadLayers();
-        year++;
-    }
 
     function shiftYear(x){
+        createUndoPoint();
         for(i = 0; i < index; i++){
-            if(points[i].year != undefined){
+            if(!points[i].start){
                 points[i].year += x;
             }
         }
@@ -522,6 +806,7 @@
             deleteAnnotation(i);
         })
         annotationLayer.addLayer(annotations[i]);
+        dateMarkerDisable();
     }
 
     function dateMarkerEnable(){
@@ -539,45 +824,51 @@
         $(map._container).off('click');
     }
 
-    var dataDialog = L.control.dialog({'size': [300, 350], 'anchor': [5, 50], 'initOpen': false})
-            .setContent('<h2>There are no data points to measure</h2>')
+    var dataDialog = L.control.dialog({'size': [240, 350], 'anchor': [5, 50], 'initOpen': false})
+            .setContent('<h3>There are no data points to measure</h3>')
             .addTo(map);
 
     function loadData(){
         if(points[0] != undefined){
-            console.log("hi");
-            string = "<table><tr><th style='width: 30%;'>Year</th><th style='width: 70%;'>Length</th></tr>";
-            Object.values(points).map(function(e, i){
-                if(e.year != undefined){
-                    if(e.measurable){
-                        length = Math.round(map.distance(last_point.latLng, e.latLng)*1000000)/1000;
-                        if(length > 999){
-                            string = string.concat("<tr><td>"+ e.year + "</td><td>" + 0 + " mm</td></tr>");
-                            last_point = e;
-                            last_length = length;
-                        }
-                        else{
-                            if(e.earlywood){
-                                wood = "e";
-                                row_color = "green";
-                            }
-                            else{
-                                wood = "l";
-                                row_color = "red";
-                            }
-                            last_point = e;
-                            last_length = length;
-                            string = string.concat("<tr style='color:" + row_color + ";'>");
-                            string = string.concat("<td>"+ e.year + wood + "</td><td>" + length + " mm</td></tr>");
-                        }
-                    }
-                    else{
-                        string = string.concat("<tr><td>"+ e.year + "_</td><td>" + "N/A</td></tr>");
-                    }
+            var y = points[1].year;
+            string = "<table><tr><th style='width: 40%;'>Year</th><th style='width: 70%;'>Length</th></tr>";
+            Object.values(points).map(function(e, i, a){
+                if(e.start){
+                    last_point = e;
+                }
+                else if(e.break){
+                    break_length = Math.round(map.distance(last_point.latLng, e.latLng)*1000000)/1000;
+                    last_point = e;
                 }
                 else{
-                    last_point = e;
-                    last_length = 0;
+                    while(e.year > y){
+                        string = string.concat("<tr><td>" + y + "-</td><td>N/A</td></tr>");
+                        y++;
+                    }
+                    if(e.skip){
+                        string = string.concat("<tr><td>"+ e.year + "-</td><td>0 mm</td></tr>");
+                    }
+                    else{
+                        length = Math.round(map.distance(last_point.latLng, e.latLng)*1000000)/1000;
+                        if(last_point.break){
+                            length += break_length;
+                        }
+                        if(length == 9.999){
+                            length = 9.998;
+                        }
+                        if(e.earlywood){
+                            wood = "e";
+                            row_color = "green";
+                        }
+                        else{
+                            wood = "l";
+                            row_color = "red";
+                            y++;
+                        }
+                        last_point = e;
+                        string = string.concat("<tr style='color:" + row_color + ";'>");
+                        string = string.concat("<td>"+ e.year + wood + "</td><td>" + length + " mm</td></tr>");
+                    }
                 }
             });
             dataDialog.setContent(string + "</table>");
@@ -586,6 +877,69 @@
     }
 
 
+    function setStartYearEnable(){
+        setStartYearBtn.state('active');
+        set_start_year_active = true;
+    }
+
+    function setStartYearDisable(){
+        setStartYearBtn.state('inactive');
+        set_start_year_active = false;
+        setStartYearDialog.close();
+    }
+
+    function setEndYearEnable(){
+        setEndYearBtn.state('active');
+        set_end_year_active = true;
+    }
+
+    function setEndYearDisable(){
+        setEndYearBtn.state('inactive');
+        set_end_year_active = false;
+        setEndYearDialog.close();
+    }
+
+    function addDataEnable(){
+        addDataBtn.state('active');
+        add_data_active = true;
+    }
+
+    function addDataDisable(){
+        $(map._container).off('click');
+        addDataBtn.state('inactive');
+        add_data_active = false;
+        map.dragging.enable();
+        mouseLine.clearLayers();
+        data_collect = false;
+    }
+
+    function addSkipEnable(){
+        addSkipBtn.state('active');
+        add_skip_active = true;
+    }
+
+    function addSkipDisable(){
+        $(map._container).off('click');
+        addSkipBtn.state('inactive');
+        add_skip_active = false;
+        map.dragging.enable();
+        mouseLine.clearLayers();
+        data_collect = false;
+    }
+
+    function addBreakEnable(){
+        addBreakBtn.state('active');
+        add_break_active = true;
+    }
+
+    function addBreakDisable(){
+        $(map._container).off('click');
+        addBreakBtn.state('inactive');
+        add_breal_active = false;
+        map.dragging.enable();
+        mouseLine.clearLayers();
+        data_collect = false;
+    }
 
     //easybutton function to delete any point in the data
     function deleteEnable(){
@@ -631,19 +985,21 @@
 
     function collapseTimescaleBar(){
         timescaleBtn.state('collapse');
-        setYearBtn.disable();
+        setStartYearBtn.disable();
+        setEndYearBtn.disable();
         shiftForwardBtn.disable();
         shiftBackwardBtn.disable();
 
-        setYearDialog.close();
+        setStartYearDisable();
+        setEndYearDisable();
     }
 
     function collapseMeasureBar(){
         measureBtn.state('collapse');
         collectBtn.disable();
         skipBtn.disable();
-        undoBtn.disable();
-        missingBtn.disable();
+        deleteLastBtn.disable();
+        breakBtn.disable();
 
         collectDisable();
     }
@@ -652,9 +1008,15 @@
         editBtn.state('collapse');
         deleteBtn.disable();
         cutBtn.disable();
+        addDataBtn.disable();
+        addSkipBtn.disable();
+        addBreakBtn.disable();
 
         deleteDisable();
         cutDisable();
+        addDataDisable();
+        addSkipDisable();
+        addBreakDisable();
     }
 
     function collapseAnnotationBar(){
@@ -682,7 +1044,8 @@
                 collapseMeasureBar();
 
                 btn.state('expand');
-                setYearBtn.enable();
+                setStartYearBtn.enable();
+                setEndYearBtn.enable();
                 shiftForwardBtn.enable();
                 shiftBackwardBtn.enable();
             }
@@ -697,25 +1060,56 @@
         }]
     });
 
-    var setYearBtn = L.easyButton ({
+    var setStartYearBtn = L.easyButton ({
         states: [
         {
-            stateName:  'set-year',
-            icon:       '<i class="material-icons md-18">access_time</i>',
-            title:      'Set the first year of chronology',
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">arrow_forward</i>',
+            title:      'Set the start year at any start point',
             onClick:    function(btn, map){
-                setYearDialog.open();
+                setEndYearDisable();
+                setStartYearEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                setStartYearDisable();
             }
         }]
-    });
+    })
+
+    var setEndYearBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">arrow_back</i>',
+            title:      'Set the end year at any start point',
+            onClick:    function(btn, map){
+                setStartYearDisable();
+                setEndYearEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                setEndYearDisable();
+            }
+        }]
+    })
 
     var shiftForwardBtn = L.easyButton ({
         states: [
         {
             stateName:  'year-forward',
-            icon:       '<i class="material-icons md-18">redo</i>',
+            icon:       '<i class="material-icons md-18">exposure_plus_1</i>',
             title:      'Shift series forward',
             onClick:    function(btn, map){
+                setStartYearDisable();
                 shiftYear(1);
             }
         }]
@@ -725,9 +1119,10 @@
         states: [
         {
             stateName:  'year-backward',
-            icon:       '<i class="material-icons md-18">undo</i>',
+            icon:       '<i class="material-icons md-18">exposure_neg_1</i>',
             title:      'Shift series backward',
             onClick:    function(btn, map){
+                setStartYearDisable();
                 shiftYear(-1);
             }
         }]
@@ -747,8 +1142,8 @@
                 btn.state('expand');
                 collectBtn.enable();
                 skipBtn.enable();
-                undoBtn.enable();
-                missingBtn.enable();
+                deleteLastBtn.enable();
+                breakBtn.enable();
             }
         },
         {
@@ -786,33 +1181,42 @@
         {
             stateName:  'skip-year',
             icon:       '<i class="material-icons md-18">update</i>',
-            title:      'Add a gap year (Alt+S)',
+            title:      'Add a zero growth year (Alt+S)',
             onClick:    function(btn, map){
                 skipYear();
             }
         }]
     });
 
-    var missingBtn = L.easyButton ({
+    var breakBtn = L.easyButton ({
         states: [
         {
-            stateName:  'missing-year',
-            icon:       '<i class="material-icons md-18">space_bar</i>',
-            title:      'Add a missing year',
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">broken_image</i>',
+            title:      'Create a break',
             onClick:    function(btn, map){
-                missingYear();
+                collectDisable();
+                breakEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                breakDisable();
             }
         }]
-    });
+    })
 
-    var undoBtn = L.easyButton ({
+    var deleteLastBtn = L.easyButton ({
         states: [
         {
-            stateName:  'undo',
-            icon:       '<i class="material-icons md-18">undo</i>',
-            title:      'Undo (Alt+Z)',
+            stateName:  'delete-last',
+            icon:       '<i class="material-icons md-18">replay</i>',
+            title:      'Delete Last Marker (Alt+Z)',
             onClick:    function(btn, map){
-                undo();
+                deleteLast();
             }
         }]
     });
@@ -831,6 +1235,9 @@
                 btn.state('expand');
                 deleteBtn.enable();
                 cutBtn.enable();
+                addDataBtn.enable();
+                addSkipBtn.enable();
+                addBreakBtn.enable();
             }
         },
         {
@@ -851,6 +1258,9 @@
             title:      'Enable Delete (Alt+D)',
             onClick: function(btn, map){
                 cutDisable();
+                addDataDisable();
+                addSkipDisable();
+                addBreakDisable();
                 deleteEnable();
             }
         },
@@ -870,8 +1280,11 @@
             stateName:  'inactive',
             icon:       '<i class="material-icons md-18">content_cut</i>',
             title:      'Cut a portion of the series',
-            onClick: function(btn, map){
+            onClick:    function(btn, map){
                 deleteDisable();
+                addDataDisable();
+                addSkipDisable();
+                addBreakDisable();
                 cutEnable();
             }
         },
@@ -884,6 +1297,77 @@
             }
         }]
     });
+
+    var addDataBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">add_circle_outline</i>',
+            title:      'Add a point in the middle of the series',
+            onClick:    function(btn, map){
+                deleteDisable();
+                cutDisable();
+                addSkipDisable();
+                addBreakDisable();
+                addDataEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                addDataDisable();
+            }
+        }]
+    })
+
+    var addSkipBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">update</i>',
+            title:      'Add a zero growth year in the middle of the series',
+            onClick:    function(btn, map){
+                deleteDisable();
+                cutDisable();
+                addDataDisable();
+                addBreakDisable();
+                addSkipEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                addSkipDisable();
+            }
+        }]
+    })
+
+    var addBreakBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">broken_image</i>',
+            title:      'Add a break in the series',
+            onClick:    function(btn, map){
+                deleteDisable();
+                cutDisable();
+                addDataDisable();
+                addSkipDisable();
+                addBreakEnable();
+            }
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            onClick:    function(btn, map){
+                addBreakDisable();
+            }
+        }]
+    })
 
     var annotationBtn = L.easyButton ({
         states: [
@@ -957,7 +1441,7 @@
         states: [
         {
             stateName:  'closed',
-            icon:       '<i class="material-icons md-18">storage</i>',
+            icon:       '<i class="material-icons md-18">straighten</i>',
             title:      'Open Data',
             onClick:    function(btn, map){
                 loadData();
@@ -965,27 +1449,60 @@
         }]
     });
 
+    var undoBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'undo',
+            icon:       '<i class="material-icons md-18">undo</i>',
+            title:      'Undo',
+            onClick:    function(btn, map){
+                undo();
+            }
+        }]
+    });
+
+    var redoBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'redo',
+            icon:       '<i class="material-icons md-18">redo</i>',
+            title:      'Redo',
+            onClick:    function(btn, map){
+                redo();
+            }
+        }]
+    });
+
 
 
 
     //group the buttons into a toolbar
-    var timeBar = L.easyBar([timescaleBtn, setYearBtn, shiftForwardBtn, shiftBackwardBtn]);
+    var undoRedoBar = L.easyBar([undoBtn, redoBtn]);
+    undoRedoBar.addTo(map);
+    undoBtn.disable();
+    redoBtn.disable();
+
+    var timeBar = L.easyBar([timescaleBtn, setStartYearBtn, setEndYearBtn, shiftForwardBtn, shiftBackwardBtn]);
     timeBar.addTo(map);
-    setYearBtn.disable();
+    setStartYearBtn.disable();
+    setEndYearBtn.disable();
     shiftForwardBtn.disable();
     shiftBackwardBtn.disable();
 
-    var measurementBar = L.easyBar([measureBtn, collectBtn, skipBtn, missingBtn, undoBtn, deleteBtn]);
+    var measurementBar = L.easyBar([measureBtn, collectBtn, skipBtn, breakBtn, deleteLastBtn]);
     measurementBar.addTo(map);
     collectBtn.disable();
     skipBtn.disable();
-    missingBtn.disable();
-    undoBtn.disable();
+    deleteLastBtn.disable();
+    breakBtn.disable();
 
-    var editBar = L.easyBar([editBtn, deleteBtn, cutBtn]);
+    var editBar = L.easyBar([editBtn, deleteBtn, cutBtn, addDataBtn, addSkipBtn, addBreakBtn]);
     editBar.addTo(map);
     deleteBtn.disable();
-    cutBtn.disable()
+    cutBtn.disable();
+    addDataBtn.disable();
+    addSkipBtn.disable();
+    addBreakBtn.disable();
 
     var annotationBar = L.easyBar([annotationBtn, dateMarkerBtn, deleteAnnotationBtn]);
     annotationBar.addTo(map);
@@ -993,7 +1510,6 @@
     deleteAnnotationBtn.disable();
 
     dataBtn.addTo(map);
-    //annotationButton.addTo(map)
 
 
     //creating the layer controls
@@ -1020,7 +1536,7 @@
         }
         //ALT + Z
         if(e.altKey && (e.keyCode == 90 || e.keycode == 122)){
-            undo();
+            deleteLast();
         }
         //ALT + C
         if(e.altKey && (e.keyCode == 67 || e.keycode == 99)){
@@ -1038,44 +1554,185 @@
 
 
 
-    /*function saveData(){
-        if(points[0] != undefined){
-            console.log("hi")
-            string = "<table><tr><th style='width: 30%;'>Year</th><th style='width: 70%;'>Length</th></tr>"
-            Object.values(points).map(function(e, i){
-                if(e.year != undefined){
-                    wood = "-"
-                    length = "N/A"
-                    string = string.concat("<tr")
-                    if(e.measurable){
-                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)/1000
-                        if(e.earlywood){
-                            wood = "e"
-                            row_color = "green"
-                        }
-                        else{
-                            wood = "l"
-                            row_color = "red"
-                        }
-                        last_latLng = e.latLng
-                        string = string.concat(" style='color:" + row_color + ";'>")
-                    }
-                    string = string.concat("<td>"+ e.year + wood + "</td><td>" + length + " mm</td></tr>")
+    function toSixCharString(n){
+        var string = n.toString();
+
+        if(string.length == 1){
+            string = "     " + string;
+        }
+        else if(string.length == 2){
+            string = "    " + string;
+        }
+        else if(string.length == 3){
+            string = "   " + string;
+        }
+        else if(string.length == 4){
+            string = "  " + string;
+        }
+        else if(string.length == 5){
+            string = " " + string;
+        }
+        else if(string.length >= 6){
+            alert("Value exceeds 5 characters");
+            throw "Error 10";
+        }
+        else{
+            alert("toSixCharString(n) unknown error");
+            throw "error";
+        }
+        return string;
+    }
+
+
+    $("#download").click(function(event){
+        sum_string = "";
+        ew_string = "";
+        lw_string = "";
+        if(points != undefined){
+            y = points[1].year;
+            sum_points = Object.values(points).filter(function(e){
+                if(e.earlywood != undefined){
+                    return !(e.earlywood);
                 }
                 else{
-                    last_latLng = e.latLng
+                    return true;
                 }
-            })
-            dataDialog.setContent(string + "</table>")
-        }
-    }*/
+            });
 
+            if(sum_points[1].year%10 > 0){
+                sum_string = sum_string.concat(toSixCharString(sum_points[1].year));
+            }
+            sum_points.map(function(e, i, a){
+                if(!e.start){
+                    if(e.year%10 == 0){
+                        sum_string = sum_string.concat("\r\n" + toSixCharString(e.year));
+                    }
+                    while(e.year > y){
+                        sum_string = sum_string.concat("    -1");
+                        y++;
+                        if(y%10 == 0){
+                            sum_string = sum_string.concat("\r\n" + toSixCharString(e.year));
+                        }
+                    }
+                    if(e.skip){
+                        sum_string = sum_string.concat("     0");
+                        y++;
+                    }
+                    else{
+                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
+                        if(length == 9999){
+                            length = 9998;
+                        }
+                        if(length == 999){
+                            length = 998;
+                        }
+
+                        length_string = toSixCharString(length); 
+
+                        sum_string = sum_string.concat(length_string);
+                        last_latLng = e.latLng;
+                        y++;
+                    }
+                }
+                else{
+                    last_latLng = e.latLng;
+                }
+            });
+            sum_string = sum_string.concat(" -9999");
+
+            y = points[1].year;
+
+            if(points[1].year%10 > 0){
+                ew_string = ew_string.concat(toSixCharString(points[1].year));
+                lw_string = lw_string.concat(toSixCharString(points[1].year));
+            }
+
+            Object.values(points).map(function(e, i, a){
+                if(!e.start){
+                    if(e.year%10 == 0){
+                        if(e.skip){
+                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
+                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                        }
+                        else if(e.earlywood){
+                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
+                        }
+                        else{
+                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                        }
+                    }
+                    while(e.year > y){
+                        console.log(e.year);
+                        console.log(y);
+                        ew_string = ew_string.concat("    -1");
+                        lw_string = lw_string.concat("    -1");
+                        y++;
+                        if(y%10 == 0){
+                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
+                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                        }
+                    }
+                    if(e.skip){
+                        if(e.earlywood){
+                            ew_string = ew_string.concat("     0");
+                        }
+                        else{
+                            lw_string = lw_string.concat("     0");
+                            y++;
+                        }
+                    }
+                    else{
+                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
+                        if(length == 9999){
+                            length = 9998;
+                        }
+                        if(length == 999){
+                            length = 998;
+                        }
+
+                        length_string = toSixCharString(length); 
+
+                        if(e.earlywood){
+                            ew_string = ew_string.concat(length_string);
+                            last_latLng = e.latLng;
+                        }
+                        else{
+                            lw_string = lw_string.concat(length_string);
+                            last_latLng = e.latLng;
+                            y++;
+                        }
+                    }
+                }
+                else{
+                    last_latLng = e.latLng;
+                }
+            });
+            ew_string = ew_string.concat(" -9999");
+            lw_string = lw_string.concat(" -9999");
+        }
+        console.log(sum_string);
+        console.log(ew_string);
+        console.log(lw_string);
+
+        var zip = new JSZip();
+        zip.file('sample.raw', sum_string);
+        zip.file('sample.lwr', lw_string);
+        zip.file('sample.ewr', ew_string);
+
+        zip.generateAsync({type:"blob"})
+        .then(function (blob) {
+            saveAs(blob, "sample.zip");
+        });
+
+        
+        //this.href = 'data:plain/text,' + sum_string;
+    });
 
 
     //saving the data as a JSON
     $( "#save" ).click(function( event ) {
-        //create anoter JSON and store the current counters for year, half_year, earlywood, and index, along with points data
-        dataJSON = {'year': year, 'half_year': half_year, 'earlywood': earlywood, 'index': index, 'points': points };
+        //create anoter JSON and store the current counters for year, earlywood, and index, along with points data
+        dataJSON = {'year': year, 'earlywood': earlywood, 'index': index, 'points': points };
         this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
     });
 
@@ -1097,7 +1754,6 @@
             points = newDataJSON.points;
             index = newDataJSON.index;
             year = newDataJSON.year;
-            half_year = newDataJSON.half_year;
             earlywood = newDataJSON.earlywood;
 
             console.log(points);
