@@ -186,6 +186,7 @@
     var add_break_active = false;
     var set_start_year_active = false;
     var set_end_year_active = false;
+    var line_marker = false;
 
 
 
@@ -205,15 +206,28 @@
         });
     }
 
+    function reloadAnnotations(){
+        annotationLayer.clearLayers();
+
+        reduced = annotations.filter(e => e != undefined);
+        console.log(reduced);
+
+        annotations.map(e => annotationLayer.addLayer(e));
+    }
+
     function undo(){
         if(undoStack.length > 0){
             redoBtn.enable();
-            var restore_points = Object.values(points).map(e => e);
+            //var restore_points = Object.values(points).map(e => e);
+            var restore_points = JSON.parse(JSON.stringify(points));
             redoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points});
             dataJSON = undoStack.pop();
 
-            points = {};
-            dataJSON.points.map((e, i) => points[i] = e);
+            points = JSON.parse(JSON.stringify(dataJSON.points));
+
+
+            //points = {};
+            //dataJSON.points.map((e, i) => points[i] = e);
 
             index = dataJSON.index;
             year = dataJSON.year;
@@ -229,18 +243,24 @@
 
     function createUndoPoint(){
         undoBtn.enable();
-        var restore_points = Object.values(points).map(e => e);
+        redoBtn.disable();
+        redoStack.length = 0;
+        //var restore_points = Object.values(points).map(e => e);
+        var restore_points = JSON.parse(JSON.stringify(points));
         undoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points });
     }
 
     function redo(){
         undoBtn.enable();
-        restore_points = Object.values(points).map(e => e);
+        //restore_points = Object.values(points).map(e => e);
+        var restore_points = JSON.parse(JSON.stringify(points));
         undoStack.push({'year': year, 'earlywood': earlywood, 'index': index, 'points': restore_points});
         dataJSON = redoStack.pop();
 
-        points = {};
-        dataJSON.points.map((e, i) => points[i] = e);
+        points = JSON.parse(JSON.stringify(dataJSON.points));
+
+        //points = {};
+        //dataJSON.points.map((e, i) => points[i] = e);
 
         index = dataJSON.index;
         year = dataJSON.year;
@@ -253,9 +273,9 @@
         }
     }
 
-    //createMouseLineFrom(latLng) will create h-bars from the given latlng to the mouse pointer
+    //createMouseHBarFrom(latLng) will create h-bars from the given latlng to the mouse pointer
 
-    function createMouseLineFrom(latLng){
+    function createMouseHBarFrom(latLng){
         $(map._container).mousemove(function lineToMouse(e){
             //only create lines when collecting data
             if(data_collect){
@@ -286,6 +306,20 @@
                 mouseLine.addLayer(L.polyline([latLng, mouseLatLng], {color: '#37474F'}));
                 mouseLine.addLayer(L.polyline([topLeftPoint, bottomLeftPoint], {color: '#37474F'}));
                 mouseLine.addLayer(L.polyline([topRightPoint, bottomRightPoint], {color: '#37474F'}));
+            }
+        });
+    }
+
+    function createMouseLineFrom(latLng){
+        $(map._container).mousemove(function lineToMouse(e){
+            //only create lines when collecting data
+            if(line_marker){
+                mouseLine.clearLayers();//continously delete previous lines
+                var mouseLatLng = map.mouseEventToLatLng(e);     //get the mouse pointers latlng
+                var point = map.latLngToLayerPoint(latLng);      //get the layer point of the given latlng
+
+                //create lines and add them to mouseLine layer
+                mouseLine.addLayer(L.polyline([latLng, mouseLatLng], {color: '#00BCD4', weight: '6'}));
             }
         });
     }
@@ -382,12 +416,13 @@
         var k = i+1;
         var year_adjusted = points[i+1].year
 
+        console.log('mouse on');
         $(map._container).click(function(e){
             var latLng = map.mouseEventToLatLng(e);
             map.dragging.disable();
 
             data_collect = true;
-            createMouseLineFrom(latLng);
+            createMouseHBarFrom(latLng);
 
             if(first_point){
                 new_points[k] = {'start': false, 'skip': false, 'break': false, 'year': year_adjusted, 'earlywood': true, 'latLng':latLng};
@@ -406,6 +441,7 @@
                     k++;
                 })
                 $(map._container).off('click');
+                console.log('mouse off');
 
                 createUndoPoint();
 
@@ -431,6 +467,7 @@
             k++;
         })
         $(map._container).off('click');
+        console.log('mouse off');
         index = k;
         year++;
 
@@ -444,12 +481,13 @@
         var first_point = true;
         var k = i+1;
 
+        console.log('mouse on');
         $(map._container).click(function(e){
             var latLng = map.mouseEventToLatLng(e);
             map.dragging.disable();
 
             data_collect = true;
-            createMouseLineFrom(latLng);
+            createMouseHBarFrom(latLng);
 
             if(first_point){
                 new_points[k] = {'start': false, 'skip': false, 'break': true, 'latLng':latLng};
@@ -466,6 +504,7 @@
                     k++;
                 })
                 $(map._container).off('click');
+                console.log('mouse off');
 
                 createUndoPoint();
 
@@ -485,7 +524,7 @@
 
     setStartYearDialog.lock();
 
-    function setYear(i){    
+    function setStartYear(i){    
         if(points[i].start){
             setStartYearDialog.open();           
 
@@ -493,22 +532,27 @@
                 new_year = document.getElementById('year_input').value;
                 setStartYearDialog.close();
 
-                createUndoPoint();
-
-                i++
-                
-                while(points[i] != undefined){
-                    if(points[i].start || points[i].break){
-                    }
-                    else if(points[i].earlywood){
-                        points[i].year = new_year;
-                    }
-                    else{
-                        points[i].year = new_year++;
-                    }
-                    i++;
+                if(new_year.toString().length > 4){
+                    alert("Year cannot exceed 4 digits!");
                 }
-                reloadLayers();
+                else{
+                    createUndoPoint();
+
+                    i++
+                    
+                    while(points[i] != undefined){
+                        if(points[i].start || points[i].break){
+                        }
+                        else if(points[i].earlywood){
+                            points[i].year = new_year;
+                        }
+                        else{
+                            points[i].year = new_year++;
+                        }
+                        i++;
+                    }
+                    reloadLayers();
+                }
                 setStartYearDisable();
             }, false);
         }   
@@ -530,24 +574,29 @@
                 new_year = document.getElementById('end_year_input').value;
                 setEndYearDialog.close();
 
-                createUndoPoint();
-                
-                if(i == index){
-                    year = new_year;
+                if(new_year.toString().length > 4){
+                    alert("Year cannot exceed 4 digits!");
                 }
+                else{
+                    createUndoPoint();
+                    
+                    if(i == index){
+                        year = new_year;
+                    }
 
-                while(points[i] != undefined){
-                    if(points[i].start || points[i].break){
+                    while(points[i] != undefined){
+                        if(points[i].start || points[i].break){
+                        }
+                        else if(points[i].earlywood){
+                            points[i].year = new_year--;
+                        }
+                        else{
+                            points[i].year = new_year;
+                        }
+                        i--;
                     }
-                    else if(points[i].earlywood){
-                        points[i].year = new_year--;
-                    }
-                    else{
-                        points[i].year = new_year;
-                    }
-                    i--;
+                    reloadLayers();
                 }
-                reloadLayers();
                 setStartYearDisable();
             }, false);
         }   
@@ -597,6 +646,7 @@
 
         //tell marker what to do when being draged
         marker_list[i].on('dragend', function(e){
+
             p[i].latLng = e.target._latlng;     //get the new latlng of the mouse pointer
             console.log(p);
 
@@ -640,7 +690,7 @@
                 addBreakPoint(i);
             }
             if(set_start_year_active){
-                setYear(i);
+                setStartYear(i);
             }
             if(set_end_year_active){
                 setEndYear(i);
@@ -689,7 +739,7 @@
             }
             //if the undo is fired while data is collected the mouse line needs to be adjusted
             if(data_collect){
-                createMouseLineFrom(points[index-2].latLng);
+                createMouseHBarFrom(points[index-2].latLng);
             }
             delete points[index-1];    //erase data in points
             index--;
@@ -702,10 +752,11 @@
 
         data_collect = true;
             
+        console.log('mouse on');
         $(map._container).click(function(e){
             var latLng = map.mouseEventToLatLng(e);
 
-            createMouseLineFrom(latLng)
+            createMouseHBarFrom(latLng)
 
             createUndoPoint();
 
@@ -721,6 +772,7 @@
 
     function breakDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         breakBtn.state('inactive');
         map.dragging.enable();
     }
@@ -731,8 +783,9 @@
 
         //map.dragging.disable();  //leaflet doesn't differentiate between a click and a drag
 
-        document.getElementById('map').style.cursor = "pointer";
+        //document.getElementById('map').style.cursor = "pointer";
 
+        console.log('mouse on');
         $(map._container).click(function startLine(e){
             var latLng = map.mouseEventToLatLng(e);
 
@@ -748,7 +801,7 @@
 
             newLatLng(points, index, latLng); //call newLatLng with current index and new latlng 
 
-            createMouseLineFrom(latLng); //create the next mouseline from the new latlng
+            createMouseHBarFrom(latLng); //create the next mouseline from the new latlng
 
             //avoid incrementing earlywood for start point
             if(!points[index].start){
@@ -769,6 +822,7 @@
     //easybutton that ends data collection
     function collectDisable(){
         $(map._container).off('click');  //turn off the mouse clicks from previous function
+        console.log('mouse off');
         collectBtn.state('inactive');  //switch the button state back to off
         data_collect = false;   //turn data_collect off
         map.dragging.enable();  //turn map dragging back on
@@ -789,41 +843,6 @@
         reloadLayers();
     }
 
-    function deleteAnnotation(i){
-        if(annotation_delete_active){
-            console.log(i);
-            annotationLayer.removeLayer(annotations[i]);
-            annotations[i] = undefined;
-            deleteAnnotationBtn.state('inactive');
-            $(map._container).off('click');
-            annotation_delete_active = false;
-        }
-    }
-
-    function newDateMarker(i){
-        annotations.push(L.circle(latLng, {radius: .0002, color: "#00BCD4"}));
-        annotations[i].on('click', function(e){
-            deleteAnnotation(i);
-        })
-        annotationLayer.addLayer(annotations[i]);
-        dateMarkerDisable();
-    }
-
-    function dateMarkerEnable(){
-        dateMarkerBtn.state('active');
-        $(map._container).click(function(e){
-            latLng = map.mouseEventToLatLng(e);
-
-            newDateMarker(a);
-            a++;
-        });
-    }
-
-    function dateMarkerDisable(){
-        dateMarkerBtn.state('inactive');
-        $(map._container).off('click');
-    }
-
     var dataDialog = L.control.dialog({'size': [240, 350], 'anchor': [5, 50], 'initOpen': false})
             .setContent('<h3>There are no data points to measure</h3>')
             .addTo(map);
@@ -831,7 +850,7 @@
     function loadData(){
         if(points[0] != undefined){
             var y = points[1].year;
-            string = "<table><tr><th style='width: 40%;'>Year</th><th style='width: 70%;'>Length</th></tr>";
+            string = "<table><tr><th style='width: 45%;'>Year</th><th style='width: 70%;'>Length</th></tr>";
             Object.values(points).map(function(e, i, a){
                 if(e.start){
                     last_point = e;
@@ -906,6 +925,7 @@
 
     function addDataDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         addDataBtn.state('inactive');
         add_data_active = false;
         map.dragging.enable();
@@ -920,6 +940,7 @@
 
     function addSkipDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         addSkipBtn.state('inactive');
         add_skip_active = false;
         map.dragging.enable();
@@ -934,6 +955,7 @@
 
     function addBreakDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         addBreakBtn.state('inactive');
         add_breal_active = false;
         map.dragging.enable();
@@ -949,6 +971,7 @@
 
     function deleteDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         deleteBtn.state('inactive');
         delete_active = false;
     }
@@ -961,20 +984,96 @@
 
     function cutDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         cutBtn.state('inactive');
         cut_active = false;
         cut_point = -1;
     }
 
+
+    function deleteAnnotation(i){
+        if(annotation_delete_active){
+            console.log(i);
+            delete annotations[i];
+            console.log(annotations);
+            reloadAnnotations();
+            deleteAnnotationDisable();
+        }
+    }
+
+    function newDateMarker(i, latLng){
+        annotations.push(L.circle(latLng, {radius: .0002, color: "#00BCD4"}));
+        annotations[i].on('click', function(e){
+            deleteAnnotation(i);
+        })
+        annotationLayer.addLayer(annotations[i]);
+        dateMarkerDisable();
+    }
+
+    function dateMarkerEnable(){
+        dateMarkerBtn.state('active');
+        console.log('mouse on');
+        $(map._container).click(function(e){
+            latLng = map.mouseEventToLatLng(e);
+
+            newDateMarker(a, latLng);
+            a++;
+        });
+    }
+
+    function dateMarkerDisable(){
+        dateMarkerBtn.state('inactive');
+        $(map._container).off('click');
+        console.log('mouse off');
+    }
+
+    function newLineMarker(i, first_point, second_point){
+        annotations.push(L.polyline([first_point, second_point], {color: '#00BCD4', weight: '6'}));
+        annotations[i].on('click', function(e){
+            deleteAnnotation(i);
+        });
+        annotationLayer.addLayer(annotations[i]);
+    }
+
+    function lineMarkerEnable(){
+        lineMarkerBtn.state('active');
+        var start = true;
+        console.log('mouse on');
+        $(map._container).click(function(e){
+            if(start){
+                first_point = map.mouseEventToLatLng(e);
+                line_marker = true;
+                createMouseLineFrom(first_point);
+                start = false;
+            }
+            else{
+                second_point = map.mouseEventToLatLng(e);
+                newLineMarker(a, first_point, second_point);
+                a++;
+                lineMarkerDisable();
+            }
+        })
+    }
+
+    function lineMarkerDisable(){
+        $(map._container).off('click');
+        console.log('mouse off');
+        lineMarkerBtn.state('inactive');
+        line_marker = false;
+        mouseLine.clearLayers();
+    }
+
     function deleteAnnotationEnable(){
         dateMarkerBtn.state('inactive');
         $(map._container).off('click');
+        console.log('mouse off');
         deleteAnnotationBtn.state('active');
         annotation_delete_active = true;
     }
 
     function deleteAnnotationDisable(){
         $(map._container).off('click');
+        console.log('mouse off');
         deleteAnnotationBtn.state('inactive');
         annotation_delete_active = false;
     }
@@ -1022,15 +1121,41 @@
     function collapseAnnotationBar(){
         annotationBtn.state('collapse');
         dateMarkerBtn.disable();
+        lineMarkerBtn.disable();
         deleteAnnotationBtn.disable();
 
         dateMarkerDisable();
+        lineMarkerDisable();
         deleteAnnotationDisable();
     }
 
 
 
     //easybuttons
+
+    var undoBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'undo',
+            icon:       '<i class="material-icons md-18">undo</i>',
+            title:      'Undo',
+            onClick:    function(btn, map){
+                undo();
+            }
+        }]
+    });
+
+    var redoBtn = L.easyButton ({
+        states: [
+        {
+            stateName:  'redo',
+            icon:       '<i class="material-icons md-18">redo</i>',
+            title:      'Redo',
+            onClick:    function(btn, map){
+                redo();
+            }
+        }]
+    });
 
     var timescaleBtn= L.easyButton ({
         states: [
@@ -1378,6 +1503,7 @@
             onClick:    function(btn, map){
                 btn.state('expand');
                 dateMarkerBtn.enable();
+                lineMarkerBtn.enable();
                 deleteAnnotationBtn.enable();
 
                 collapseEditBar();
@@ -1403,6 +1529,7 @@
             title:      'Create a circle marker',
             onClick:    function(btn, map){
                 deleteAnnotationDisable();
+                lineMarkerDisable();
                 dateMarkerEnable();
             }
         },
@@ -1415,6 +1542,28 @@
             }
         }]
     });
+
+    var lineMarkerBtn = L.easyButton({
+        states: [
+        {
+            stateName:  'inactive',
+            icon:       '<i class="material-icons md-18">format_clear</i>',
+            title:      'Create a line marker',
+            onClick:    function(btn, map){
+                dateMarkerDisable();
+                deleteAnnotationDisable();
+                lineMarkerEnable();
+            } 
+        },
+        {
+            stateName:  'active',
+            icon:       '<i class="material-icons md-18">clear</i>',
+            title:      'Cancel',
+            onClick:    function(btn, map){
+                lineMarkerDisable();
+            }
+        }]
+    })
     
     var deleteAnnotationBtn = L.easyButton ({
         states: [
@@ -1424,6 +1573,7 @@
             title:      'Delete an annotation',
             onClick:    function(btn, map){
                 dateMarkerDisable();
+                lineMarkerDisable();
                 deleteAnnotationEnable();
             }
         },
@@ -1446,30 +1596,6 @@
             onClick:    function(btn, map){
                 loadData();
             }  
-        }]
-    });
-
-    var undoBtn = L.easyButton ({
-        states: [
-        {
-            stateName:  'undo',
-            icon:       '<i class="material-icons md-18">undo</i>',
-            title:      'Undo',
-            onClick:    function(btn, map){
-                undo();
-            }
-        }]
-    });
-
-    var redoBtn = L.easyButton ({
-        states: [
-        {
-            stateName:  'redo',
-            icon:       '<i class="material-icons md-18">redo</i>',
-            title:      'Redo',
-            onClick:    function(btn, map){
-                redo();
-            }
         }]
     });
 
@@ -1504,9 +1630,10 @@
     addSkipBtn.disable();
     addBreakBtn.disable();
 
-    var annotationBar = L.easyBar([annotationBtn, dateMarkerBtn, deleteAnnotationBtn]);
+    var annotationBar = L.easyBar([annotationBtn, dateMarkerBtn, lineMarkerBtn, deleteAnnotationBtn]);
     annotationBar.addTo(map);
     dateMarkerBtn.disable();
+    lineMarkerBtn.disable();
     deleteAnnotationBtn.disable();
 
     dataBtn.addTo(map);
@@ -1552,7 +1679,31 @@
     document.addEventListener('keyup', doc_keyUp, false);
 
 
+    function toFourCharString(n){
+        var string = n.toString();
 
+        if(string.length == 1){
+            string = "   " + string;
+        }
+        else if(string.length == 2){
+            string = "  " + string;
+        }
+        else if(string.length == 3){
+            string = " " + string;
+        }
+        else if(string.length == 4){
+            string = string;
+        }
+        else if(string.length >= 5){
+            alert("Value exceeds 4 characters");
+            throw "Error 10";
+        }
+        else{
+            alert("toSixCharString(n) unknown error");
+            throw "error";
+        }
+        return string;
+    }
 
     function toSixCharString(n){
         var string = n.toString();
@@ -1574,7 +1725,42 @@
         }
         else if(string.length >= 6){
             alert("Value exceeds 5 characters");
-            throw "Error 10";
+            throw "Error 11";
+        }
+        else{
+            alert("toSixCharString(n) unknown error");
+            throw "error";
+        }
+        return string;
+    }
+
+    function toEightCharString(n){
+        var string = n.toString();
+
+        if(string.length == 1){
+            string = string + "       ";
+        }
+        else if(string.length == 2){
+            string = string + "      ";
+        }
+        else if(string.length == 3){
+            string = string + "     ";
+        }
+        else if(string.length == 4){
+            string = string + "    ";
+        }
+        else if(string.length == 5){
+            string = string + "   ";
+        }
+        else if(string.length == 6){
+            string = string + "  ";
+        }
+        else if(string.length == 7){
+            string = string + " ";
+        }
+        else if(string.length >= 8){
+            alert("Value exceeds 7 characters");
+            throw "Error 12";
         }
         else{
             alert("toSixCharString(n) unknown error");
@@ -1600,18 +1786,18 @@
             });
 
             if(sum_points[1].year%10 > 0){
-                sum_string = sum_string.concat(toSixCharString(sum_points[1].year));
+                sum_string = sum_string.concat(toFourCharString(sum_points[1].year));
             }
             sum_points.map(function(e, i, a){
                 if(!e.start){
                     if(e.year%10 == 0){
-                        sum_string = sum_string.concat("\r\n" + toSixCharString(e.year));
+                        sum_string = sum_string.concat("\r\n" + toFourCharString(e.year));
                     }
                     while(e.year > y){
                         sum_string = sum_string.concat("    -1");
                         y++;
                         if(y%10 == 0){
-                            sum_string = sum_string.concat("\r\n" + toSixCharString(e.year));
+                            sum_string = sum_string.concat("\r\n" + toFourCharString(e.year));
                         }
                     }
                     if(e.skip){
@@ -1643,22 +1829,22 @@
             y = points[1].year;
 
             if(points[1].year%10 > 0){
-                ew_string = ew_string.concat(toSixCharString(points[1].year));
-                lw_string = lw_string.concat(toSixCharString(points[1].year));
+                ew_string = ew_string.concat(toFourCharString(points[1].year));
+                lw_string = lw_string.concat(toFourCharString(points[1].year));
             }
 
             Object.values(points).map(function(e, i, a){
                 if(!e.start){
                     if(e.year%10 == 0){
                         if(e.skip){
-                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
-                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                            ew_string = ew_string.concat("\r\n" + toFourCharString(e.year));
+                            lw_string = lw_string.concat("\r\n" + toFourCharString(e.year));
                         }
                         else if(e.earlywood){
-                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
+                            ew_string = ew_string.concat("\r\n" + toFourCharString(e.year));
                         }
                         else{
-                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                            lw_string = lw_string.concat("\r\n" + toFourCharString(e.year));
                         }
                     }
                     while(e.year > y){
@@ -1668,8 +1854,8 @@
                         lw_string = lw_string.concat("    -1");
                         y++;
                         if(y%10 == 0){
-                            ew_string = ew_string.concat("\r\n" + toSixCharString(e.year));
-                            lw_string = lw_string.concat("\r\n" + toSixCharString(e.year));
+                            ew_string = ew_string.concat("\r\n" + toFourCharString(e.year));
+                            lw_string = lw_string.concat("\r\n" + toFourCharString(e.year));
                         }
                     }
                     if(e.skip){
@@ -1751,12 +1937,17 @@
             newDataJSON = JSON.parse(e.target.result);
 
             //assign the data to our current session
-            points = newDataJSON.points;
+            points = JSON.parse(JSON.stringify(newDataJSON.points));
             index = newDataJSON.index;
             year = newDataJSON.year;
             earlywood = newDataJSON.earlywood;
 
             console.log(points);
+
+            collapseTimescaleBar();
+            collapseAnnotationBar();
+            collapseEditBar();
+            collapseMeasureBar();
 
             reloadLayers();
         }
