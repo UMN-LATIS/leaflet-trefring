@@ -21,21 +21,25 @@
 	box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
-#save, #download{
+#save-local, #save-cloud, #download{
 	color: #78909C;
 }
 
-#save:hover, #download:hover{
-	color: #80CBC4;
+#save-local:hover, #save-cloud:hover, #download:hover{
+	color: #80DEEA;
+}
+
+#admin-save{
+	padding-top: 5px;
 }
 
 .file-upload{
-	padding-top: 10px;
+	padding-top: 5px;
 	color: #78909C;
 }
 
 .file-upload:hover{
-	color: #80CBC4;
+	color: #80DEEA;
 }
 
 .file-upload > input
@@ -67,37 +71,3 @@ table{
 
 #map .easy-button-button.disabled {
   height: 0;}
-
-/*#map{
-	height: 60%;
-	width: 100%;
-}
-
-#nav{
-	height: 30px;
-	width: 100%;
-}
-
-#selectFiles{
-	float; right;
-	position: absolute;
-	top: 4px;
-	left: 85px;
-}
-
-#import{
-	position: absolute;
-	top: 2px;
-	left: 275px
-}
-
-#data{
-	overflow-y:auto;
-	padding: 5px;
-	height: 35%;
-	width: 100%;
-}
-
-.leaflet-container.crosshair-cursor-enabled {
-    cursor:crosshair;
-}*/

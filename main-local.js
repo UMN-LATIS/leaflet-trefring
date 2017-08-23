@@ -1,51 +1,92 @@
+var src;
+var map;
 
-    var src;
+var map = L.map('map', {
+    fullscreenControl: true,
+    zoomSnap: 0,
+    crs: L.CRS.Simple,
+    drawControl: true,
+    layers: [],
+    doubleClickZoom: false,
+    zoomControl: false
+}).setView([0, 0], 0);
 
-    var map = L.map('map', {
-        fullscreenControl: true,
-        zoomSnap: 0,
-        crs: L.CRS.Simple,
-        drawControl: true,
-        layers: [],
-        doubleClickZoom: false,
-        zoomControl: false
-    }).setView([0, 0], 0);
+var layer = L.tileLayer.elevator(function(coords, tile, done) {
+    var error;
+    var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+    tile.onload = (function(done, error, tile) {
+        return function() {
+            done(error, tile);
+        }
+    })(done, error, tile);
+    tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+    //tile.src = params.Key;
+    src = tile.src;
+    return tile.src;
+},
+{
+    width: 231782,
+    height: 4042,
+    tileSize :254,
+    maxZoom: 19 - 1,
+    overlap: 1,
+    pixelsPerMillimeter: 468, //(NEW)
+    lineColor: 'blue'
+}).addTo(map);
 
-    var image = L.tileLayer.elevator(function(coords, tile, done) {
-        var error;
-        var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
-        tile.onload = (function(done, error, tile) {
-            return function() {
-                done(error, tile);
-            }
-        })(done, error, tile);
-        //tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
-        tile.src = params.Key;
-        src = tile.src;
-        return tile.src;
-    },
-    {
-        width: 231782,
-        height: 4042,
-        tileSize :254,
-        maxZoom: 19 - 1,
-        overlap: 1,
-        pixelsPerMillimeter: 468, //(NEW)
-        lineColor: 'blue'
-    }).addTo(map);
-    
+//minimap
+var miniLayer = new L.tileLayer.elevator(function(coords, tile, done) {
+    var error;
+    var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+    tile.onload = (function(done, error, tile) {
+        return function() {
+            done(error, tile)
+        }
+    })(done, error, tile);
+    tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+    //tile.src = params.Key;
+    src = tile.src;
+    return tile.src;
+},
+{
+    width: 231782,
+    height: 4042,
+    tileSize: 254,
+    maxZoom: 13,
+    overlap: 1,
+});
+
+var miniMap = new L.Control.MiniMap(miniLayer, {
+    width: 950,
+    height: 50,
+    //position: "topright", //in case you would like to change position of the minimap
+    toggleDisplay: true,
+    zoomAnimation: false,
+    zoomLevelOffset: -3,
+    zoomLevelFixed: -3
+});
+
+miniMap.addTo(map);
+
+
+var loadInterface = function() {    
 
     map.on('movestart', function(e){
         document.getElementById('map').style.cursor = 'move';
     })
     map.on('moveend', function(e){
-        document.getElementById('map').style.cursor = 'default';
+        if(collect.dataPoint.active || annotation.lineMarker.active){
+            document.getElementById('map').style.cursor = 'pointer';
+        }
+        else{
+            document.getElementById('map').style.cursor = 'default';
+        }
     })
 
     document.getElementById('map').style.cursor = 'default';
 
-    //map scrolling
 
+    //map scrolling
     var mapSize = map.getSize();    //size of the map used for map scrolling
     var mousePos = 0;               //an initial mouse position
 
@@ -77,41 +118,6 @@
         }
     })
 
-    //minimap
-
-    var miniLayer = new L.tileLayer.elevator(function(coords, tile, done) {
-        var error;
-        var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
-        tile.onload = (function(done, error, tile) {
-            return function() {
-                done(error, tile)
-            }
-        })(done, error, tile);
-        //tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
-        tile.src = params.Key;
-        src = tile.src;
-        return tile.src;
-    },
-    {
-        width: 231782,
-        height: 4042,
-        tileSize: 254,
-        maxZoom: 13,
-        overlap: 1,
-    });
-
-    var miniMap = new L.Control.MiniMap(miniLayer, {
-        width: 950,
-        height: 50,
-        //position: "topright", //in case you would like to change position of the minimap
-        toggleDisplay: true,
-        zoomAnimation: false,
-        zoomLevelOffset: -3,
-        zoomLevelFixed: -3
-    });
-
-    miniMap.addTo(map);
-
 
     //coordinate information in bottom left hand side of map
     var coordinatesDiv = document.createElement("div");
@@ -127,32 +133,22 @@
 
 
     //creating colored icons for points
-    dark_green_icon = L.icon({
-        iconUrl: 'images/dark_green_icon.png',
-        iconSize:     [30, 30] // size of the icon
+    light_blue_icon = L.icon({
+        iconUrl: 'images/light_blue_icon.png',
+        iconSize:     [32, 32] // size of the icon
     });
-    dark_red_icon = L.icon({
-        iconUrl: 'images/dark_red_icon.png',
-        iconSize:     [30, 30] // size of the icon
+    dark_blue_icon = L.icon({
+        iconUrl: 'images/dark_blue_icon.png',
+        iconSize:     [32, 32] // size of the icon
     });
-    black_icon = L.icon({
-        iconUrl: 'images/black_icon.png',
-        iconSize:     [30, 30] // size of the icon
+    white_icon = L.icon({
+        iconUrl: 'images/white_icon.png',
+        iconSize:     [32, 32] // size of the icon
     });
-    blue_grey_light_icon = L.icon({
-        iconUrl: 'images/blue_grey_light_icon.png',
-        iconSize:     [30, 30] // size of the icon
+    grey_icon = L.icon({
+        iconUrl: 'images/grey_icon.png',
+        iconSize:     [32, 32] // size of the icon
     });
-    blue_grey_dark_icon = L.icon({
-        iconUrl: 'images/blue_grey_dark_icon.png',
-        iconSize:     [30, 30] // size of the icon
-    });
-    dark_navy_icon = L.icon({
-        iconUrl: 'images/dark_navy_icon.png',
-        iconSize:     [30, 30] // size of the icon
-    });
-
-
 
 
     var POINTS = {};    //JSON with all the point data
@@ -160,7 +156,6 @@
     var YEAR = 0;           //year
     var EARLYWOOD = true;   //earlywood or latewood
     var INDEX = 0;      //points index
-
 
 
     var interactiveMouse = {
@@ -177,7 +172,7 @@
                         var point = map.latLngToLayerPoint(latLng);      //get the layer point of the given latlng
 
                         //create lines and add them to mouseLine layer
-                        self.layer.addLayer(L.polyline([latLng, mouseLatLng], {color: '#00BCD4', weight: '6'}));
+                        self.layer.addLayer(L.polyline([latLng, mouseLatLng], {color: '#000', weight: '6'}));
                     }
                 });
             },
@@ -211,9 +206,9 @@
                         var bottomLeftPoint = map.layerPointToLatLng([newX, newY]);
 
                         //create lines and add them to mouseLine layer
-                        self.layer.addLayer(L.polyline([latLng, mouseLatLng], {color: '#37474F'}));
-                        self.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint], {color: '#37474F'}));
-                        self.layer.addLayer(L.polyline([topRightPoint, bottomRightPoint], {color: '#37474F'}));
+                        self.layer.addLayer(L.polyline([latLng, mouseLatLng], {color: '#00BCD4', weight: '5'}));
+                        self.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint], {color: '#00BCD4', weight: '5'}));
+                        self.layer.addLayer(L.polyline([topRightPoint, bottomRightPoint], {color: '#00BCD4', weight: '5'}));
                     }
                 });
             }
@@ -250,18 +245,18 @@
 
                 //check if index is the start point
                 if(p[i].start){
-                    var marker = L.marker(leafLatLng, {icon: dark_navy_icon, draggable: true, title: "Start Point"});
+                    var marker = L.marker(leafLatLng, {icon: white_icon, draggable: true, title: "Start Point"});
                 }
                 //check if point is earlywood
                 else if(p[i].break){
-                    var marker = L.marker(leafLatLng, {icon: dark_navy_icon, draggable: true, title: "Break Point"})
+                    var marker = L.marker(leafLatLng, {icon: white_icon, draggable: true, title: "Break Point"})
                 }
                 else if(p[i].earlywood){
-                    var marker = L.marker(leafLatLng, {icon: dark_green_icon, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
+                    var marker = L.marker(leafLatLng, {icon: light_blue_icon, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
                 }
                 //otherwise it's latewood
                 else{
-                    var marker = L.marker(leafLatLng, {icon: dark_red_icon, draggable: true, title: "Year " + p[i].year + ", latewood"});
+                    var marker = L.marker(leafLatLng, {icon: dark_blue_icon, draggable: true, title: "Year " + p[i].year + ", latewood"});
                 }
 
                 if(p[i-1] != undefined && p[i-1].skip){
@@ -271,7 +266,7 @@
                     else{
                         average = L.latLng([leafLatLng.lat, (leafLatLng.lng - .001)]);
                     }
-                    skip_marker = L.marker(average, {icon: blue_grey_light_icon, draggable: true, title: "Year " + p[i-1].year + ", None"});
+                    skip_marker = L.marker(average, {icon: grey_icon, draggable: true, title: "Year " + p[i-1].year + ", None"});
                     skip_marker.on('click', function(e){
                         if(edit.deletePoint.active){
                             edit.deletePoint.action(i-1);
@@ -289,17 +284,16 @@
                 this.markers[i].on('dragend', function(e){
 
                     p[i].latLng = e.target._latlng;     //get the new latlng of the mouse pointer
-                    console.log(p);
 
                     //adjusting the line from the previous and preceeding point if they exist
                     if(p[i-1] != undefined && p[i-1].latLng != undefined && !p[i].start){
                         self.lineLayer.removeLayer(self.lines[i]);
-                        self.lines[i] = L.polyline([p[i-1].latLng, e.target._latlng], {color: '#37474F'});
+                        self.lines[i] = L.polyline([p[i-1].latLng, e.target._latlng], {color: '#00BCD4', weight: '5'});
                         self.lineLayer.addLayer(self.lines[i]);
                     }
                     if(p[i+1] != undefined && p[i+1].latLng != undefined && self.lines[i+1] != undefined){
                         self.lineLayer.removeLayer(self.lines[i+1]);
-                        self.lines[i+1] = L.polyline([e.target._latlng, p[i+1].latLng], {color: '#37474F'});
+                        self.lines[i+1] = L.polyline([e.target._latlng, p[i+1].latLng], {color: '#00BCD4', weight: '5'});
                         self.lineLayer.addLayer(self.lines[i+1]);
                     }
                 });
@@ -340,7 +334,7 @@
 
                 //drawing the line if the previous point exists
                 if(p[i-1] != undefined && !p[i-1].skip && !p[i].start){
-                    this.lines[i] = L.polyline([p[i-1].latLng, leafLatLng], {color: '#37474F'});
+                    this.lines[i] = L.polyline([p[i-1].latLng, leafLatLng], {color: '#00BCD4', weight: '5'});
                     this.lineLayer.addLayer(this.lines[i]);
                 }
 
@@ -364,10 +358,8 @@
             function(){
                 if(this.stack.length > 0){
                     redo.btn.enable();
-                    console.log(POINTS);
                     var restore_points = JSON.parse(JSON.stringify(POINTS));
                     redo.stack.push({'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': restore_points});
-                    console.log(redo.stack);
                     dataJSON = this.stack.pop();
 
                     POINTS = JSON.parse(JSON.stringify(dataJSON.points));
@@ -650,6 +642,7 @@
                         annotation.collapse();
                         edit.collapse();
                         collect.collapse();
+                        loadData.dialog.close();
 
                         time.btn.state('expand');
                         time.setYearFromStart.btn.enable();
@@ -844,6 +837,7 @@
                         edit.collapse();
                         annotation.collapse();
                         time.collapse();
+                        loadData.dialog.close();
 
                         collect.btn.state('expand');
                         collect.dataPoint.btn.enable();
@@ -924,11 +918,7 @@
                         delete POINTS[i+1];
                     }
 
-                    console.log(POINTS);
-
-                    console.log(this.markerLayer);
                     interactiveData.reload();
-
                     this.disable();
                 },
             enable:
@@ -999,10 +989,7 @@
                         alert("cannot select dame point");
                     }
 
-                    console.log(POINTS);
-
                     interactiveData.reload();
-
                     edit.cut.disable();
                 },
             enable:
@@ -1063,7 +1050,6 @@
                         var latLng = map.mouseEventToLatLng(e);
                         map.dragging.disable();
 
-                        collect.dataPoint.active = true;
                         interactiveMouse.hbarFrom(latLng);
 
                         if(first_point){
@@ -1108,7 +1094,7 @@
                     //map.dragging.enable();
                     document.getElementById('map').style.cursor = "default";
                     interactiveMouse.layer.clearLayers();
-                    collect.dataPoint.active = false;
+                    collect.dataPoint .active = false;
                 },
             btn:
                 L.easyButton ({
@@ -1206,12 +1192,15 @@
                     var first_point = true;
                     var k = i+1;
 
+                    document.getElementById('map').style.cursor = "pointer";
+                    collect.dataPoint.active = true;
+                    interactiveMouse.hbarFrom(POINTS[i].latLng);
+
                     var self = this;
                     $(map._container).click(function(e){
                         var latLng = map.mouseEventToLatLng(e);
                         map.dragging.disable();
 
-                        collect.dataPoint.active = true;
                         interactiveMouse.hbarFrom(latLng);
 
                         if(first_point){
@@ -1289,6 +1278,7 @@
                         annotation.collapse();
                         collect.collapse();
                         time.collapse();
+                        loadData.dialog.close();
 
                         edit.btn.state('expand');
                         edit.deletePoint.btn.enable();
@@ -1320,8 +1310,7 @@
             function(){
                 this.layer.clearLayers();
 
-                reduced = annotation.markers.filter(function (e){return e != undefined});
-                console.log(reduced);
+                var reduced = annotation.markers.filter(function (e){return e != undefined});
 
                 this.markers.map(function(e){return annotation.layer.addLayer(e)});
             },
@@ -1339,7 +1328,7 @@
         dateMarker: {
             action:
                 function(i, latLng){
-                    annotation.markers.push(L.circle(latLng, {radius: .0002, color: "#00BCD4"}));
+                    annotation.markers.push(L.circle(latLng, {radius: .0002, color: "#000", weight: '6'}));
                     annotation.markers[i].on('click', function(e){
                         annotation.deleteAnnotation.action(i);
                     })
@@ -1389,7 +1378,7 @@
                 false,
             action:
                 function(i, first_point, second_point){
-                    annotation.markers.push(L.polyline([first_point, second_point], {color: '#00BCD4', weight: '6'}));
+                    annotation.markers.push(L.polyline([first_point, second_point], {color: '#000', weight: '6'}));
                     annotation.markers[i].on('click', function(e){
                         annotation.deleteAnnotation.action(i);
                     });
@@ -1451,9 +1440,7 @@
             action:
                 function(i){
                     if(this.active){
-                        console.log(i);
                         delete annotation.markers[i];
-                        console.log(annotation.markers);
                         annotation.reload();
                         this.disable();
                     }
@@ -1506,6 +1493,7 @@
                         annotation.dateMarker.btn.enable();
                         annotation.lineMarker.btn.enable();
                         annotation.deleteAnnotation.btn.enable();
+                        loadData.dialog.close();
 
                         edit.collapse();
                         collect.collapse();
@@ -1559,11 +1547,11 @@
                                 }
                                 if(e.earlywood){
                                     wood = "e";
-                                    row_color = "green";
+                                    row_color = "#00d2e6";
                                 }
                                 else{
                                     wood = "l";
-                                    row_color = "red";
+                                    row_color = "#00838f";
                                     y++;
                                 }
                                 last_point = e;
@@ -1631,7 +1619,7 @@
 
     //creating the layer controls
     var baseLayer = {
-        "Tree Ring": image
+        "Tree Ring": layer
     };
 
     var overlay = {
@@ -1682,7 +1670,7 @@
         }
         else if(string.length >= 5){
             alert("Value exceeds 4 characters");
-            throw "Error 10";
+            throw "error in toFourCharString(n)";
         }
         else{
             alert("toSixCharString(n) unknown error");
@@ -1711,7 +1699,7 @@
         }
         else if(string.length >= 6){
             alert("Value exceeds 5 characters");
-            throw "Error 11";
+            throw "error in toSixCharString(n)";
         }
         else{
             alert("toSixCharString(n) unknown error");
@@ -1746,7 +1734,7 @@
         }
         else if(string.length >= 8){
             alert("Value exceeds 7 characters");
-            throw "Error 12";
+            throw "error in toEightCharString(n)";
         }
         else{
             alert("toSixCharString(n) unknown error");
@@ -1834,8 +1822,6 @@
                         }
                     }
                     while(e.year > y){
-                        console.log(e.year);
-                        console.log(y);
                         ew_string = ew_string.concat("    -1");
                         lw_string = lw_string.concat("    -1");
                         y++;
@@ -1895,18 +1881,42 @@
         .then(function (blob) {
             saveAs(blob, "sample.zip");
         });
-
-        
-        //this.href = 'data:plain/text,' + sum_string;
     });
-
 
     //saving the data as a JSON
-    $( "#save" ).click(function( event ) {
+    $("#save-local").click(function(event){
         //create anoter JSON and store the current counters for year, earlywood, and index, along with points data
-        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS };
+        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
         this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
     });
+
+    /*function addSaveButton(targetURL){
+        document.getElementById('admin-save').innerHTML = '<a href="#" id="save-cloud"><i class="material-icons md-18">backup</i></a>';
+
+        $("#save-cloud").click(function(event) {
+            dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
+            $.post(targetURL, {sidecarData: dataJSON}, function(data, textStatus, xhr) {
+                alert("you did it!");
+            });
+        });
+    }*/
+
+
+    function loadNewData(newData){
+        POINTS = JSON.parse(JSON.stringify(newDataJSON.POINTS));
+        INDEX = newDataJSON.index;
+        YEAR = newDataJSON.year;
+        EARLYWOOD = newDataJSON.earlywood;
+
+        console.log(POINTS);
+
+        time.collapse();
+        annotation.collapse();
+        edit.collapse();
+        collect.collapse();
+
+        interactiveData.reload();
+    }
 
     //importing data fromt he user
     function loadFile(){
@@ -1922,21 +1932,11 @@
             console.log(e);
             newDataJSON = JSON.parse(e.target.result);
 
-            //assign the data to our current session
-            POINTS = JSON.parse(JSON.stringify(newDataJSON.POINTS));
-            INDEX = newDataJSON.index;
-            YEAR = newDataJSON.year;
-            EARLYWOOD = newDataJSON.earlywood;
-
-            console.log(POINTS);
-
-            time.collapse();
-            annotation.collapse();
-            edit.collapse();
-            collect.collapse();
-
-            interactiveData.reload();
+            loadNewData(newDataJSON);
         }
 
         fr.readAsText(files.item(0));
     }
+};
+
+loadInterface();

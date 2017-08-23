@@ -33,14 +33,9 @@
 </head>
 
 <body>
-<!--
-    <a href="#" id="save" download="data.json">Save Data</a>
-    <input type="file" id="selectFiles"/>
-    <button id="import">Import Data</button>
--->
-
     <div id="button_area">
-        <a href="#" id="save" download="data.json"><i class="material-icons md-18">save</i></a>
+        <a href="#" id="save-local" download="data.json"><i class="material-icons md-18">save</i></a>
+        <div id="admin-save"></div>
         <div class="file-upload">
             <label for="file">
                 <i id="upload_button" class="material-icons md-18">file_upload</i>
@@ -48,13 +43,11 @@
 
              <input type="file" id="file" onchange="loadFile()"/>
         </div>
-        <!--<a href="#" id="download" download="data.txt"><i class="material-icons md-18">file_download</i></a>-->
         <a href="#" id="download"><i class="material-icons md-18">file_download</i></a>
        
     </div>
-    <div id="map_container"><div id="map"></div></div>
-    
+    <div id="map_container"><div id="map"></div></div>    
 
 </body>
 </html>
-<script type="application/javascript" src="main.js"></script>
+<script type="application/javascript" src="main-local.js"></script>
