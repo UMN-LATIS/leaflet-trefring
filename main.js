@@ -965,11 +965,11 @@ var loadInterface = function() {
                 false,
             action:
                 function(i){
-                    var new_points = POINTS
+                    var new_points = POINTS;
                     var second_points = Object.values(POINTS).splice(i+1, INDEX-1);
                     var first_point = true;
                     var k = i+1;
-                    var year_adjusted = POINTS[i+1].year
+                    var year_adjusted = POINTS[i+1].year;
 
                     document.getElementById('map').style.cursor = "pointer";
                     collect.dataPoint.active = true;

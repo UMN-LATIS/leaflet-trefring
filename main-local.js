@@ -152,6 +152,7 @@ var loadInterface = function() {
 
 
     var POINTS = {};    //JSON with all the point data
+    var ANNOTATIONS = {};
 
     var YEAR = 0;           //year
     var EARLYWOOD = true;   //earlywood or latewood
@@ -340,7 +341,7 @@ var loadInterface = function() {
 
                 this.previousLatLng = leafLatLng;
                 this.markerLayer.addLayer(this.markers[i]);    //add the marker to the marker layer
-            },
+            }
     }
 
     var undo = {
@@ -1035,11 +1036,11 @@ var loadInterface = function() {
                 false,
             action:
                 function(i){
-                    var new_points = POINTS
+                    var new_points = POINTS;
                     var second_points = Object.values(POINTS).splice(i+1, INDEX-1);
                     var first_point = true;
                     var k = i+1;
-                    var year_adjusted = POINTS[i+1].year
+                    var year_adjusted = POINTS[i+1].year;
 
                     document.getElementById('map').style.cursor = "pointer";
                     collect.dataPoint.active = true;
@@ -1306,13 +1307,38 @@ var loadInterface = function() {
             new Array(),
         layer:
             L.layerGroup().addTo(map),
+        newAnnotation:
+            function(i){
+                ref = ANNOTATIONS[i];
+                if(ref.dateMarker){
+                    this.markers.push(L.circle(ref.latLng, {radius: .0002, color: "#000", weight: '6'}));
+                    this.markers[i].on('click', function(e){
+                        annotation.deleteAnnotation.action(i);
+                    })
+                    this.layer.addLayer(this.markers[i]);
+                }
+                else if(ref.lineMarker){
+                    this.markers.push(L.polyline([ref.first_point, ref.second_point], {color: '#000', weight: '6'}));
+                    this.markers[i].on('click', function(e){
+                        annotation.deleteAnnotation.action(i);
+                    });
+                    this.layer.addLayer(this.markers[i]);
+                }
+            },
         reload:
             function(){
                 this.layer.clearLayers();
+                this.markers = new Array();
+                this.index = 0;
+                var reduced = Object.values(ANNOTATIONS).filter(e => e != undefined);
+                reduced.map((e, i) => ANNOTATIONS[i] = e);
+
+                Object.values(ANNOTATIONS).map(function(e, i){annotation.newAnnotation(i);annotation.index++});
+                /*this.layer.clearLayers();
 
                 var reduced = annotation.markers.filter(function (e){return e != undefined});
 
-                this.markers.map(function(e){return annotation.layer.addLayer(e)});
+                this.markers.map(function(e){return annotation.layer.addLayer(e)});*/
             },
         collapse:
             function(){
@@ -1328,13 +1354,17 @@ var loadInterface = function() {
         dateMarker: {
             action:
                 function(i, latLng){
+                    ANNOTATIONS[i] = {'dateMarker': true, 'lineMarker': false, 'latLng': latLng};
+                    annotation.newAnnotation(i);
+                },
+                /*function(i, latLng){
                     annotation.markers.push(L.circle(latLng, {radius: .0002, color: "#000", weight: '6'}));
                     annotation.markers[i].on('click', function(e){
                         annotation.deleteAnnotation.action(i);
                     })
                     annotation.layer.addLayer(annotation.markers[i]);
                     this.disable();
-                },
+                },*/
             enable:
                 function(){
                     this.btn.state('active');
@@ -1378,12 +1408,16 @@ var loadInterface = function() {
                 false,
             action:
                 function(i, first_point, second_point){
+                    ANNOTATIONS[i] = {'dateMarker': false, 'lineMarker': true, 'first_point': first_point, 'second_point': second_point};
+                    annotation.newAnnotation(i);
+                },
+                /*function(i, first_point, second_point){
                     annotation.markers.push(L.polyline([first_point, second_point], {color: '#000', weight: '6'}));
                     annotation.markers[i].on('click', function(e){
                         annotation.deleteAnnotation.action(i);
                     });
                     annotation.layer.addLayer(annotation.markers[i]);
-                },
+                },*/
             enable:
                 function(){
                     this.btn.state('active');
@@ -1440,7 +1474,7 @@ var loadInterface = function() {
             action:
                 function(i){
                     if(this.active){
-                        delete annotation.markers[i];
+                        delete ANNOTATIONS[i]
                         annotation.reload();
                         this.disable();
                     }
@@ -1886,7 +1920,8 @@ var loadInterface = function() {
     //saving the data as a JSON
     $("#save-local").click(function(event){
         //create anoter JSON and store the current counters for year, earlywood, and index, along with points data
-        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
+        annotations = annotation.markers;
+        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS, 'annotations': annotations};
         this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
     });
 
@@ -1903,10 +1938,11 @@ var loadInterface = function() {
 
 
     function loadNewData(newData){
-        POINTS = JSON.parse(JSON.stringify(newDataJSON.POINTS));
-        INDEX = newDataJSON.index;
-        YEAR = newDataJSON.year;
-        EARLYWOOD = newDataJSON.earlywood;
+        POINTS = JSON.parse(JSON.stringify(newData.POINTS));
+        INDEX = newData.index;
+        YEAR = newData.year;
+        EARLYWOOD = newData.earlywood;
+        annotation.markers = new Array(newData.annotations);
 
         console.log(POINTS);
 
