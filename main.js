@@ -1,5 +1,8 @@
 
-var loadInterface = function() {    
+var addSaveButton = null;
+var loadNewData = null;
+var loadFile = null;
+var loadInterface = function(basePath) {    
 
     map.on('movestart', function(e){
         document.getElementById('map').style.cursor = 'move';
@@ -64,19 +67,19 @@ var loadInterface = function() {
 
     //creating colored icons for points
     light_blue_icon = L.icon({
-        iconUrl: 'images/light_blue_icon.png',
+        iconUrl: basePath + 'images/light_blue_icon.png',
         iconSize:     [32, 32] // size of the icon
     });
     dark_blue_icon = L.icon({
-        iconUrl: 'images/dark_blue_icon.png',
+        iconUrl: basePath +'images/dark_blue_icon.png',
         iconSize:     [32, 32] // size of the icon
     });
     white_icon = L.icon({
-        iconUrl: 'images/white_icon.png',
+        iconUrl: basePath +'images/white_icon.png',
         iconSize:     [32, 32] // size of the icon
     });
     grey_icon = L.icon({
-        iconUrl: 'images/grey_icon.png',
+        iconUrl: basePath +'images/grey_icon.png',
         iconSize:     [32, 32] // size of the icon
     });
 
@@ -1820,24 +1823,23 @@ var loadInterface = function() {
         this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
     });
 
-    function addSaveButton(targetURL){
+    addSaveButton = function(targetURL){
         document.getElementById('admin-save').innerHTML = '<a href="#" id="save-cloud"><i class="material-icons md-18">backup</i></a>';
 
         $("#save-cloud").click(function(event) {
             dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
-            $.post(targetURL, {sidecarData: dataJSON}, function(data, textStatus, xhr) {
-                alert("you did it!");
+            $.post(targetURL, {sidecarContent: JSON.stringify(dataJSON)}, function(data, textStatus, xhr) {
+                alert("Saved Successfully");
             });
         });
     }
 
-    function loadNewData(newData){
-        POINTS = JSON.parse(JSON.stringify(newDataJSON.POINTS));
+    loadNewData = function(newDataJSON){
+        POINTS = JSON.parse(JSON.stringify(newDataJSON.points));
         INDEX = newDataJSON.index;
         YEAR = newDataJSON.year;
         EARLYWOOD = newDataJSON.earlywood;
 
-        console.log(POINTS);
 
         time.collapse();
         annotation.collapse();
@@ -1848,7 +1850,7 @@ var loadInterface = function() {
     }
 
     //importing data fromt he user
-    function loadFile(){
+    loadFile = function(){
         var files = document.getElementById('file').files;
         console.log(files);
         if (files.length <= 0) {
