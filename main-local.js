@@ -683,7 +683,7 @@ var loadInterface = function(basePath) {
                     var self = this;
                     $(map._container).click(function startLine(e){
                         document.getElementById('map').style.cursor = "pointer";
-                        
+
                         var latLng = map.mouseEventToLatLng(e);
 
                         undo.push();
@@ -1914,7 +1914,7 @@ var loadInterface = function(basePath) {
         document.getElementById('admin-save').innerHTML = '<a href="#" id="save-cloud"><i class="material-icons md-18">backup</i></a>';
 
         $("#save-cloud").click(function(event) {
-            dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
+            dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS, 'annotations': ANNOTATIONS};
             $.post(targetURL, {sidecarContent: JSON.stringify(dataJSON)}, function(data, textStatus, xhr) {
                 alert("Saved Successfully");
             });
