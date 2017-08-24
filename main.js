@@ -1,8 +1,7 @@
-
 var addSaveButton = null;
 var loadNewData = null;
 var loadFile = null;
-var loadInterface = function(basePath) {    
+var loadInterface = function(basePath) { 
 
     map.on('movestart', function(e){
         document.getElementById('map').style.cursor = 'move';
@@ -20,7 +19,7 @@ var loadInterface = function(basePath) {
 
 
     //map scrolling
-    var mapSize = map.getSize();    //size of the map used for map scrolling
+    /*var mapSize = map.getSize();    //size of the map used for map scrolling
     var mousePos = 0;               //an initial mouse position
 
     map.on('mousemove', function(e){
@@ -49,10 +48,9 @@ var loadInterface = function(basePath) {
             //map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
             map.panBy([0, 40]);
         }
-    })
+    })*/
 
-
-    //coordinate information in bottom left hand side of map
+    /*//coordinate information in bottom left hand side of map
     var coordinatesDiv = document.createElement("div");
     coordinatesDiv.innerHTML = "<div class='leaflet-control-attribution leaflet-control'><p id='leaflet-coordinates-tag'></p></div>";
     document.getElementsByClassName("leaflet-bottom leaflet-left")[0].appendChild(coordinatesDiv);
@@ -62,29 +60,32 @@ var loadInterface = function(basePath) {
         var x = Math.floor(coords.x); //not really x and y coordinates, they're arbitrary and based on rounding the latitude and longitude (because this is mapping software)
         var y = Math.floor(coords.y);
         document.getElementById("leaflet-coordinates-tag").innerHTML = "X: " + x + "   Y: " + y;
-    });
+    });*/
 
 
     //creating colored icons for points
-    light_blue_icon = L.icon({
-        iconUrl: basePath + 'images/light_blue_icon.png',
-        iconSize:     [32, 32] // size of the icon
-    });
-    dark_blue_icon = L.icon({
-        iconUrl: basePath +'images/dark_blue_icon.png',
-        iconSize:     [32, 32] // size of the icon
-    });
-    white_icon = L.icon({
-        iconUrl: basePath +'images/white_icon.png',
-        iconSize:     [32, 32] // size of the icon
-    });
-    grey_icon = L.icon({
-        iconUrl: basePath +'images/grey_icon.png',
-        iconSize:     [32, 32] // size of the icon
-    });
+    var markerIcon = {
+        light_blue: L.icon({
+            iconUrl: basePath + 'images/light_blue_icon.png',
+            iconSize: [32, 32] // size of the icon
+        }),
+        dark_blue: L.icon({
+            iconUrl: basePath + 'images/dark_blue_icon.png',
+            iconSize: [32, 32] // size of the icon
+        }),
+        white: L.icon({
+            iconUrl: basePath + 'images/white_icon.png',
+            iconSize: [32, 32] // size of the icon
+        }),
+        grey: L.icon({
+            iconUrl: basePath + 'images/grey_icon.png',
+            iconSize: [32, 32] // size of the icon
+        })
+    };
 
 
     var POINTS = {};    //JSON with all the point data
+    var ANNOTATIONS = {};
 
     var YEAR = 0;           //year
     var EARLYWOOD = true;   //earlywood or latewood
@@ -178,18 +179,18 @@ var loadInterface = function(basePath) {
 
                 //check if index is the start point
                 if(p[i].start){
-                    var marker = L.marker(leafLatLng, {icon: white_icon, draggable: true, title: "Start Point"});
+                    var marker = L.marker(leafLatLng, {icon: markerIcon.white, draggable: true, title: "Start Point"});
                 }
                 //check if point is earlywood
                 else if(p[i].break){
-                    var marker = L.marker(leafLatLng, {icon: white_icon, draggable: true, title: "Break Point"})
+                    var marker = L.marker(leafLatLng, {icon: markerIcon.white, draggable: true, title: "Break Point"})
                 }
                 else if(p[i].earlywood){
-                    var marker = L.marker(leafLatLng, {icon: light_blue_icon, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
+                    var marker = L.marker(leafLatLng, {icon: markerIcon.light_blue, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
                 }
                 //otherwise it's latewood
                 else{
-                    var marker = L.marker(leafLatLng, {icon: dark_blue_icon, draggable: true, title: "Year " + p[i].year + ", latewood"});
+                    var marker = L.marker(leafLatLng, {icon: markerIcon.dark_blue, draggable: true, title: "Year " + p[i].year + ", latewood"});
                 }
 
                 if(p[i-1] != undefined && p[i-1].skip){
@@ -199,7 +200,7 @@ var loadInterface = function(basePath) {
                     else{
                         average = L.latLng([leafLatLng.lat, (leafLatLng.lng - .001)]);
                     }
-                    skip_marker = L.marker(average, {icon: grey_icon, draggable: true, title: "Year " + p[i-1].year + ", None"});
+                    skip_marker = L.marker(average, {icon: markerIcon.grey_icon, draggable: true, title: "Year " + p[i-1].year + ", None"});
                     skip_marker.on('click', function(e){
                         if(edit.deletePoint.active){
                             edit.deletePoint.action(i-1);
@@ -622,6 +623,8 @@ var loadInterface = function(basePath) {
 
                     var self = this;
                     $(map._container).click(function startLine(e){
+                        document.getElementById('map').style.cursor = "pointer";
+                        
                         var latLng = map.mouseEventToLatLng(e);
 
                         undo.push();
@@ -1239,13 +1242,34 @@ var loadInterface = function(basePath) {
             new Array(),
         layer:
             L.layerGroup().addTo(map),
+        newAnnotation:
+            function(i){
+                ref = ANNOTATIONS[i];
+                if(ref.dateMarker){
+                    this.markers.push(L.circle(ref.latLng, {radius: .0002, color: "#000", weight: '6'}));
+                    this.markers[i].on('click', function(e){
+                        annotation.deleteAnnotation.action(i);
+                    })
+                    this.layer.addLayer(this.markers[i]);
+                }
+                else if(ref.lineMarker){
+                    this.markers.push(L.polyline([ref.first_point, ref.second_point], {color: '#000', weight: '6'}));
+                    this.markers[i].on('click', function(e){
+                        annotation.deleteAnnotation.action(i);
+                    });
+                    this.layer.addLayer(this.markers[i]);
+                }
+            },
         reload:
             function(){
                 this.layer.clearLayers();
+                this.markers = new Array();
+                this.index = 0;
+                var reduced = Object.values(ANNOTATIONS).filter(e => e != undefined);
+                ANNOTATIONS = {};
+                reduced.map((e, i) => ANNOTATIONS[i] = e);
 
-                var reduced = annotation.markers.filter(function (e){return e != undefined});
-
-                this.markers.map(function(e){return annotation.layer.addLayer(e)});
+                Object.values(ANNOTATIONS).map(function(e, i){annotation.newAnnotation(i);annotation.index++});
             },
         collapse:
             function(){
@@ -1261,12 +1285,8 @@ var loadInterface = function(basePath) {
         dateMarker: {
             action:
                 function(i, latLng){
-                    annotation.markers.push(L.circle(latLng, {radius: .0002, color: "#000", weight: '6'}));
-                    annotation.markers[i].on('click', function(e){
-                        annotation.deleteAnnotation.action(i);
-                    })
-                    annotation.layer.addLayer(annotation.markers[i]);
-                    this.disable();
+                    ANNOTATIONS[i] = {'dateMarker': true, 'lineMarker': false, 'latLng': latLng};
+                    annotation.newAnnotation(i);
                 },
             enable:
                 function(){
@@ -1311,11 +1331,8 @@ var loadInterface = function(basePath) {
                 false,
             action:
                 function(i, first_point, second_point){
-                    annotation.markers.push(L.polyline([first_point, second_point], {color: '#000', weight: '6'}));
-                    annotation.markers[i].on('click', function(e){
-                        annotation.deleteAnnotation.action(i);
-                    });
-                    annotation.layer.addLayer(annotation.markers[i]);
+                    ANNOTATIONS[i] = {'dateMarker': false, 'lineMarker': true, 'first_point': first_point, 'second_point': second_point};
+                    annotation.newAnnotation(i);
                 },
             enable:
                 function(){
@@ -1373,7 +1390,7 @@ var loadInterface = function(basePath) {
             action:
                 function(i){
                     if(this.active){
-                        delete annotation.markers[i];
+                        delete ANNOTATIONS[i]
                         annotation.reload();
                         this.disable();
                     }
@@ -1512,29 +1529,23 @@ var loadInterface = function(basePath) {
             })
     }
 
-
-
     //group the buttons into a toolbar
     var undoRedoBar = L.easyBar([undo.btn, redo.btn]);
-    undoRedoBar.addTo(map);
     undo.btn.disable();
     redo.btn.disable();
 
     var timeBar = L.easyBar([time.btn, time.setYearFromStart.btn, time.setYearFromEnd.btn, time.shift.forwardBtn, time.shift.backwardBtn]);
-    timeBar.addTo(map);
     time.setYearFromStart.btn.disable();
     time.setYearFromEnd.btn.disable();
     time.shift.forwardBtn.disable();
     time.shift.backwardBtn.disable();
 
     var collectBar = L.easyBar([collect.btn, collect.dataPoint.btn, collect.zeroGrowth.btn, collect.breakPoint.btn]);
-    collectBar.addTo(map);
     collect.dataPoint.btn.disable();
     collect.zeroGrowth.btn.disable();
     collect.breakPoint.btn.disable();
 
     var editBar = L.easyBar([edit.btn, edit.deletePoint.btn, edit.cut.btn, edit.addData.btn, edit.addZeroGrowth.btn, edit.addBreak.btn]);
-    editBar.addTo(map);
     edit.deletePoint.btn.disable();
     edit.cut.btn.disable();
     edit.addData.btn.disable();
@@ -1542,13 +1553,20 @@ var loadInterface = function(basePath) {
     edit.addBreak.btn.disable();
 
     var annotationBar = L.easyBar([annotation.btn, annotation.dateMarker.btn, annotation.lineMarker.btn, annotation.deleteAnnotation.btn]);
-    annotationBar.addTo(map);
     annotation.dateMarker.btn.disable();
     annotation.lineMarker.btn.disable();
     annotation.deleteAnnotation.btn.disable();
 
-    loadData.btn.addTo(map);
 
+    var miniMap = new L.Control.MiniMap(miniLayer, {
+        width: 500,
+        height: 25,
+        //position: "topright", //in case you would like to change position of the minimap
+        toggleDisplay: true,
+        zoomAnimation: false,
+        zoomLevelOffset: -3,
+        zoomLevelFixed: -3
+    });
 
     //creating the layer controls
     var baseLayer = {
@@ -1561,9 +1579,18 @@ var loadInterface = function(basePath) {
         "Lines": interactiveData.lineLayer
     };
 
-    L.control.layers(baseLayer, overlay).addTo(map);    //adding layer controls to the map
 
+    //add all UI elements to map
+    miniMap.addTo(map);
 
+    undoRedoBar.addTo(map);
+    timeBar.addTo(map);
+    collectBar.addTo(map);
+    editBar.addTo(map);
+    annotationBar.addTo(map);
+    loadData.btn.addTo(map);
+
+    L.control.layers(baseLayer, overlay).addTo(map);
 
 
     //doc_keyUp(e) takes a keyboard event, for keyboard shortcuts
@@ -1819,7 +1846,7 @@ var loadInterface = function(basePath) {
     //saving the data as a JSON
     $("#save-local").click(function(event){
         //create anoter JSON and store the current counters for year, earlywood, and index, along with points data
-        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS};
+        dataJSON = {'year': YEAR, 'earlywood': EARLYWOOD, 'index': INDEX, 'points': POINTS, 'annotations': ANNOTATIONS};
         this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
     });
 
@@ -1834,12 +1861,12 @@ var loadInterface = function(basePath) {
         });
     }
 
-    loadNewData = function(newDataJSON){
-        POINTS = JSON.parse(JSON.stringify(newDataJSON.points));
-        INDEX = newDataJSON.index;
-        YEAR = newDataJSON.year;
-        EARLYWOOD = newDataJSON.earlywood;
-
+    loadNewData = function(newData){
+        INDEX = newData.index;
+        YEAR = newData.year;
+        EARLYWOOD = newData.earlywood;
+        POINTS = newData.points;
+        ANNOTATIONS = newData.annotations;
 
         time.collapse();
         annotation.collapse();
@@ -1847,6 +1874,7 @@ var loadInterface = function(basePath) {
         collect.collapse();
 
         interactiveData.reload();
+        annotation.reload();
     }
 
     //importing data fromt he user
