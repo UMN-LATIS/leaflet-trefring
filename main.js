@@ -1,6 +1,9 @@
 var addSaveButton = null;
 var loadNewData = null;
 var loadFile = null;
+var getMetadata = function(metadata){
+    console.log(metadata);
+};
 var loadInterface = function(basePath) { 
 
     map.on('movestart', function(e){
