@@ -41,13 +41,73 @@
                 <i id="upload_button" class="material-icons md-18">file_upload</i>
             </label>
 
-            <input type="file" id="file" onchange="loadFile()"/>
+            <input type="file" id="file" onchange="treering.loadFile()"/>
         </div>
-        <a href="#" id="download"><i class="material-icons md-18">file_download</i></a>
-       
     </div>
     <div id="map_container"><div id="map"></div></div>    
 
 </body>
 </html>
-<script type="application/javascript" src="main-local.js"></script>
+<script type="application/javascript" src="treeringAsset.js"></script>
+
+<script>
+    var src;
+    var map = L.map('map', {
+        fullscreenControl: true,
+        zoomSnap: 0,
+        crs: L.CRS.Simple,
+        drawControl: true,
+        layers: [],
+        doubleClickZoom: false,
+        zoomControl: false
+    }).setView([0, 0], 0);
+
+    var layer = L.tileLayer.elevator(function(coords, tile, done) {
+        var error;
+        var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+        tile.onload = (function(done, error, tile) {
+            return function() {
+                done(error, tile);
+            }
+        })(done, error, tile);
+        tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+        //tile.src = params.Key;
+        src = tile.src;
+        return tile.src;
+    },
+    {
+        width: 231782,
+        height: 4042,
+        tileSize :254,
+        maxZoom: 19 - 1,
+        overlap: 1,
+        pixelsPerMillimeter: 468, //(NEW)
+        lineColor: 'blue'
+    }).addTo(map);
+
+    //minimap
+    var miniLayer = new L.tileLayer.elevator(function(coords, tile, done) {
+        var error;
+        var params = {Bucket: 'elevator-assets', Key: "testasset5/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+        tile.onload = (function(done, error, tile) {
+            return function() {
+                done(error, tile)
+            }
+        })(done, error, tile);
+        tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+        //tile.src = params.Key;
+        src = tile.src;
+        return tile.src;
+    },
+    {
+        width: 231782,
+        height: 4042,
+        tileSize: 254,
+        maxZoom: 13,
+        overlap: 1,
+    });
+
+    //basePath, saveURL, initialData, assetName, innerYear
+    var treering = new leafletTreering(map, "", "", {}, "ABC00X", 1234);
+    treering.loadInterface();
+</script>
