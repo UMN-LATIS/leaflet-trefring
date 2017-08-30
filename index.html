@@ -107,7 +107,7 @@
         overlap: 1,
     });
 
-    //map, basePath, saveURL, initialData, assetName, datingInner
-    var treering = new leafletTreering(map, "", "", {}, "ABC00X", 1234);
+    //map, basePath, saveURL, {initialData: json, assetName: string, datingInner: int, hasLatewood: bool}
+    var treering = new leafletTreering(map, "", "", {'initialData': {}, 'assetName': "ABC00X", 'datingInner': 1234, 'hasLatewood': false});
     treering.loadInterface();
 </script>

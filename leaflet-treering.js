@@ -1,14 +1,30 @@
 
-var leafletTreering = function(map, basePath, saveURL, initialData, assetName, datingInner){
-    this.map = map;
-    this.basePath = basePath;
-    this.saveURL = saveURL;
-    this.initialData = initialData;
-    this.assetName = assetName;
-    this.datingInner = datingInner;
+var leafletTreering = function(map, basePath, saveURL, options){
+    var Lt = this;
+
+    Lt.map = map;
+    Lt.basePath = basePath;
+    Lt.saveURL = saveURL;
+
+    //default
+    Lt.initialData = {};
+    Lt.assetName = "N/A";
+    Lt.datingInner = 0;
+    Lt.hasLatewood = true;
+
+    //options
+    if(options.initialData != undefined)
+        Lt.initialData = options.initialData;
+    if(options.assetName != undefined)
+        Lt.assetName = options.assetName;
+    if(options.datingInner != undefined)
+        Lt.datingInner = options.datingInner; 
+    if(options.hasLatewood != undefined)
+        Lt.hasLatewood = options.hasLatewood;
+    
 
     //after a leafletTreering is defined, loadInterface will be used to load all buttons and any initial data
-    this.loadInterface = function(basePath){
+    Lt.loadInterface = function(){
 
         //set up the cursor
         map.on('movestart', function(e){
@@ -47,23 +63,23 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
             this.href = 'data:plain/text,' + JSON.stringify(dataJSON);
         });
 
-        loadData(initialData);
+        loadData(Lt.initialData);
     };
 
     //add an html button with id #save-cloud for saving data to a target url
-    this.addSaveButton = function(){
+    Lt.addSaveButton = function(){
         document.getElementById('admin-save').innerHTML = '<a href="#" id="save-cloud"><i class="material-icons md-18">backup</i></a>';
 
         $("#save-cloud").click(function(event) {
             dataJSON = {'year': year, 'earlywood': earlywood, 'index': index, 'points': points, 'annotations': annotations};
-            $.post(saveURL, {sidecarContent: JSON.stringify(dataJSON)}, function(data, textStatus, xhr) {
+            $.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}, function(data, textStatus, xhr) {
                 alert("Saved Successfully");
             });
         });
     };
 
     //load data into asset through a file with html id #file
-    this.loadFile = function(){
+    Lt.loadFile = function(){
         var files = document.getElementById('file').files;
         console.log(files);
         if (files.length <= 0) {
@@ -103,26 +119,26 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
 
     var points = {};            //object with all the point data
     var annotations = {};       //object with all annotations data
-    var year = this.datingInner;  //year
+    var year = Lt.datingInner;  //year
     var earlywood = true;       //earlywood or latewood
     var index = 0;              //points index
 
     //creating colored icons for points
     var markerIcon = {
         light_blue: L.icon({
-            iconUrl: basePath + 'images/light_blue_icon.png',
+            iconUrl: Lt.basePath + 'images/light_blue_icon.png',
             iconSize: [32, 32] // size of the icon
         }),
         dark_blue: L.icon({
-            iconUrl: basePath + 'images/dark_blue_icon.png',
+            iconUrl: Lt.basePath + 'images/dark_blue_icon.png',
             iconSize: [32, 32] // size of the icon
         }),
         white: L.icon({
-            iconUrl: basePath + 'images/white_icon.png',
+            iconUrl: Lt.basePath + 'images/white_icon.png',
             iconSize: [32, 32] // size of the icon
         }),
         grey: L.icon({
-            iconUrl: basePath + 'images/grey_icon.png',
+            iconUrl: Lt.basePath + 'images/grey_icon.png',
             iconSize: [32, 32] // size of the icon
         })
     };
@@ -225,12 +241,17 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
                     var marker = L.marker(leafLatLng, {icon: markerIcon.white, draggable: true, title: "Break Point"})
                 }
                 //check if point is earlywood
-                else if(p[i].earlywood){
-                    var marker = L.marker(leafLatLng, {icon: markerIcon.light_blue, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
+                else if(Lt.hasLatewood){
+                    if(p[i].earlywood){
+                        var marker = L.marker(leafLatLng, {icon: markerIcon.light_blue, draggable: true, title: "Year " + p[i].year + ", earlywood"});         
+                    }
+                    //otherwise it's latewood
+                    else{
+                        var marker = L.marker(leafLatLng, {icon: markerIcon.dark_blue, draggable: true, title: "Year " + p[i].year + ", latewood"});
+                    }
                 }
-                //otherwise it's latewood
                 else{
-                    var marker = L.marker(leafLatLng, {icon: markerIcon.dark_blue, draggable: true, title: "Year " + p[i].year + ", latewood"});
+                    var marker = L.marker(leafLatLng, {icon: markerIcon.light_blue, draggable: true, title: "Year " + p[i].year}); 
                 }
 
                 //deal with previous skip point if one exists
@@ -287,7 +308,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
                         }
                     }
                     if(edit.addData.active){
-                        if(p[i].earlywood){
+                        if(p[i].earlywood && Lt.hasLatewood){
                             alert("must select latewood or start point")
                         }
                         else{
@@ -683,12 +704,18 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
                         interactiveMouse.hbarFrom(latLng); //create the next mouseline from the new latlng
 
                         //avoid incrementing earlywood for start point
+                        
                         if(!points[index].start){
-                            if(earlywood){
-                                earlywood = false;
+                            if(Lt.hasLatewood){
+                                if(earlywood){
+                                    earlywood = false;
+                                }
+                                else{
+                                    earlywood = true;
+                                    year++;
+                                }
                             }
                             else{
-                                earlywood = true;
                                 year++;
                             }
                         }
@@ -889,27 +916,39 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
                             points[i] = e;
                             i++
                         });
-                        index = index - 1;
+                        index--;
                         delete points[index];
                     }
                     else{
-                        if(points[i].earlywood && points[i+1].earlywood != undefined){
-                            j = i+1;
+                        if(Lt.hasLatewood){
+                            if(points[i].earlywood && points[i+1].earlywood != undefined){
+                                j = i+1;
+                            }
+                            else if(points[i-1].earlywood != undefined){
+                                j = i;
+                                i--;
+                            }
+                            //get the second half of the data
+                            second_points = Object.values(points).splice(j+1, index-1);
+                            second_points.map(function(e){
+                                e.year--;
+                                points[i] = e;
+                                i++;
+                            })
+                            index = i-1;
+                            delete points[i];
+                            delete points[i+1];
                         }
-                        else if(points[i-1].earlywood != undefined){
-                            j = i;
-                            i--;
+                        else{
+                            second_points = Object.values(points).splice(i+1, index-1);
+                            second_points.map(function(e){
+                                e.year--;
+                                points[i] = e;
+                                i++;
+                            })
+                            index--;
+                            delete points[index];
                         }
-                        //get the second half of the data
-                        second_points = Object.values(points).splice(j+1, index-1);
-                        second_points.map(function(e){
-                            e.year--;
-                            points[i] = e;
-                            i++;
-                        })
-                        index = i-1;
-                        delete points[i];
-                        delete points[i+1];
                     }
 
                     visualAsset.reload();
@@ -1046,7 +1085,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
 
                         interactiveMouse.hbarFrom(latLng);
 
-                        if(first_point){
+                        if(first_point && Lt.hasLatewood){
                             new_points[k] = {'start': false, 'skip': false, 'break': false, 'year': year_adjusted, 'earlywood': true, 'latLng':latLng};
                             visualAsset.newLatLng(new_points, k, latLng);
                             k++;
@@ -1701,141 +1740,197 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
             action:
                 function(){
                     if(points != undefined && points[1] != undefined){
-                        var sum_string = "";
-                        var ew_string = "";
-                        var lw_string = "";
+                        if(Lt.hasLatewood){
 
-                        y = points[1].year;
-                        sum_points = Object.values(points).filter(function(e){
-                            if(e.earlywood != undefined){
-                                return !(e.earlywood);
-                            }
-                            else{
-                                return true;
-                            }
-                        });
+                            var sum_string = "";
+                            var ew_string = "";
+                            var lw_string = "";
 
-                        if(sum_points[1].year%10 > 0){
-                            sum_string = sum_string.concat(data.download.toEightCharString(assetName) + data.download.toFourCharString(sum_points[1].year));
-                        }
-                        sum_points.map(function(e, i, a){
-                            if(!e.start){
-                                if(e.year%10 == 0){
-                                    sum_string = sum_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                }
-                                while(e.year > y){
-                                    sum_string = sum_string.concat("    -1");
-                                    y++;
-                                    if(y%10 == 0){
-                                        sum_string = sum_string.concat("\r\n" + data.download.toFourCharString(e.year));
-                                    }
-                                }
-                                if(e.skip){
-                                    sum_string = sum_string.concat("     0");
-                                    y++;
+                            y = points[1].year;
+                            sum_points = Object.values(points).filter(function(e){
+                                if(e.earlywood != undefined){
+                                    return !(e.earlywood);
                                 }
                                 else{
-                                    length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
-                                    if(length == 9999){
-                                        length = 9998;
-                                    }
-                                    if(length == 999){
-                                        length = 998;
-                                    }
-
-                                    length_string = data.download.toSixCharString(length); 
-
-                                    sum_string = sum_string.concat(length_string);
-                                    last_latLng = e.latLng;
-                                    y++;
+                                    return true;
                                 }
+                            });
+
+                            if(sum_points[1].year%10 > 0){
+                                sum_string = sum_string.concat(data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(sum_points[1].year));
                             }
-                            else{
-                                last_latLng = e.latLng;
-                            }
-                        });
-                        sum_string = sum_string.concat(" -9999");
-
-                        y = points[1].year;
-
-                        if(points[1].year%10 > 0){
-                            ew_string = ew_string.concat(data.download.toEightCharString(assetName) + data.download.toFourCharString(points[1].year));
-                            lw_string = lw_string.concat(data.download.toEightCharString(assetName) + data.download.toFourCharString(points[1].year));
-                        }
-
-                        Object.values(points).map(function(e, i, a){
-                            if(!e.start){
-                                if(e.year%10 == 0){
+                            sum_points.map(function(e, i, a){
+                                if(!e.start){
+                                    if(e.year%10 == 0){
+                                        sum_string = sum_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                    }
+                                    while(e.year > y){
+                                        sum_string = sum_string.concat("    -1");
+                                        y++;
+                                        if(y%10 == 0){
+                                            sum_string = sum_string.concat("\r\n" + data.download.toFourCharString(e.year));
+                                        }
+                                    }
                                     if(e.skip){
-                                        ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                        lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                    }
-                                    else if(e.earlywood){
-                                        ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
+                                        sum_string = sum_string.concat("     0");
+                                        y++;
                                     }
                                     else{
-                                        lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                    }
-                                }
-                                while(e.year > y){
-                                    ew_string = ew_string.concat("    -1");
-                                    lw_string = lw_string.concat("    -1");
-                                    y++;
-                                    if(y%10 == 0){
-                                        ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                        lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(assetName) + data.download.toFourCharString(e.year));
-                                    }
-                                }
-                                if(e.skip){
-                                    if(e.earlywood){
-                                        ew_string = ew_string.concat("     0");
-                                    }
-                                    else{
-                                        lw_string = lw_string.concat("     0");
+                                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
+                                        if(length == 9999){
+                                            length = 9998;
+                                        }
+                                        if(length == 999){
+                                            length = 998;
+                                        }
+
+                                        length_string = data.download.toSixCharString(length); 
+
+                                        sum_string = sum_string.concat(length_string);
+                                        last_latLng = e.latLng;
                                         y++;
                                     }
                                 }
                                 else{
-                                    length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
-                                    if(length == 9999){
-                                        length = 9998;
-                                    }
-                                    if(length == 999){
-                                        length = 998;
-                                    }
+                                    last_latLng = e.latLng;
+                                }
+                            });
+                            sum_string = sum_string.concat(" -9999");
 
-                                    length_string = data.download.toSixCharString(length); 
+                            y = points[1].year;
 
-                                    if(e.earlywood){
-                                        ew_string = ew_string.concat(length_string);
-                                        last_latLng = e.latLng;
+                            if(points[1].year%10 > 0){
+                                ew_string = ew_string.concat(data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(points[1].year));
+                                lw_string = lw_string.concat(data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(points[1].year));
+                            }
+
+                            Object.values(points).map(function(e, i, a){
+                                if(!e.start){
+                                    if(e.year%10 == 0){
+                                        if(e.skip){
+                                            ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                            lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                        }
+                                        else if(e.earlywood){
+                                            ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                        }
+                                        else{
+                                            lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                        }
+                                    }
+                                    while(e.year > y){
+                                        ew_string = ew_string.concat("    -1");
+                                        lw_string = lw_string.concat("    -1");
+                                        y++;
+                                        if(y%10 == 0){
+                                            ew_string = ew_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                            lw_string = lw_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                        }
+                                    }
+                                    if(e.skip){
+                                        if(e.earlywood){
+                                            ew_string = ew_string.concat("     0");
+                                        }
+                                        else{
+                                            lw_string = lw_string.concat("     0");
+                                            y++;
+                                        }
                                     }
                                     else{
-                                        lw_string = lw_string.concat(length_string);
+                                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
+                                        if(length == 9999){
+                                            length = 9998;
+                                        }
+                                        if(length == 999){
+                                            length = 998;
+                                        }
+
+                                        length_string = data.download.toSixCharString(length); 
+
+                                        if(e.earlywood){
+                                            ew_string = ew_string.concat(length_string);
+                                            last_latLng = e.latLng;
+                                        }
+                                        else{
+                                            lw_string = lw_string.concat(length_string);
+                                            last_latLng = e.latLng;
+                                            y++;
+                                        }
+                                    }
+                                }
+                                else{
+                                    last_latLng = e.latLng;
+                                }
+                            });
+                            ew_string = ew_string.concat(" -9999");
+                            lw_string = lw_string.concat(" -9999");
+                        
+                            console.log(sum_string);
+                            console.log(ew_string);
+                            console.log(lw_string);
+
+                            var zip = new JSZip();
+                            zip.file((Lt.assetName+'.raw'), sum_string);
+                            zip.file((Lt.assetName+'.lwr'), lw_string);
+                            zip.file((Lt.assetName+'.ewr'), ew_string);
+
+                        }
+                        else{
+                            var sum_string = "";
+
+                            y = points[1].year;
+                            sum_points = Object.values(points);
+
+                            if(sum_points[1].year%10 > 0){
+                                sum_string = sum_string.concat(data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(sum_points[1].year));
+                            }
+                            sum_points.map(function(e, i, a){
+                                if(!e.start){
+                                    if(e.year%10 == 0){
+                                        sum_string = sum_string.concat("\r\n" + data.download.toEightCharString(Lt.assetName) + data.download.toFourCharString(e.year));
+                                    }
+                                    while(e.year > y){
+                                        sum_string = sum_string.concat("    -1");
+                                        y++;
+                                        if(y%10 == 0){
+                                            sum_string = sum_string.concat("\r\n" + data.download.toFourCharString(e.year));
+                                        }
+                                    }
+                                    if(e.skip){
+                                        sum_string = sum_string.concat("     0");
+                                        y++;
+                                    }
+                                    else{
+                                        length = Math.round(map.distance(last_latLng, e.latLng)*1000000)
+                                        if(length == 9999){
+                                            length = 9998;
+                                        }
+                                        if(length == 999){
+                                            length = 998;
+                                        }
+
+                                        length_string = data.download.toSixCharString(length); 
+
+                                        sum_string = sum_string.concat(length_string);
                                         last_latLng = e.latLng;
                                         y++;
                                     }
                                 }
-                            }
-                            else{
-                                last_latLng = e.latLng;
-                            }
-                        });
-                        ew_string = ew_string.concat(" -9999");
-                        lw_string = lw_string.concat(" -9999");
-                    
-                        console.log(sum_string);
-                        console.log(ew_string);
-                        console.log(lw_string);
+                                else{
+                                    last_latLng = e.latLng;
+                                }
+                            });
+                            sum_string = sum_string.concat(" -9999");
 
-                        var zip = new JSZip();
-                        zip.file((assetName+'.raw'), sum_string);
-                        zip.file((assetName+'.lwr'), lw_string);
-                        zip.file((assetName+'.ewr'), ew_string);
+                            console.log(sum_string);
+
+                            var zip = new JSZip();
+                            zip.file((Lt.assetName+'.raw'), sum_string);
+                        }
 
                         zip.generateAsync({type:"blob"})
                         .then(function (blob) {
-                            saveAs(blob, (assetName+'.zip'));
+                            saveAs(blob, (Lt.assetName+'.zip'));
                         });
                     }
                     else{
@@ -1888,18 +1983,25 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
                                 if(length == 9.999){
                                     length = 9.998;
                                 }
-                                if(e.earlywood){
-                                    wood = "e";
-                                    row_color = "#00d2e6";
+                                if(Lt.hasLatewood){
+                                    if(e.earlywood){
+                                        wood = "e";
+                                        row_color = "#00d2e6";
+                                    }
+                                    else{
+                                        wood = "l";
+                                        row_color = "#00838f";
+                                        y++;
+                                    }
+                                    string = string.concat("<tr style='color:" + row_color + ";'>");
+                                    string = string.concat("<td>"+ e.year + wood + "</td><td>" + length + " mm</td></tr>");
                                 }
                                 else{
-                                    wood = "l";
-                                    row_color = "#00838f";
                                     y++;
+                                    string = string.concat("<tr style='color: #00d2e6;'>");
+                                    string = string.concat("<td>"+ e.year +"</td><td>" + length + " mm</td></tr>");
                                 }
                                 last_point = e;
-                                string = string.concat("<tr style='color:" + row_color + ";'>");
-                                string = string.concat("<td>"+ e.year + wood + "</td><td>" + length + " mm</td></tr>");
                             }
                         }
                     });
@@ -1998,7 +2100,8 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, d
     var overlay = {
         "Points": visualAsset.markerLayer,
         "H-bar": interactiveMouse.layer,
-        "Lines": visualAsset.lineLayer
+        "Lines": visualAsset.lineLayer,
+        "Annotations": annotation.layer
     };
 
     //doc_keyUp(e) takes a keyboard event, for keyboard shortcuts
