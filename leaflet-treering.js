@@ -1,11 +1,11 @@
 
-var leafletTreering = function(map, basePath, saveURL, initialData, assetName, innerYear){
+var leafletTreering = function(map, basePath, saveURL, initialData, assetName, datingInner){
     this.map = map;
     this.basePath = basePath;
     this.saveURL = saveURL;
     this.initialData = initialData;
     this.assetName = assetName;
-    this.innerYear = innerYear;
+    this.datingInner = datingInner;
 
     //after a leafletTreering is defined, loadInterface will be used to load all buttons and any initial data
     this.loadInterface = function(basePath){
@@ -103,7 +103,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
 
     var points = {};            //object with all the point data
     var annotations = {};       //object with all annotations data
-    var year = this.innerYear;  //year
+    var year = this.datingInner;  //year
     var earlywood = true;       //earlywood or latewood
     var index = 0;              //points index
 
@@ -476,7 +476,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'inactive',
                         icon:       '<i class="material-icons md-18">arrow_forward</i>',
-                        title:      'Set the start year at any start point',
+                        title:      'Set the year at a start point and all proceeding points',
                         onClick:    function(btn, map){
                             time.setYearFromEnd.disable();
                             time.setYearFromStart.enable();
@@ -485,7 +485,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             time.setYearFromStart.disable();
                         }
@@ -555,7 +555,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'inactive',
                         icon:       '<i class="material-icons md-18">arrow_back</i>',
-                        title:      'Set the end year at any start point',
+                        title:      'Set the year at an end point and all prior years',
                         onClick:    function(btn, map){
                             time.setYearFromStart.disable();
                             time.setYearFromEnd.enable();
@@ -564,7 +564,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             time.setYearFromEnd.disable();
                         }
@@ -588,7 +588,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'year-forward',
                         icon:       '<i class="material-icons md-18">exposure_plus_1</i>',
-                        title:      'Shift series forward',
+                        title:      'Shift series forward one year',
                         onClick:    function(btn, map){
                             time.setYearFromStart.disable();
                             time.shift.action(1);
@@ -601,7 +601,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'year-backward',
                         icon:       '<i class="material-icons md-18">exposure_neg_1</i>',
-                        title:      'Shift series backward',
+                        title:      'Shift series backward one year',
                         onClick:    function(btn, map){
                             time.setYearFromStart.disable();
                             time.shift.action(-1);
@@ -712,16 +712,16 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     states: [
                     {
                         stateName:  'inactive',
-                        icon:       '<i class="material-icons md-18">add_circle_outline</i>',
-                        title:      'Begin data collection (Alt+C)',
+                        icon:       '<i class="material-icons md-18">linear_scale</i>',
+                        title:      'Create measurable points',
                         onClick:    function(btn, map){
                             create.dataPoint.enable();
                         }
                     },
                     {
                         stateName:  'active',
-                        icon:       '<i class="material-icons md-18">add_circle</i>',
-                        title:      'End data collection (Alt+C)',
+                        icon:       '<i class="material-icons md-18">clear</i>',
+                        title:      'End (Esc)',
                         onClick:    function(btn, map){
                             create.dataPoint.disable();
                         }
@@ -742,8 +742,8 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     states: [
                     {
                         stateName:  'skip-year',
-                        icon:       '<i class="material-icons md-18">update</i>',
-                        title:      'Add a zero growth year (Alt+S)',
+                        icon:       '<i class="material-icons md-18">exposure_zero</i>',
+                        title:      'Add a zero growth year',
                         onClick:    function(btn, map){
                             create.zeroGrowth.action();
                         }
@@ -785,7 +785,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'inactive',
                         icon:       '<i class="material-icons md-18">broken_image</i>',
-                        title:      'Create a break',
+                        title:      'Create a break point',
                         onClick:    function(btn, map){
                             create.dataPoint.disable();
                             create.breakPoint.enable();
@@ -794,7 +794,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             create.breakPoint.disable();
                         }
@@ -806,7 +806,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                 states: [
                 {
                     stateName:  'collapse',
-                    icon:       '<i class="material-icons md-18">timeline</i>',
+                    icon:       '<i class="material-icons md-18">straighten</i>',
                     title:      'Create new data points',
                     onClick:    function(btn, map){
                         create.btn.state('expand');
@@ -854,24 +854,23 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
             action:
                 function(i){
                     undo.push();
-
                     if(points[i].start){ 
                         if(points[i-1] != undefined && points[i-1].break){
                             alert("You cannot delete this point!");
                         }
                         else{
-                            if(points[0] != undefined){
-                                var latLng = points[1].latLng;
-                                points[1] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng}; 
-                            }
                             second_points = Object.values(points).splice(i+1, index-1);
-                            second_points.map(function(e){
-                                points[i] = e;
+                            second_points.map(function(e, k){
+                                if(!k){
+                                    points[i] = {'start': true, 'skip': false, 'break': false, 'latLng': e.latLng};
+                                }
+                                else{
+                                    points[i] = e;
+                                }
                                 i++;
                             });
-                            index = index - 2;
+                            index--;
                             delete points[index];
-                            delete points[index+1];
                         }
                     }
                     else if(points[i].break){
@@ -933,7 +932,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'inactive',
                         icon:       '<i class="material-icons md-18">delete</i>',
-                        title:      'Enable Delete (Alt+D)',
+                        title:      'Delete a point',
                         onClick: function(btn, map){
                             edit.cut.disable();
                             edit.addData.disable();
@@ -945,7 +944,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Disable Delete (Alt+D)',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             edit.deletePoint.disable()
                         }
@@ -967,7 +966,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                         points = {};
                         trimmed_points.map(function(e){
                             if(!k){
-                                points[k] = {"start": true,"latLng": e.latLng, "measurable": false};
+                                points[k] = {'start': true, 'skip': false, 'break': false, 'latLng': e.latLng};
                             }   
                             else{    
                                 points[k] = e;
@@ -1018,7 +1017,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel cutting',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             edit.cut.disable()
                         }
@@ -1109,7 +1108,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             edit.addData.disable();
                         }
@@ -1157,7 +1156,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     states: [
                     {
                         stateName:  'inactive',
-                        icon:       '<i class="material-icons md-18">update</i>',
+                        icon:       '<i class="material-icons md-18">exposure_zero</i>',
                         title:      'Add a zero growth year in the middle of the series',
                         onClick:    function(btn, map){
                             edit.deletePoint.disable();
@@ -1170,7 +1169,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             edit.addZeroGrowth.disable();
                         }
@@ -1304,18 +1303,33 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
             L.layerGroup().addTo(map),
         newAnnotation:
             function(i){
-                ref = annotations[i];
-                if(ref.dateMarker){
-                    this.markers.push(L.circle(ref.latLng, {radius: .0002, color: "#000", weight: '6'}));
+                var ref = annotations[i];
+                if(ref.dateMarker || ref.comment){
+                    var circle = L.circle(ref.latLng, {radius: .0002, color: '#000', weight: '6'})
+                    if(ref.comment){
+                        circle = L.circle(ref.latLng, {radius: .0002, color: 'red', weight: '6'});
+                    }
+                    this.markers.push(circle);
+                    var self = this;
                     this.markers[i].on('click', function(e){
-                        annotation.deleteAnnotation.action(i);
+                        if(self.deleteAnnotation.active){
+                            self.deleteAnnotation.action(i);
+                            if(ref.comment){
+                                self.comment.dialog.close();
+                            }
+                        }
+                        else if(ref.comment){
+                            self.comment.dialog.setContent(ref.text);
+                            self.comment.dialog.open;
+                        }
                     })
                     this.layer.addLayer(this.markers[i]);
                 }
                 else if(ref.lineMarker){
                     this.markers.push(L.polyline([ref.first_point, ref.second_point], {color: '#000', weight: '6'}));
+                    var self = this;
                     this.markers[i].on('click', function(e){
-                        annotation.deleteAnnotation.action(i);
+                        self.deleteAnnotation.action(i);
                     });
                     this.layer.addLayer(this.markers[i]);
                 }
@@ -1336,19 +1350,35 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
         collapse:
             function(){
                 this.btn.state('collapse');
+                this.comment.btn.disable();
                 this.dateMarker.btn.disable();
                 this.lineMarker.btn.disable();
                 this.deleteAnnotation.btn.disable();
 
+                this.comment.disable();
                 this.dateMarker.disable();
                 this.lineMarker.disable();
                 this.deleteAnnotation.disable();
             },
-        dateMarker: {
+        comment: {
+            input: L.control.dialog({'size': [290, 195], 'anchor': [80, 50], 'initOpen': false})
+                        .setContent('<textarea class="comment_input" name="message" rows="7" cols="38"></textarea>' +
+                                    '<br>' +
+                                    '<button class="comment_submit">enter</button>')
+                        .addTo(map),
+            dialog: L.control.dialog({'size': [290, 195], 'anchor': [80, 50], 'initOpen': false})
+                        .setContent('')
+                        .addTo(map),
             action:
                 function(i, latLng){
-                    annotations[i] = {'dateMarker': true, 'lineMarker': false, 'latLng': latLng};
-                    annotation.newAnnotation(i);
+                    this.input.open();
+                    var self = this;
+                    $('.comment_submit').click(function(){
+                        var string = ($('.comment_input').val()).slice(0);
+                        annotations[i] = {'comment': true, 'dateMarker': false, 'lineMarker': false, 'latLng': latLng, 'text': string};
+                        annotation.newAnnotation(i);
+                        self.disable(); 
+                    })
                 },
             enable:
                 function(){
@@ -1356,6 +1386,54 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     var self = this;
                     $(map._container).click(function(e){
                         latLng = map.mouseEventToLatLng(e);
+                        self.action(annotation.index, latLng);
+                        annotation.index++;
+                    })
+                },
+            disable:
+                function(){
+                    this.btn.state('inactive');
+                    $(map._container).off('click');
+                    $('.comment_submit').off('click');
+                    this.input.close();
+                    this.active = false;
+                },
+            btn:
+                L.easyButton({
+                    states: [
+                    {
+                        stateName:  'inactive',
+                        icon:       '<i class="material-icons md-18">comment</i>',
+                        title:      'Make a comment',
+                        onClick:    function(btn, map){
+                            annotation.deleteAnnotation.disable();
+                            annotation.lineMarker.disable();
+                            annotation.dateMarker.disable();
+                            annotation.comment.enable();
+                        }
+                    },
+                    {
+                        stateName:  'active',
+                        icon:       '<i class="material-icons md-18">clear</i>',
+                        title:      'Cancel (Esc)',
+                        onClick:    function(btn, map){
+                            annotation.comment.disable();
+                        }
+                    }]
+                })
+        },
+        dateMarker: {
+            action:
+                function(i, latLng){
+                    annotations[i] = {'comment': false, 'dateMarker': true, 'lineMarker': false, 'latLng': latLng};
+                    annotation.newAnnotation(i);
+                },
+            enable:
+                function(){
+                    this.btn.state('active');
+                    var self = this;
+                    $(map._container).click(function(e){
+                        var latLng = map.mouseEventToLatLng(e);
                         self.action(annotation.index, latLng);
                         annotation.index++;
                     });
@@ -1381,7 +1459,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             annotation.dateMarker.disable();
                         }
@@ -1393,7 +1471,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                 false,
             action:
                 function(i, first_point, second_point){
-                    annotations[i] = {'dateMarker': false, 'lineMarker': true, 'first_point': first_point, 'second_point': second_point};
+                    annotations[i] = {'comment': false, 'dateMarker': false, 'lineMarker': true, 'first_point': first_point, 'second_point': second_point};
                     annotation.newAnnotation(i);
                 },
             enable:
@@ -1439,7 +1517,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             annotation.lineMarker.disable();
                         }
@@ -1486,7 +1564,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'active',
                         icon:       '<i class="material-icons md-18">clear</i>',
-                        title:      'Cancel',
+                        title:      'Cancel (Esc)',
                         onClick:    function(btn, map){
                             annotation.deleteAnnotation.disable();
                         }
@@ -1499,9 +1577,10 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                 {
                     stateName:  'collapse',
                     icon:       '<i class="material-icons md-18">message</i>',
-                    title:      'Create annotations',
+                    title:      'Make annotations',
                     onClick:    function(btn, map){
                         btn.state('expand');
+                        annotation.comment.btn.enable();
                         annotation.dateMarker.btn.enable();
                         annotation.lineMarker.btn.enable();
                         annotation.deleteAnnotation.btn.enable();
@@ -1769,7 +1848,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                     {
                         stateName:  'download',
                         icon:       '<i class="material-icons md-18">file_download</i>',
-                        title:      'download formated data',
+                        title:      'Download formated data',
                         onClick:    function(btn, map){
                             data.download.action();
                         }
@@ -1840,8 +1919,8 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
                 states: [
                 {
                     stateName:  'collapse',
-                    icon:       '<i class="material-icons md-18">straighten</i>',
-                    title:      'Open Data',
+                    icon:       '<i class="material-icons md-18">show_chart</i>',
+                    title:      'View and download data',
                     onClick:    function(btn, map){
                         btn.state('expand');
                         data.action();
@@ -1867,6 +1946,7 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
     //locking the dialog boxes so the cannot be moved or resized
     time.setYearFromStart.dialog.lock();
     time.setYearFromEnd.dialog.lock();
+    annotation.comment.input.lock();
 
     //grouping the buttons into their respective toolbars
     var undoRedoBar = L.easyBar([undo.btn, redo.btn]);
@@ -1891,7 +1971,8 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
     edit.addZeroGrowth.btn.disable();
     edit.addBreak.btn.disable();
 
-    var annotationBar = L.easyBar([annotation.btn, annotation.dateMarker.btn, annotation.lineMarker.btn, annotation.deleteAnnotation.btn]);
+    var annotationBar = L.easyBar([annotation.btn, annotation.comment.btn, annotation.dateMarker.btn, annotation.lineMarker.btn, annotation.deleteAnnotation.btn]);
+    annotation.comment.btn.disable();
     annotation.dateMarker.btn.disable();
     annotation.lineMarker.btn.disable();
     annotation.deleteAnnotation.btn.disable();
@@ -1901,8 +1982,8 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
 
     //the default minimap is square which doesn't look nice
     var miniMap = new L.Control.MiniMap(miniLayer, {
-        width: 500,
-        height: 25,
+        width: 550,
+        height: 50,
         toggleDisplay: true,
         zoomAnimation: false,
         zoomLevelOffset: -3,
@@ -1922,18 +2003,17 @@ var leafletTreering = function(map, basePath, saveURL, initialData, assetName, i
 
     //doc_keyUp(e) takes a keyboard event, for keyboard shortcuts
     var doc_keyUp = function(e){
-        //ALT + S
-        if(e.altKey && (e.keyCode == 83 || e.keycode == 115)){
-            create.zeroGrowth.action();
-        }
-        //ALT + C
-        if(e.altKey && (e.keyCode == 67 || e.keycode == 99)){
-            if(create.dataPoint.btn._currentState.stateName == 'inactive'){
-                create.dataPoint.enable();
-            }
-            else{
-                create.dataPoint.disable();
-            }
+        if(e.keyCode == 27){
+            create.dataPoint.disable();
+            create.breakPoint.disable();
+            edit.deletePoint.disable();
+            edit.cut.disable();
+            edit.addData.disable();
+            edit.addZeroGrowth.disable();
+            edit.addBreak.disable();
+            annotation.comment.disable();
+            annotation.dateMarker.disable();
+            annotation.lineMarker.disable();
         }
     };
 };
