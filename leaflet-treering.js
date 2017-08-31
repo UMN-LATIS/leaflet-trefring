@@ -384,10 +384,17 @@ var leafletTreering = function(map, basePath, saveURL, options){
                 })
 
                 //drawing the line if the previous point exists
-                if(p[i-1] != undefined && !p[i-1].skip && !p[i].start){
-                    this.lines[i] = L.polyline([p[i-1].latLng, leafLatLng], {color: '#00BCD4', weight: '5'});
-                    this.lineLayer.addLayer(this.lines[i]);
+                if(p[i-1] != undefined && !p[i].start){
+                    if(p[i-1].skip && p[i-2] != undefined && !p[i-2].start){
+                        this.lines[i] = L.polyline([p[i-2].latLng, leafLatLng], {color: '#00BCD4', weight: '3'});
+                        this.lineLayer.addLayer(this.lines[i]);
+                    }
+                    else{
+                        this.lines[i] = L.polyline([p[i-1].latLng, leafLatLng], {color: '#00BCD4', weight: '5'});
+                        this.lineLayer.addLayer(this.lines[i]);
+                    }
                 }
+                
 
                 this.previousLatLng = leafLatLng;
                 this.markerLayer.addLayer(this.markers[i]);    //add the marker to the marker layer
@@ -1480,6 +1487,8 @@ var leafletTreering = function(map, basePath, saveURL, options){
             enable:
                 function(){
                     this.btn.state('active');
+                    document.getElementById('map').style.cursor = "pointer";
+
                     var self = this;
                     $(map._container).click(function(e){
                         latLng = map.mouseEventToLatLng(e);
@@ -1492,6 +1501,7 @@ var leafletTreering = function(map, basePath, saveURL, options){
                     this.btn.state('inactive');
                     $(map._container).off('click');
                     $('.comment_submit').off('click');
+                    document.getElementById('map').style.cursor = "default";
                     this.input.close();
                     this.active = false;
                 },
@@ -1528,6 +1538,8 @@ var leafletTreering = function(map, basePath, saveURL, options){
             enable:
                 function(){
                     this.btn.state('active');
+                    document.getElementById('map').style.cursor = "pointer";
+
                     var self = this;
                     $(map._container).click(function(e){
                         var latLng = map.mouseEventToLatLng(e);
@@ -1539,6 +1551,7 @@ var leafletTreering = function(map, basePath, saveURL, options){
                 function(){
                     this.btn.state('inactive');
                     $(map._container).off('click');
+                    document.getElementById('map').style.cursor = "default";
                 },
             btn:
                 L.easyButton ({
@@ -1574,9 +1587,12 @@ var leafletTreering = function(map, basePath, saveURL, options){
             enable:
                 function(){
                     this.btn.state('active');
+                    document.getElementById('map').style.cursor = "pointer";
                     var start = true;
+
                     var self = this;
                     $(map._container).click(function(e){
+                        document.getElementById('map').style.cursor = "pointer";
                         if(start){
                             first_point = map.mouseEventToLatLng(e);
                             self.active = true;
@@ -1594,6 +1610,7 @@ var leafletTreering = function(map, basePath, saveURL, options){
             disable:
                 function(){
                     $(map._container).off('click');
+                    document.getElementById('map').style.cursor = "default";
                     this.btn.state('inactive');
                     this.active = false;
                     interactiveMouse.layer.clearLayers();
@@ -2031,7 +2048,8 @@ var leafletTreering = function(map, basePath, saveURL, options){
                                 y++;
                             }
                             if(e.skip){
-                                string = string.concat("<tr><td>"+ e.year + "-</td><td>0 mm</td></tr>");
+                                string = string.concat("<tr><td>"+ e.year + "</td><td>0 mm</td></tr>");
+                                y++;
                             }
                             else{
                                 length = Math.round(map.distance(last_point.latLng, e.latLng)*1000000)/1000;
