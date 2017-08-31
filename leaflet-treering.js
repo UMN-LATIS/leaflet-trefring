@@ -26,10 +26,16 @@ var leafletTreering = function(map, basePath, saveURL, options){
     //after a leafletTreering is defined, loadInterface will be used to load all buttons and any initial data
     Lt.loadInterface = function(){
 
+        autoScroll.on();
+
+        map.on('resize', function(e){
+            autoScroll.reset();
+        });
+
         //set up the cursor
         map.on('movestart', function(e){
         document.getElementById('map').style.cursor = 'move';
-        })
+        });
         map.on('moveend', function(e){
             if(create.dataPoint.active || annotation.lineMarker.active){
                 document.getElementById('map').style.cursor = 'pointer';
@@ -37,7 +43,7 @@ var leafletTreering = function(map, basePath, saveURL, options){
             else{
                 document.getElementById('map').style.cursor = 'default';
             }
-        })
+        });
 
         document.getElementById('map').style.cursor = 'default';
 
@@ -116,6 +122,52 @@ var leafletTreering = function(map, basePath, saveURL, options){
         edit.collapse();
         create.collapse(); 
     };
+
+    var autoScroll = {
+        on:
+            function(){
+                //map scrolling
+                var mapSize = map.getSize();    //size of the map used for map scrolling
+                var mousePos = 0;               //an initial mouse position
+
+                map.on('mousemove', function(e){
+                    var oldMousePos = mousePos;      //save the old mouse position
+                    mousePos = e.containerPoint;    //container point of the mouse
+                    var mouseLatLng = e.latlng;         //latLng of the mouse
+                    var mapCenter = map.getCenter();    //center of the map   
+
+                    //left bound of the map
+                    if(mousePos.x <= 40 && mousePos.y > 450 && oldMousePos.x > mousePos.x){
+                        //map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
+                        map.panBy([-200, 0]);
+                    }
+                    //right bound of the map
+                    if(mousePos.x + 40 > mapSize.x && mousePos.y > 100 && oldMousePos.x < mousePos.x){
+                        //map.panTo([mapCenter.lat, (mapCenter.lng + .015)]);
+                        map.panBy([200, 0]);
+                    }
+                    //upper bound of the map
+                    if(mousePos.x + 40 < mapSize.x && mousePos.y < 40 && oldMousePos.y > mousePos.y){
+                        //map.panTo([mapCenter.lat, (mapCenter.lng + .015)]);
+                        map.panBy([0, -40]);
+                    }
+                    //lower bound of the map
+                    if(mousePos.x >= 40 && mousePos.y > mapSize.y - 40 && oldMousePos.y < mousePos.y){
+                        //map.panTo([mapCenter.lat, (mapCenter.lng - .015)]);     //defines where the map view should move to
+                        map.panBy([0, 40]);
+                    }
+                });
+            },
+        off:
+            function(){
+                map.off('mousemove');
+            },
+        reset:
+            function(){
+                this.off();
+                this.on();
+            }
+    } 
 
     var points = {};            //object with all the point data
     var annotations = {};       //object with all annotations data
