@@ -276,11 +276,7 @@ var leafletTreering = function(map, basePath, saveURL, options){
                 var self = this;
 
                 //tell marker what to do when being draged
-                this.markers[i].on('dragend', function(e){
-
-                    undo.push();
-                    p[i].latLng = e.target._latlng;     //get the new latlng of the mouse pointer
-
+                this.markers[i].on('drag', function(e){
                     //adjusting the line from the previous and preceeding point if they exist
                     if(p[i-1] != undefined && p[i-1].latLng != undefined && !p[i].start){
                         self.lineLayer.removeLayer(self.lines[i]);
@@ -293,6 +289,12 @@ var leafletTreering = function(map, basePath, saveURL, options){
                         self.lineLayer.addLayer(self.lines[i+1]);
                     }
                 });
+
+                //tell marker waht to do when the draggin is done
+                this.markers[i].on('dragend', function(e){               
+                    undo.push();
+                    p[i].latLng = e.target._latlng;
+                })
 
                 //tell marker what to do when clicked
                 this.markers[i].on('click', function(e){
@@ -783,9 +785,13 @@ var leafletTreering = function(map, basePath, saveURL, options){
                     this.btn.state('active');
 
                     create.dataPoint.active = true;
-                        
+                    
+                    document.getElementById('map').style.cursor = "pointer";
+
                     var self = this;
                     $(map._container).click(function(e){
+                        document.getElementById('map').style.cursor = "pointer";
+
                         var latLng = map.mouseEventToLatLng(e);
 
                         interactiveMouse.hbarFrom(latLng)
@@ -887,8 +893,8 @@ var leafletTreering = function(map, basePath, saveURL, options){
                         }
                         else{
                             second_points = Object.values(points).splice(i+1, index-1);
-                            second_points.map(function(e, k){
-                                if(!k){
+                            second_points.map(function(e){
+                                if(!i){
                                     points[i] = {'start': true, 'skip': false, 'break': false, 'latLng': e.latLng};
                                 }
                                 else{
