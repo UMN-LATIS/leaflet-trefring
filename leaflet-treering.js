@@ -1534,12 +1534,12 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
             },
         comment: {
             active: false,
-            input: L.control.dialog({'size': [290, 195], 'anchor': [80, 50], 'initOpen': false})
-                        .setContent('<textarea class="comment_input" name="message" rows="7" cols="38"></textarea>' +
+            input: L.control.dialog({'size': [245, 160], 'anchor': [80, 50], 'initOpen': false})
+                        .setContent('<textarea class="comment_input" name="message" rows="5" cols="30"></textarea>' +
                                     '<br>' +
                                     '<button class="comment_submit">enter</button>')
                         .addTo(map),
-            dialog: L.control.dialog({'size': [290, 195], 'anchor': [80, 50], 'initOpen': false})
+            dialog: L.control.dialog({'size': [200, 140], 'anchor': [80, 50], 'initOpen': false})
                         .setContent('')
                         .addTo(map),
             action:
