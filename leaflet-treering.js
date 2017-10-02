@@ -189,15 +189,15 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
             },
         saveCloud:
             function(){
-                this.saveTimer = -1;
-                autosave.saveDisplayTime();
-                console.log("saved")
                 dataJSON = {'saveDate': autosave.getCurrentDate(), 'saveTime': autosave.getCurrentTime(), 'year': year, 'earlywood': earlywood, 'index': index, 'points': points, 'annotations': annotations};
-                /*$.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}, function(data, textStatus, xhr) {
-                    saveTime = 0;
-                    saveDiplayTime(saveTimer);
-                    console.log("saved")
-                });*/
+                $.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}).done(function(msg){
+                        this.saveTime = -1;
+                        autosave.saveDiplayTime();
+                        console.log("saved");
+                    })
+                    .fail(function(xhr, status, error){
+                        alert("Error: failed to save changes");
+                    })
             },
         initialize:
             function(){
