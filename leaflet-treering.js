@@ -1662,6 +1662,7 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
                     document.getElementById('map').style.cursor = "pointer";
 
                     var self = this;
+                    map.doubleClickZoom.disable();
                     $(map._container).dblclick(function(e){
                         latLng = map.mouseEventToLatLng(e);
                         anchor = map.mouseEventToContainerPoint(e);
@@ -1672,6 +1673,7 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
             disable:
                 function(){
                     this.btn.state('inactive');
+                    map.doubleClickZoom.enable();
                     $(map._container).off('dblclick');
                     $('.comment_submit').off('click');
                     document.getElementById('map').style.cursor = "default";
