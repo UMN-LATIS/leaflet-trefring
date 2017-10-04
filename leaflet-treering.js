@@ -164,16 +164,23 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
         saveDisplayDate:
             function(){
                 var currentDate = this.getCurrentDate();
+                console.log(currentDate.day)
+                console.log(currentDate.month)
+                console.log(currentDate.year)
+                console.log(saveDate.year)
                 if(saveDate != undefined){
                     if(saveDate.year == currentDate.year && saveDate.month == currentDate.month){
                         if(saveDate.day == currentDate.day){
+                            console.log("same day");
                             document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved today at " + saveTime.hour + ":" + saveTime.minute + saveTime.am_pm;
                         }
                         else if(saveDate.day == (currentDate.day - 1)){
+                            console.log("yesterday");
                             document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved yesterday at " + saveTime.hour + ":" + saveTime.minute + saveTime.am_pm;    
                         } 
                     }
                     else{
+                        console.log("another day");
                         document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved on " + saveDate.month + "/" + saveDate.day + "/" + saveDate.year + " at " + saveTime.hour + ":" + saveTime.minute + saveTime.am_pm;
                     }
                 }
@@ -189,15 +196,18 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
             },
         saveCloud:
             function(){
+                this.saveTime = -1;
+                autosave.saveDisplayTime();
+                console.log("saved");
                 dataJSON = {'saveDate': autosave.getCurrentDate(), 'saveTime': autosave.getCurrentTime(), 'year': year, 'earlywood': earlywood, 'index': index, 'points': points, 'annotations': annotations};
-                $.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}).done(function(msg){
+                /*$.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}).done(function(msg){
                         this.saveTime = -1;
                         autosave.saveDisplayTime();
                         console.log("saved");
                     })
                     .fail(function(xhr, status, error){
                         alert("Error: failed to save changes");
-                    })
+                    })*/
             },
         initialize:
             function(){
