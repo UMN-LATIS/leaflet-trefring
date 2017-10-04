@@ -164,7 +164,7 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
         saveDisplayDate:
             function(){
                 var currentDate = this.getCurrentDate();
-                if(saveDate != undefined){
+                if(saveDate != undefined && saveDate.year != undefined){
                     if(saveDate.year == currentDate.year && saveDate.month == currentDate.month){
                         if(saveDate.day == currentDate.day){
                             document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved today at " + saveTime.hour + ":" + ('0' + saveTime.minute).slice(-2) + saveTime.am_pm;
@@ -176,6 +176,9 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
                     else{
                         document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved on " + saveDate.month + "/" + saveDate.day + "/" + saveDate.year + " at " + saveTime.hour + ":" + ('0' + saveTime.minute).slice(-2) + saveTime.am_pm;
                     }
+                }
+                else{
+                     document.getElementById("leaflet-save-time-tag").innerHTML = "Save history unavailable";
                 }
             },
         debounce:
