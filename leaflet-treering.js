@@ -147,12 +147,13 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
         saveDisplayTime:
             function(){
                 this.saveTimer++;
-                console.log(this.saveTimer);
                 if(this.saveTimer == 0){
                     document.getElementById("leaflet-save-time-tag").innerHTML = "All changes saved to cloud";
+                    seconds_ago = function(){ document.getElementById("leaflet-save-time-tag").innerHTML = "All changes saved seconds ago"; }
+                    window.setTimeout(seconds_ago, 5000);
                 }
                 else if(this.saveTimer == 1){
-                    document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved 30 seconds ago";
+                    document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved less then a minute ago";
                 }
                 else if(this.saveTimer == 2){
                     document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved a minute ago";
@@ -176,13 +177,16 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
                         else if(saveDate.day == (currentDate.day - 1)){
                             document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved yesterday at " + saveTime.hour + ":" + ('0' + saveTime.minute).slice(-2) + saveTime.am_pm;    
                         } 
+                        else{
+                        document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved on " + saveDate.month + "/" + saveDate.day + "/" + saveDate.year + " at " + saveTime.hour + ":" + ('0' + saveTime.minute).slice(-2) + saveTime.am_pm;
+                        }
                     }
                     else{
                         document.getElementById("leaflet-save-time-tag").innerHTML = "Last changes saved on " + saveDate.month + "/" + saveDate.day + "/" + saveDate.year + " at " + saveTime.hour + ":" + ('0' + saveTime.minute).slice(-2) + saveTime.am_pm;
                     }
                 }
                 else{
-                     document.getElementById("leaflet-save-time-tag").innerHTML = "Save history unavailable";
+                    document.getElementById("leaflet-save-time-tag").innerHTML = "Save history unavailable";
                 }
             },
         debounce:
@@ -196,12 +200,12 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
             },
         saveCloud:
             function(){
-                /*this.saveTime = -1;
+                /*this.saveTimer = -1;
                 autosave.saveDisplayTime();
                 console.log("saved");*/
                 dataJSON = {'saveDate': autosave.getCurrentDate(), 'saveTime': autosave.getCurrentTime(), 'year': year, 'earlywood': earlywood, 'index': index, 'points': points, 'annotations': annotations};
                 $.post(Lt.saveURL, {sidecarContent: JSON.stringify(dataJSON)}).done(function(msg){
-                        this.saveTime = -1;
+                        this.saveTimer = -1;
                         autosave.saveDisplayTime();
                         console.log("saved");
                     })
@@ -2236,11 +2240,13 @@ var leafletTreering = function(map, basePath, saveURL, savePermission, options){
                     var self = this;
 
                     $('.confirm_delete').click(function(){
+                        undo.push();
                         points = [];
                         visualAsset.reload();
                         data.action();
                         autosave.debounce();
                         self.disable();
+                        data.collapse();
                     })
                     $('.cancel_delete').click(function(){
                         self.disable();
