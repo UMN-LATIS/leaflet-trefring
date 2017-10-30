@@ -27,8 +27,6 @@ var leafletTreering = function(map, ppm, basePath, saveURL, savePermission, opti
     //after a leafletTreering is defined, loadInterface will be used to load all buttons and any initial data
     Lt.loadInterface = function(){
 
-        Lt.map.zoomControl = true;
-
         autoScroll.on();
 
         Lt.map.on('resize', function(e){
