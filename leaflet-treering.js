@@ -15,6 +15,7 @@ var leafletTreering = function(map, basePath, options) {
   Lt.hasLatewood = options.hasLatewood || false;
 
   if (Lt.ppm == 0) {
+    alert("Please set up PPM in asset metadata. PPM will default to 468.");
     Lt.ppm = 468;
   }
 
@@ -1559,7 +1560,19 @@ var leafletTreering = function(map, basePath, options) {
       displayDate:
         function() {  
           if (saveDate.day != undefined && saveDate.hour != undefined) {
-            document.getElementById("leaflet-save-time-tag").innerHTML = "Saved to cloud at " + saveDate.hour + ":" + saveDate.minute + " on " +
+            var am_pm = "am";
+            if (saveDate.hour >= 12) {
+              saveDate.hour -= 12;
+              am_pm = "pm"; 
+            }
+            if (saveDate.hour == 0) {
+              saveDate.hour += 12;
+            }
+            minute_string = saveDate.minute
+            if (saveDate.minute < 10) {
+              minute_string = "0" + saveDate.minute;
+            }
+            document.getElementById("leaflet-save-time-tag").innerHTML = "Saved to cloud at " + saveDate.hour + ":" + minute_string + am_pm + " on " +
               saveDate.month + "/" + saveDate.day + "/" + saveDate.year;
           } else {
             document.getElementById("leaflet-save-time-tag").innerHTML = "No data saved to cloud";
