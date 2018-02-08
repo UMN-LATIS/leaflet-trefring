@@ -96,11 +96,10 @@ var leafletTreering = function(map, basePath, options) {
       }
     });
     length = length / pixelsPerMillimeter;
-    
     retinaFactor = 1;
-    // if (L.Browser.retina) {
-    //   retinaFactor = 2; // this is potentially incorrect for 3x+ devices
-    // }
+    if (L.Browser.retina) {
+      retinaFactor = 2; // this is potentially incorrect for 3x+ devices
+    }
     return length * retinaFactor;
   };
 
