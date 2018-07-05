@@ -49,11 +49,13 @@ var leafletTreering = function(map, basePath, options) {
       createBar.addTo(Lt.map);
       editBar.addTo(Lt.map);
       fileBar.addTo(Lt.map);
+      imageAdjustment.btn.addTo(Lt.map);
       undoRedoBar.addTo(Lt.map);
     } else {
       popout.btn.addTo(Lt.map);
       data.btn.addTo(Lt.map);
       fileBar.addTo(Lt.map);
+      imageAdjustment.btn.addTo(Lt.map);
     }
 
     L.control.layers(baseLayer, overlay).addTo(Lt.map);
@@ -416,6 +418,62 @@ var leafletTreering = function(map, basePath, options) {
               }
             }]
         })
+  };
+
+  var imageAdjustment = {
+    dialog: 
+        L.control.dialog({'size': [340, 200], 'anchor': [5, 50],
+          'initOpen': false}).setContent('<div><label style="text-align:center;display:block;">Brightness</label> \
+            <input class="imageSlider" id="brightness-slider" value=100 min=0 max=300 type=range> \
+            <label style="text-align:center;display:block;">Contrast</label> \
+          <input class="imageSlider" id="contrast-slider" type=range min=50 max=350 value=100></div> \
+<label style="text-align:center;display:block;">Saturation</label> \
+          <input class="imageSlider" id="saturation-slider" type=range min=0 max=350 value=100></div> \
+          <label style="text-align:center;display:block;">Hue Rotation</label> \
+          <input class="imageSlider" id="hue-slider" type=range min=0 max=360 value=0></div>').addTo(Lt.map),
+    updateFilters: function() {
+        var brightnessSlider = document.getElementById("brightness-slider")
+        var contrastSlider = document.getElementById("contrast-slider")
+        var saturationSlider = document.getElementById("saturation-slider")
+        var hueSlider = document.getElementById("hue-slider")
+
+        document.getElementsByClassName("leaflet-pane")[0].style.filter = "contrast(" + contrastSlider.value + "%) " +
+                                                                          "brightness(" + brightnessSlider.value + "%) " +
+                                                                          "saturate(" + saturationSlider.value + "%) " +
+                                                                          "hue-rotate(" + hueSlider.value + "deg)";
+
+    },
+    btn: L.easyButton({
+          states: [
+            {
+              stateName: 'collapse',
+              icon: '<i class="material-icons md-18">brightness_6</i>',
+              title: 'Image Adjustments',
+              onClick: function(btn, map) {
+                imageAdjustment.dialog.lock();
+                imageAdjustment.dialog.open();
+                var brightnessSlider = document.getElementById("brightness-slider")
+                var contrastSlider = document.getElementById("contrast-slider")
+                var saturationSlider = document.getElementById("saturation-slider")
+                var hueSlider = document.getElementById("hue-slider")
+                btn.state('expand');
+                $(".imageSlider").change(function() {
+                  imageAdjustment.updateFilters();
+                });
+              }
+            },
+            {
+              stateName: 'expand',
+              icon: '<i class="material-icons md-18">clear</i>',
+              title: 'Collapse',
+              onClick: function(btn, map) {
+                imageAdjustment.dialog.unlock();
+                imageAdjustment.dialog.close();
+                btn.state('collapse');
+              }
+            }]
+        })
+
   };
 
   //undo changes to points using a stack
