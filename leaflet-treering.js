@@ -37,8 +37,13 @@ function LTreering(viewer, basePath, options) {
   this.visualAsset = new VisualAsset(this);
   
   this.popout = new Popout(this);
+  this.undo = new Undo(this);
+  this.redo = new Redo(this);
   
-//  this.undo = new Undo(this);
+  this.createPoint = new CreatePoint(this);
+  
+  this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
+  this.createTools = new ButtonBar(this, [this.createPoint.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
 }
 
 
@@ -63,12 +68,14 @@ LTreering.prototype.loadInterface = function () {
 //    data.btn.addTo(Lt.map);
 //    annotation.btn.addTo(Lt.map);
 //    setYear.btn.addTo(Lt.map);
-//    createBar.addTo(Lt.map);
+    
 //    editBar.addTo(Lt.map);
 //    fileBar.addTo(Lt.map);
 //    undoRedoBar.addTo(Lt.map);
   } else {
     self.popout.btn.addTo(self.viewer);
+    self.createTools.bar.addTo(self.viewer);
+    self.undoRedoBar.addTo(self.viewer);
 //    data.btn.addTo(Lt.map);
 //    fileBar.addTo(Lt.map);
   }
@@ -109,6 +116,25 @@ function MeasurementData(dataObject) {
   this.earlywood = dataObject.earlywood || true;
   this.points = dataObject.points || {};
   this.annotations = dataObject.annotations || {};
+  
+  MeasurementData.prototype.newPoint = function(start, latLng, hasLatewood) {
+    if (start) {
+      this.points[this.index] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng};
+    } else {
+      this.points[this.index] = {'start': false, 'skip': false, 'break': false, 'year': this.year, 'earlywood': this.earlywood, 'latLng': latLng};
+      if (hasLatewood) {
+        if (this.earlywood) {
+          this.earlywood = false;
+        } else {
+          this.earlywood = true;
+          this.year++;
+        }
+      } else {
+        this.year++;
+      }
+    }
+    this.index++;
+  }
 }
 
 /**
@@ -226,7 +252,7 @@ function InteractiveMouse(Lt) {
     var self = this;
     
     $(Lt.viewer._container).mousemove(function(e) {
-      if (Lt.create.dataPoint.active) {
+      if (Lt.createPoint.active) {
         self.layer.clearLayers();
         var mousePoint = Lt.viewer.mouseEventToLayerPoint(e);
         var mouseLatLng = Lt.viewer.mouseEventToLatLng(e);
@@ -329,7 +355,7 @@ function VisualAsset(Lt) {
    * @param {Leaflet LatLng Object} latLng -
    */
   VisualAsset.prototype.newLatLng = function (points, i, latLng) {
-    leafLatLng = L.latLng(latLng);
+    var leafLatLng = L.latLng(latLng);
 
     if (window.name === 'popout') {
       var draggable = true;
@@ -343,7 +369,7 @@ function VisualAsset(Lt) {
     if (points[i].start) {
       var marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
         draggable: draggable, title: 'Start Point', riseOnHover: true});
-    } else if (p[i].break) { //check if point is a break
+    } else if (points[i].break) { //check if point is a break
       var marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
         draggable: draggable, title: 'Break Point', riseOnHover: true});
     } else if (Lt.hasLatewood) { //check if point is earlywood
@@ -456,6 +482,60 @@ function VisualAsset(Lt) {
 /*****************************************************************************/
 
 /**
+ * A collapsable button bar
+ * @constructor
+ * @param 
+ */
+function ButtonBar(Lt, btns, icon, title) {
+  var self = this;
+
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'collapse',
+//        icon: '<i class="material-icons md-18">straighten</i>',
+        icon: icon,
+//        title: 'Create new data points',
+        title: title,
+        onClick: function(btn, map) {
+          self.btn.state('expand');
+          self.expand();
+          
+//          create.dataPoint.btn.enable();
+//          create.zeroGrowth.btn.enable();
+//          create.breakPoint.btn.enable();
+//
+//          data.disable();
+//          edit.collapse();
+//          annotation.disable();
+//          setYear.disable();
+        }
+      },
+      {
+        stateName: 'expand',
+        icon: '<i class="material-icons md-18">expand_less</i>',
+        title: 'Collapse',
+        onClick: function(btn, map) {
+          self.btn.state('collapse');
+          self.collapse();
+        }
+      }]
+  });
+  
+  this.bar = L.easyBar([self.btn].concat(btns));
+  
+  ButtonBar.prototype.expand = function() {
+    btns.forEach(function(e) { e.enable() });
+  }
+  
+  ButtonBar.prototype.collapse = function() {
+    btns.forEach(function(e) { e.disable() });
+  }
+  
+  this.collapse();
+}
+
+/**
  * A popout object
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
@@ -476,63 +556,203 @@ function Popout(Lt) {
   })
 }
 
-///**
-// * A undo button
-// @param {Ltreering} Lt - Leaflet treering object
-// */
-//function Undo(Lt) {
-//  var self = this;
-//  
-//  this.stack = new Array();
-//  
-//  this.push = function() {
-//    self.btn.enable();
-//    Lt.redo.btn.disable();
-//    Lt.redo.stack.length = 0;
-//    var restore_points = JSON.parse(JSON.stringify(points));
-//    self.stack.push({'year': year, 'earlywood': earlywood,
-//      'index': index, 'points': restore_points });
-//  };
-//  
-//  this.pop = function() {
-//    if (self.stack.length > 0) {
-//      if (points[index - 1].start) {
-//        create.dataPoint.disable();
-//      } else {
-//        interactiveMouse.hbarFrom(points[index - 2].latLng);
-//      }
-//
-//      redo.btn.enable();
-//      var restore_points = JSON.parse(JSON.stringify(points));
-//      redo.stack.push({'year': year, 'earlywood': earlywood,
-//        'index': index, 'points': restore_points});
-//      dataJSON = self.stack.pop();
-//
-//      points = JSON.parse(JSON.stringify(dataJSON.points));
-//
-//      index = dataJSON.index;
-//      year = dataJSON.year;
-//      earlywood = dataJSON.earlywood;
-//
-//      visualAsset.reload();
-//
-//      if (self.stack.length == 0) {
-//        self.btn.disable();
-//      }
-//    }
-//  };
-//  
-//  this.btn = L.easyButton({
-//    states: [
-//      {
-//        stateName: 'undo',
-//        icon: '<i class="material-icons md-18">undo</i>',
-//        title: 'Undo',
-//        onClick: function(btn, map) {
-//          self.pop();
-//        }
-//      }]
-//  });
-//}
+/**
+ * Undo actions
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Undo(Lt) {
+  var self = this;
+  
+  this.stack = new Array();
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'undo',
+        icon: '<i class="material-icons md-18">undo</i>',
+        title: 'Undo',
+        onClick: function(btn, map) {
+          self.pop();
+        }
+      }]
+  });
+  
+  Undo.prototype.push = function() {
+    self.btn.enable();
+    Lt.redo.btn.disable();
+    Lt.redo.stack.length = 0;
+    var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
+    self.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
+      'index': Lt.mData.index, 'points': restore_points });
+  };
+  
+  Undo.prototype.pop = function() {
+    if (self.stack.length > 0) {
+      if (Lt.mData.points[Lt.mData.index - 1].start) {
+        Lt.createPoint.disable();
+      } else {
+        Lt.mouseLine.from(Lt.mData.points[Lt.mData.index - 2].latLng);
+      }
+
+      Lt.redo.btn.enable();
+      var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
+      Lt.redo.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
+        'index': Lt.mData.index, 'points': restore_points});
+      var dataJSON = self.stack.pop();
+
+      Lt.mData.points = JSON.parse(JSON.stringify(dataJSON.points));
+
+      Lt.mData.index = dataJSON.index;
+      Lt.mData.year = dataJSON.year;
+      Lt.mData.earlywood = dataJSON.earlywood;
+
+      Lt.visualAsset.reload();
+
+      if (self.stack.length == 0) {
+        self.btn.disable();
+      }
+    }
+  };
+}
+
+/**
+ * Redo actions
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Redo(Lt) {
+    var self = this;
+  
+    this.stack = new Array();
+  
+    this.btn = L.easyButton({
+      states: [
+        {
+          stateName: 'redo',
+          icon: '<i class="material-icons md-18">redo</i>',
+          title: 'Redo',
+          onClick: function(btn, map) {
+            self.pop();
+          }
+        }]
+    });
+  
+    Redo.prototype.pop = function() {
+      Lt.undo.btn.enable();
+      var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
+      Lt.undo.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
+        'index': Lt.mData.index, 'points': restore_points});
+      var dataJSON = this.stack.pop();
+
+      Lt.mData.points = JSON.parse(JSON.stringify(dataJSON.points));
+
+      Lt.mData.index = dataJSON.index;
+      Lt.mData.year = dataJSON.year;
+      Lt.mData.earlywood = dataJSON.earlywood;
+
+      Lt.visualAsset.reload();
+
+      if (this.stack.length == 0) {
+        this.btn.disable();
+      }
+    };
+}
+
+
+/**
+ * Create measurement points
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function CreatePoint(Lt) {
+  var self = this;
+  
+  this.active = false;
+  this.startPoint = true;
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">linear_scale</i>',
+        title: 'Create measurable points',
+        onClick: function(btn, map) {
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'End (Esc)',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+      
+  CreatePoint.prototype.enable = function() {
+    self.btn.state('active');
+
+    document.getElementById('map').style.cursor = 'pointer';
+
+    $(document).keyup(function(e) {
+      var key = e.which || e.keyCode;
+      if (key === 27) {
+        self.disable();
+      }
+    });
+
+    $(Lt.viewer._container).click(function(e) {
+      document.getElementById('map').style.cursor = 'pointer';
+
+      var latLng = Lt.viewer.mouseEventToLatLng(e);
+
+      Lt.undo.push();
+
+      if (self.startPoint) {
+        var popup = L.popup({closeButton: false}).setContent(
+            '<input type="number" style="border:none; width:50px;"' +
+            'value="' + Lt.mData.year + '" id="year_input"></input>')
+            .setLatLng(latLng)
+            .openOn(Lt.viewer);
+
+        document.getElementById('year_input').select();
+
+        $(document).keypress(function(e) {
+          var key = e.which || e.keyCode;
+          if (key === 13) {
+            Lt.mData.year = parseInt(document.getElementById('year_input').value);
+            popup.remove(Lt.viewer);
+          }
+        });
+        Lt.mData.newPoint(self.startPoint, latLng, Lt.hasLatewood);
+        self.startPoint = false;
+      } else {
+        Lt.mData.newPoint(self.startPoint, latLng, Lt.hasLatewood);
+      }
+
+      //call newLatLng with current index and new latlng
+      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index-1, latLng);
+
+      //create the next mouseline from the new latlng
+      Lt.mouseLine.from(latLng);
+
+      self.active = true;   //activate dataPoint after one point is made
+    });
+  };
+  
+  CreatePoint.prototype.disable = function() {
+    $(document).off('keyup');
+    // turn off the mouse clicks from previous function
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    Lt.mouseLine.layer.clearLayers(); //clear the mouseline
+    document.getElementById('map').style.cursor = 'default';
+
+    this.startPoint = true;
+  };
+}
+
+
 
 
