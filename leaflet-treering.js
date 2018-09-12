@@ -36,20 +36,21 @@ function LTreering(viewer, basePath, options) {
   this.mouseLine = new InteractiveMouse(this);
   this.visualAsset = new VisualAsset(this);
   
-  //buttons
   this.popout = new Popout(this);
+  
+//  this.undo = new Undo(this);
 }
 
 
 /**
- * A method to load the interface of the treering viewer
+ * Load the interface of the treering viewer
  */
 LTreering.prototype.loadInterface = function () {
   var self = this;
   console.log(self);
 
   self.autoscroll.on();
-  self.viewer.on('resize', function (e) {
+  self.viewer.on('resize', function () {
     self.autoscroll.reset();
   });
 
@@ -80,7 +81,7 @@ LTreering.prototype.loadInterface = function () {
 
 
 /**
- * A method to load the JSON data attached to the treering image
+ * Load the JSON data attached to the treering image
  */
 LTreering.prototype.loadData = function () {
   this.visualAsset.reload();
@@ -91,8 +92,6 @@ LTreering.prototype.loadData = function () {
 //  edit.collapse();
 //  create.collapse();
 };
-
-
 
 /*******************************************************************************/
 
@@ -118,8 +117,6 @@ function MeasurementData(dataObject) {
  * @param {Leaflet Map Object} LtViewer - a refrence to the leaflet map object
  */
 function Autoscroll(LtViewer) {
-  var self = this;
-
   /**
   * A method to turn on autoscroll based on viewer dimmensions
   */
@@ -131,8 +128,8 @@ function Autoscroll(LtViewer) {
     LtViewer.on('mousemove', function (e) {
       var oldMousePos = mousePos;    // Save the old mouse position
       mousePos = e.containerPoint;  // Container point of the mouse
-      var mouseLatLng = e.latlng;     // latLng of the mouse
-      var mapCenter = LtViewer.getCenter();  // Center of the map
+//      var mouseLatLng = e.latlng;     // latLng of the mouse
+//      var mapCenter = LtViewer.getCenter();  // Center of the map
 
       //left bound of the map
       if (mousePos.x <= 40 && mousePos.y > 450 &&
@@ -168,8 +165,8 @@ function Autoscroll(LtViewer) {
   * A method to reset autoscroll when the viewer's dimmensions are resized
   */
   Autoscroll.prototype.reset = function () {
-    self.off();
-    self.on();
+    this.off();
+    this.on();
   };
 }
 
@@ -209,7 +206,7 @@ function MarkerIcon(color, LtBasePath) {
     //   iconUrl: Lt.basePath + 'images/red_dot_icon.png',
     //   iconSize: [12, 12] // size of the icon
     // }),
-};
+}
 
 /**
  * An object for the line created between a click location and the cursor
@@ -288,7 +285,7 @@ function InteractiveMouse(Lt) {
       }
     });
   }
-};
+}
 
 
 /**
@@ -453,28 +450,89 @@ function VisualAsset(Lt) {
     //add the marker to the marker layer
     this.markerLayer.addLayer(this.markers[i]);   
   };
-};
+}
 
 
 /*****************************************************************************/
 
-
 /**
- * A popout button
- @param {Ltreering} Lt - leaflet treering object
+ * A popout object
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
+  var self = this;
+  
   this.btn = L.easyButton({
     states: [{
       stateName: 'popout',
       icon: '<i class="material-icons md-18">launch</i>',
       title: 'Popout Window',
-      onClick: function(btn, map) {
+      onClick: function() {
         window.open(Lt.popoutUrl, 'popout',
-            'location=yes,height=600,width=800,scrollbars=yes,status=yes');
+                    'location=yes,height=600,width=800,scrollbars=yes,status=yes');
       }
     }]
   })
-};
+}
+
+///**
+// * A undo button
+// @param {Ltreering} Lt - Leaflet treering object
+// */
+//function Undo(Lt) {
+//  var self = this;
+//  
+//  this.stack = new Array();
+//  
+//  this.push = function() {
+//    self.btn.enable();
+//    Lt.redo.btn.disable();
+//    Lt.redo.stack.length = 0;
+//    var restore_points = JSON.parse(JSON.stringify(points));
+//    self.stack.push({'year': year, 'earlywood': earlywood,
+//      'index': index, 'points': restore_points });
+//  };
+//  
+//  this.pop = function() {
+//    if (self.stack.length > 0) {
+//      if (points[index - 1].start) {
+//        create.dataPoint.disable();
+//      } else {
+//        interactiveMouse.hbarFrom(points[index - 2].latLng);
+//      }
+//
+//      redo.btn.enable();
+//      var restore_points = JSON.parse(JSON.stringify(points));
+//      redo.stack.push({'year': year, 'earlywood': earlywood,
+//        'index': index, 'points': restore_points});
+//      dataJSON = self.stack.pop();
+//
+//      points = JSON.parse(JSON.stringify(dataJSON.points));
+//
+//      index = dataJSON.index;
+//      year = dataJSON.year;
+//      earlywood = dataJSON.earlywood;
+//
+//      visualAsset.reload();
+//
+//      if (self.stack.length == 0) {
+//        self.btn.disable();
+//      }
+//    }
+//  };
+//  
+//  this.btn = L.easyButton({
+//    states: [
+//      {
+//        stateName: 'undo',
+//        icon: '<i class="material-icons md-18">undo</i>',
+//        title: 'Undo',
+//        onClick: function(btn, map) {
+//          self.pop();
+//        }
+//      }]
+//  });
+//}
 
 
