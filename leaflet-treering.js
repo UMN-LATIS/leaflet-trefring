@@ -40,10 +40,16 @@ function LTreering(viewer, basePath, options) {
   this.undo = new Undo(this);
   this.redo = new Redo(this);
   
+  this.dating = new Dating(this);
+  
   this.createPoint = new CreatePoint(this);
+  this.zeroGrowth = new ZeroGrowth(this);
+  this.createBreak = new CreateBreak(this);
   
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.createTools = new ButtonBar(this, [this.createPoint.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
+  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
+  
+  this.data = new Data(this);
 }
 
 
@@ -74,6 +80,8 @@ LTreering.prototype.loadInterface = function () {
 //    undoRedoBar.addTo(Lt.map);
   } else {
     self.popout.btn.addTo(self.viewer);
+    self.data.btn.addTo(self.viewer);
+    self.dating.btn.addTo(self.viewer);
     self.createTools.bar.addTo(self.viewer);
     self.undoRedoBar.addTo(self.viewer);
 //    data.btn.addTo(Lt.map);
@@ -134,7 +142,7 @@ function MeasurementData(dataObject) {
       }
     }
     this.index++;
-  }
+  };
 }
 
 /**
@@ -354,7 +362,7 @@ function VisualAsset(Lt) {
    * @param {int} i - index of points
    * @param {Leaflet LatLng Object} latLng -
    */
-  VisualAsset.prototype.newLatLng = function (points, i, latLng) {
+  VisualAsset.prototype.newLatLng = function (pts, i, latLng) {
     var leafLatLng = L.latLng(latLng);
 
     if (window.name === 'popout') {
@@ -364,28 +372,29 @@ function VisualAsset(Lt) {
     }
 
     var draggable = true;
+    var marker;
 
     //check if index is the start point
-    if (points[i].start) {
-      var marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
+    if (pts[i].start) {
+      marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
         draggable: draggable, title: 'Start Point', riseOnHover: true});
-    } else if (points[i].break) { //check if point is a break
-      var marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
+    } else if (pts[i].break) { //check if point is a break
+      marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
         draggable: draggable, title: 'Break Point', riseOnHover: true});
     } else if (Lt.hasLatewood) { //check if point is earlywood
-      if (points[i].earlywood) {
-        var marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
-          draggable: draggable, title: 'Year ' + points[i].year +
+      if (pts[i].earlywood) {
+        marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
+          draggable: draggable, title: 'Year ' + pts[i].year +
               ', earlywood', riseOnHover: true});
       } else { //otherwise it's latewood
-        var marker = L.marker(leafLatLng, {icon: new MarkerIcon('dark_blue', Lt.basePath),
-          draggable: draggable, title: 'Year ' + points[i].year +
+        marker = L.marker(leafLatLng, {icon: new MarkerIcon('dark_blue', Lt.basePath),
+          draggable: draggable, title: 'Year ' + pts[i].year +
             ', latewood',
           riseOnHover: true});
       }
     } else {
-      var marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
-        draggable: draggable, title: 'Year ' + points[i].year,
+      marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
+        draggable: draggable, title: 'Year ' + pts[i].year,
         riseOnHover: true});
     }
 
@@ -394,7 +403,7 @@ function VisualAsset(Lt) {
 
     //tell marker what to do when being dragged
     this.markers[i].on('drag', function(e) {
-      if (!points[i].start) {
+      if (!pts[i].start) {
         self.lineLayer.removeLayer(self.lines[i]);
         self.lines[i] =
             L.polyline([self.lines[i]._latlngs[0], e.target._latlng],
@@ -411,7 +420,7 @@ function VisualAsset(Lt) {
               weight: '3'
             });
         self.lineLayer.addLayer(self.lines[i + 1]);
-      } else if (self.lines[i + 2] !== undefined && !points[i + 1].start) {
+      } else if (self.lines[i + 2] !== undefined && !pts[i + 1].start) {
         self.lineLayer.removeLayer(self.lines[i + 2]);
         self.lines[i + 2] =
             L.polyline([e.target._latlng, self.lines[i + 2]._latlngs[1]],
@@ -423,17 +432,17 @@ function VisualAsset(Lt) {
     });
 
     //tell marker what to do when the draggin is done
-//    this.markers[i].on('dragend', function(e) {
-//      undo.push();
-//      points[i].latLng = e.target._latlng;
-//    });
+    this.markers[i].on('dragend', function(e) {
+      Lt.undo.push();
+      pts[i].latLng = e.target._latlng;
+    });
 
-//    //tell marker what to do when clicked
-//    this.markers[i].on('click', function(e) {
+    //tell marker what to do when clicked
+    this.markers[i].on('click', function(e) {
 //      if (Lt.edit.deletePoint.active) {
 //        Lt.edit.deletePoint.action(i);
 //      }
-//      console.log(points[i]);
+//      console.log(pts[i]);
 //
 //      if (Lt.edit.cut.active) {
 //        if (edit.cut.point != -1) {
@@ -443,8 +452,8 @@ function VisualAsset(Lt) {
 //        }
 //      }
 //      if (Lt.edit.addZeroGrowth.active) {
-//        if ((points[i].earlywood && Lt.hasLatewood) || points[i].start ||
-//            points[i].break) {
+//        if ((pts[i].earlywood && Lt.hasLatewood) || pts[i].start ||
+//            pts[i].break) {
 //          alert('Missing year can only be placed at the end of a year!');
 //        } else {
 //          Lt.edit.addZeroGrowth.action(i);
@@ -453,21 +462,21 @@ function VisualAsset(Lt) {
 //      if (Lt.edit.addBreak.active) {
 //        Lt.edit.addBreak.action(i);
 //      }
-//      if (setYear.active) {
-//        setYear.action(i);
-//      }
-//    });
+      if (Lt.dating.active) {
+        Lt.dating.action(i);
+      }
+    });
 
     //drawing the line if the previous point exists
-    if (points[i - 1] != undefined && !points[i].start) {
-      if (points[i].earlywood || !Lt.hasLatewood || 
-          (!points[i - 1].earlywood && points[i].break)) {
+    if (pts[i - 1] != undefined && !pts[i].start) {
+      if (pts[i].earlywood || !Lt.hasLatewood || 
+          (!pts[i - 1].earlywood && pts[i].break)) {
         var color = '#00BCD4';
       } else {
         var color = '#00838f';
       }
       this.lines[i] =
-          L.polyline([points[i - 1].latLng, leafLatLng],
+          L.polyline([pts[i - 1].latLng, leafLatLng],
           {color: color, opacity: '.75', weight: '3'});
       this.lineLayer.addLayer(this.lines[i]);
     }
@@ -658,6 +667,97 @@ function Redo(Lt) {
     };
 }
 
+/**
+ * Set date of chronology
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Dating(Lt) {
+  var self = this;
+  
+  this.active = false;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">access_time</i>',
+        title: 'Set the year of any point and adjust all other points',
+        onClick: function(btn, map) {
+//          annotation.disable();
+//          edit.collapse();
+//          create.collapse();
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+  
+  Dating.prototype.action = function(i) {
+    if (Lt.mData.points[i].year != undefined) {
+      var popup = L.popup({closeButton: false})
+          .setContent(
+          '<input type="number" style="border:none;width:50px;" value="' +
+          Lt.mData.points[i].year + '" id="year_input"></input>')
+          .setLatLng(Lt.mData.points[i].latLng)
+          .openOn(Lt.viewer);
+
+      document.getElementById('year_input').select();
+
+      $(Lt.viewer._container).click(function(e) {
+        popup.remove(Lt.viewer);
+        self.disable();
+      });
+
+      $(document).keypress(function(e) {
+        var key = e.which || e.keyCode;
+        if (key === 13) {
+          var new_year = parseInt(document.getElementById('year_input').value);
+          popup.remove(Lt.viewer);
+
+          var date = new Date();
+          var max = date.getFullYear();
+
+          if (new_year > max) {
+            alert('Year cannot exceed ' + max + '!');
+          } else {
+            Lt.undo.push();
+
+            var shift = new_year - Lt.mData.points[i].year;
+
+            Object.values(Lt.mData.points).map(function(e, i) {
+              if (Lt.mData.points[i].year != undefined) {
+                Lt.mData.points[i].year += shift;
+              }
+            });
+            Lt.mData.year += shift;
+            Lt.visualAsset.reload();
+          }
+          self.disable();
+        }
+      });
+    }
+  };
+  
+  Dating.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+  };
+
+  Dating.prototype.disable = function() {
+    this.btn.state('inactive');
+    $(Lt.viewer._container).off('click');
+    $(document).off('keypress');
+    this.active = false;
+  };
+}
 
 /**
  * Create measurement points
@@ -753,6 +853,588 @@ function CreatePoint(Lt) {
   };
 }
 
+/**
+ * Add a zero growth measurement
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function ZeroGrowth(Lt) {
+  var self = this;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'skip-year',
+        icon: '<i class="material-icons md-18">exposure_zero</i>',
+        title: 'Add a zero growth year',
+        onClick: function(btn, map) {
+          self.add();
+        }
+      }]
+  });
+  
+  ZeroGrowth.prototype.add = function() {
+    if (Lt.mData.index) {
+      var latLng = Lt.mData.points[Lt.mData.index - 1].latLng;
 
+      Lt.undo.push();
 
+      Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': false,
+        'year': Lt.mData.year, 'earlywood': true, 'latLng': latLng};
+      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
+      Lt.mData.index++;
+      if (Lt.hasLatewood) {
+        Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': false,
+          'year': Lt.mData.year, 'earlywood': false, 'latLng': latLng};
+        Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
+        Lt.mData.index++;
+      }
+      Lt.mData.year++;
+    } else {
+      alert('First year cannot be missing!');
+    }
+  };      
+}
 
+/**
+ * Add a break in a measurement
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function CreateBreak(Lt) {
+  var self = this;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">broken_image</i>',
+        title: 'Create a break point',
+        onClick: function(btn, map) {
+          Lt.createPoint.disable();
+          self.enable();
+          Lt.mouseLine.from(Lt.mData.points[Lt.mData.index - 1].latLng);
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  })
+  
+  CreateBreak.prototype.enable = function() {
+    self.btn.state('active');
+
+    Lt.createPoint.active = true;
+
+    document.getElementById('map').style.cursor = 'pointer';
+
+    $(Lt.viewer._container).click(function(e) {
+      document.getElementById('map').style.cursor = 'pointer';
+
+      var latLng = Lt.viewer.mouseEventToLatLng(e);
+
+      Lt.mouseLine.from(latLng);
+
+      Lt.undo.push();
+
+      Lt.viewer.dragging.disable();
+      Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': true,
+        'latLng': latLng};
+      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
+      Lt.mData.index++;
+      self.disable();
+
+      Lt.createPoint.enable();
+    });
+  };
+  
+  CreateBreak.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    Lt.viewer.dragging.enable();
+    Lt.mouseLine.layer.clearLayers();
+    Lt.createPoint.active = false;
+  };
+      
+}
+
+function Data(Lt) {
+  var self = this;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'collapse',
+        icon: '<i class="material-icons md-18">view_list</i>',
+        title: 'View and download data',
+        onClick: function(btn, map) {
+          self.enable();
+
+//          create.collapse();
+//          setYear.disable();
+//          edit.collapse();
+//          annotation.disable();
+        }
+      },
+      {
+        stateName: 'expand',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Collapse',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+  
+  this.dialog = L.control.dialog({'size': [340, 400], 'anchor': [5, 50], 'initOpen': false})
+    .setContent('<h3>There are no data points to measure</h3>')
+    .addTo(Lt.viewer);
+  
+  Data.prototype.distance = function(p1, p2) {
+    var lastPoint = Lt.viewer.project(p1, Lt.viewer.getMaxZoom());
+    var newPoint = Lt.viewer.project(p2, Lt.viewer.getMaxZoom());
+    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
+        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
+    var pixelsPerMillimeter = 1;
+    Lt.viewer.eachLayer(function(layer) {
+      if (layer.options.pixelsPerMillimeter > 0) {
+        pixelsPerMillimeter = Lt.ppm;
+      }
+    });
+    length = length / pixelsPerMillimeter;
+    var retinaFactor = 1;
+    if (L.Browser.retina) {
+      retinaFactor = 2; // this is potentially incorrect for 3x+ devices
+    }
+    return length * retinaFactor;
+  }
+  
+  Data.prototype.download = function() {
+    
+    var toFourCharString = function(n) {
+      var string = n.toString();
+
+      if (string.length == 1) {
+        string = '   ' + string;
+      } else if (string.length == 2) {
+        string = '  ' + string;
+      } else if (string.length == 3) {
+        string = ' ' + string;
+      } else if (string.length == 4) {
+        string = string;
+      } else if (string.length >= 5) {
+        alert('Value exceeds 4 characters');
+        throw 'error in toFourCharString(n)';
+      } else {
+        alert('toSixCharString(n) unknown error');
+        throw 'error';
+      }
+      return string;
+    };
+
+    var toSixCharString = function(n) {
+      var string = n.toString();
+
+      if (string.length == 1) {
+        string = '     ' + string;
+      } else if (string.length == 2) {
+        string = '    ' + string;
+      } else if (string.length == 3) {
+        string = '   ' + string;
+      } else if (string.length == 4) {
+        string = '  ' + string;
+      } else if (string.length == 5) {
+        string = ' ' + string;
+      } else if (string.length >= 6) {
+        alert('Value exceeds 5 characters');
+        throw 'error in toSixCharString(n)';
+      } else {
+        alert('toSixCharString(n) unknown error');
+        throw 'error';
+      }
+      return string;
+    };
+
+    var toEightCharString = function(n) {
+      var string = n.toString();
+      if (string.length == 0) {
+        string = string + '        ';
+      } else if (string.length == 1) {
+        string = string + '       ';
+      } else if (string.length == 2) {
+        string = string + '      ';
+      } else if (string.length == 3) {
+        string = string + '     ';
+      } else if (string.length == 4) {
+        string = string + '    ';
+      } else if (string.length == 5) {
+        string = string + '   ';
+      } else if (string.length == 6) {
+        string = string + '  ';
+      } else if (string.length == 7) {
+        string = string + ' ';
+      } else if (string.length >= 8) {
+        alert('Value exceeds 7 characters');
+        throw 'error in toEightCharString(n)';
+      } else {
+        alert('toSixCharString(n) unknown error');
+        throw 'error';
+      }
+      return string;
+    };
+    
+    if (Lt.mData.points != undefined && Lt.mData.points[1] != undefined) {
+      
+      var sum_points;
+      var sum_string = '';
+      var last_latLng;
+      var break_length;
+      var length_string;
+      
+      if (Lt.hasLatewood) {
+
+        var sum_string = '';
+        var ew_string = '';
+        var lw_string = '';
+
+        y = Lt.mData.points[1].year;
+        var sum_points = Object.values(Lt.mData.points).filter(function(e) {
+          if (e.earlywood != undefined) {
+            return !(e.earlywood);
+          } else {
+            return true;
+          }
+        });
+
+        if (sum_points[1].year % 10 > 0) {
+          sum_string = sum_string.concat(
+              toEightCharString(Lt.assetName) +
+              toFourCharString(sum_points[1].year));
+        }
+
+        var break_point = false;
+        sum_points.map(function(e, i, a) {
+          
+          if (e.start) {
+            last_latLng = e.latLng;
+          } else if (e.break) {
+            break_length = 
+              Math.round(data.distance(last_latLng, e.latLng) * 1000);
+              break_point = true;
+          } else {
+            if (e.year % 10 == 0) {
+              sum_string = sum_string.concat('\r\n' +
+                  toEightCharString(Lt.assetName) +
+                  toFourCharString(e.year));
+            }
+            while (e.year > y) {
+              sum_string = sum_string.concat('    -1');
+              y++;
+              if (y % 10 == 0) {
+                sum_string = sum_string.concat('\r\n' +
+                    toFourCharString(e.year));
+              }
+            }
+
+            var length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            if (break_point) {
+              length += break_length;
+              break_point = false;
+            }
+            if (length == 9999) {
+              length = 9998;
+            }
+            if (length == 999) {
+              length = 998;
+            }
+
+            length_string = toSixCharString(length);
+
+            sum_string = sum_string.concat(length_string);
+            last_latLng = e.latLng;
+            y++;
+          }
+        });
+        sum_string = sum_string.concat(' -9999');
+
+        y = Lt.mData.points[1].year;
+
+        if (Lt.mData.points[1].year % 10 > 0) {
+          ew_string = ew_string.concat(
+              toEightCharString(Lt.assetName) +
+              toFourCharString(Lt.mData.points[1].year));
+          lw_string = lw_string.concat(
+              toEightCharString(Lt.assetName) +
+              toFourCharString(Lt.mData.points[1].year));
+        }
+
+        break_point = false;
+        Object.values(Lt.mData.points).map(function(e, i, a) {
+          if (e.start) {
+            last_latLng = e.latLng;
+          } else if (e.break) {
+            break_length = 
+              Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            break_point = true;
+          } else {
+            if (e.year % 10 == 0) {
+              if (e.earlywood) {
+                ew_string = ew_string.concat('\r\n' +
+                    toEightCharString(Lt.assetName) +
+                    toFourCharString(e.year));
+              } else {
+                lw_string = lw_string.concat('\r\n' +
+                    toEightCharString(Lt.assetName) +
+                    toFourCharString(e.year));
+              }
+            }
+            while (e.year > y) {
+              ew_string = ew_string.concat('    -1');
+              lw_string = lw_string.concat('    -1');
+              y++;
+              if (y % 10 == 0) {
+                ew_string = ew_string.concat('\r\n' +
+                    toEightCharString(Lt.assetName) +
+                    toFourCharString(e.year));
+                lw_string = lw_string.concat('\r\n' +
+                    toEightCharString(Lt.assetName) +
+                    toFourCharString(e.year));
+              }
+            }
+
+            length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            if (break_point) {
+              length += break_length;
+              break_point = false;
+            }
+            if (length == 9999) {
+              length = 9998;
+            }
+            if (length == 999) {
+              length = 998;
+            }
+
+            length_string = toSixCharString(length);
+
+            if (e.earlywood) {
+              ew_string = ew_string.concat(length_string);
+              last_latLng = e.latLng;
+            } else {
+              lw_string = lw_string.concat(length_string);
+              last_latLng = e.latLng;
+              y++;
+            }
+          }
+        });
+        ew_string = ew_string.concat(' -9999');
+        lw_string = lw_string.concat(' -9999');
+
+        console.log(sum_string);
+        console.log(ew_string);
+        console.log(lw_string);
+
+        var zip = new JSZip();
+        zip.file((Lt.assetName + '.raw'), sum_string);
+        zip.file((Lt.assetName + '.lwr'), lw_string);
+        zip.file((Lt.assetName + '.ewr'), ew_string);
+
+      } else {
+
+        var y = Lt.mData.points[1].year;
+        sum_points = Object.values(Lt.mData.points);
+
+        if (sum_points[1].year % 10 > 0) {
+          sum_string = sum_string.concat(
+              toEightCharString(Lt.assetName) +
+              toFourCharString(sum_points[1].year));
+        }
+        sum_points.map(function(e, i, a) {
+          if (!e.start) {
+            if (e.year % 10 == 0) {
+              sum_string = sum_string.concat('\r\n' +
+                  toEightCharString(Lt.assetName) +
+                  toFourCharString(e.year));
+            }
+            while (e.year > y) {
+              sum_string = sum_string.concat('    -1');
+              y++;
+              if (y % 10 == 0) {
+                sum_string = sum_string.concat('\r\n' +
+                    toFourCharString(e.year));
+              }
+            }
+
+            length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            if (length == 9999) {
+              length = 9998;
+            }
+            if (length == 999) {
+              length = 998;
+            }
+
+            length_string = toSixCharString(length);
+
+            sum_string = sum_string.concat(length_string);
+            last_latLng = e.latLng;
+            y++;
+          } else {
+            last_latLng = e.latLng;
+          }
+        });
+        sum_string = sum_string.concat(' -9999');
+
+        var zip = new JSZip();
+        zip.file((Lt.assetName + '.raw'), sum_string);
+      }
+
+      zip.generateAsync({type: 'blob'})
+          .then(function(blob) {
+            saveAs(blob, (Lt.assetName + '.zip'));
+          });
+    } else {
+      alert('There is no data to download');
+    }
+  };
+  
+  Data.prototype.clean = function() {
+    for (var i in Lt.mData.points) {
+      if (Lt.mData.points[i] === null || Lt.mData.points[i] === undefined) {
+        delete Lt.mData.points[i];
+      }
+    }
+  };
+  
+  Data.prototype.enable = function() {
+    this.btn.state('expand');
+    var string;
+    if (Lt.mData.points[0] != undefined) {
+      var y = Lt.mData.points[1].year;
+      string = '<div><button id="download-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>download</button><button id="refresh-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>refresh</button><button id="delete-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>delete all</button></div><table><tr>' +
+          '<th style="width: 45%;">Year</th>' +
+          '<th style="width: 70%;">Length</th></tr>';
+
+      var break_point = false;
+      var last_latLng;
+      var break_length;
+      var break_point;
+      var length;
+      this.clean();
+      Object.values(Lt.mData.points).map(function(e, i, a) {
+        
+        if (e.start) {
+          last_latLng = e.latLng;
+        } else if (e.break) {
+          break_length =
+            Math.round(self.distance(last_latLng, e.latLng) * 1000) / 1000;
+          break_point = true;
+        } else {
+          while (e.year > y) {
+            string = string.concat('<tr><td>' + y +
+                '-</td><td>N/A</td></tr>');
+            y++;
+          }
+          length = Math.round(self.distance(last_latLng, e.latLng) * 1000) / 1000;
+          if (break_point) {
+            length += break_length;
+            length = Math.round(length * 1000) / 1000;
+            break_point = false;
+          }
+          if (length == 9.999) {
+            length = 9.998;
+          }
+          if (Lt.hasLatewood) {
+            var wood;
+            var row_color;
+            if (e.earlywood) {
+              wood = 'E';
+              row_color = '#00d2e6';
+            } else {
+              wood = 'L';
+              row_color = '#00838f';
+              y++;
+            }
+            string =
+                string.concat('<tr style="color:' + row_color + ';">');
+            string = string.concat('<td>' + e.year + wood + '</td><td>'+
+                length + ' mm</td></tr>');
+          } else {
+            y++;
+            string = string.concat('<tr style="color: #00d2e6;">');
+            string = string.concat('<td>' + e.year + '</td><td>' +
+                length + ' mm</td></tr>');
+          }
+          last_latLng = e.latLng;
+        }
+      });
+      this.dialog.setContent(string + '</table>');
+    } else {
+      string = '<div><button id="download-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          'disabled>download</button>' +
+          '<button id="refresh-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>refresh</button><button id="delete-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>delete all</button></div>' +
+          '<h3>There are no data points to measure</h3>';
+      this.dialog.setContent(string);
+    }
+    this.dialog.lock();
+    this.dialog.open();
+    $('#download-button').click(self.download);
+    $('#refresh-button').click(function() {
+      self.disable();
+      self.enable();
+    });
+    $('#delete-button').click(function() {
+      self.dialog.setContent(
+          '<p>This action will delete all data points.' +
+          'Annotations will not be effected.' +
+          'Are you sure you want to continue?</p>' +
+          '<p><button id="confirm-delete"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>confirm</button><button id="cancel-delete"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>cancel</button></p>');
+
+      $('#confirm-delete').click(function() {
+        Lt.undo.push();
+
+        Lt.mData.points = {};
+        Lt.mData.year = 0;
+        Lt.mData.earlywood = true;
+        Lt.mData.index = 0;
+
+        Lt.visualAsset.reload();
+
+        self.disable();
+      });
+      $('#cancel-delete').click(function() {
+        self.disable();
+        self.enable();
+      });
+    });
+  },
+  
+  Data.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('collapse');
+    $('#confirm-delete').off('click');
+    $('#cancel-delete').off('click');
+    $('#download-button').off('click');
+    $('#refresh-button').off('click');
+    $('#delete-button').off('click');
+    this.dialog.close();
+  };
+}
