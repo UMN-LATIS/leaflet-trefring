@@ -19,19 +19,20 @@ function LTreering(viewer, basePath, options) {
   this.basePath = basePath;
 
   //options
-  this.ppm = options.ppm || 468;
-  this.saveURL = options.saveURL || '';
-  this.savePermission = options.savePermission || false;
-  this.popoutUrl = options.popoutUrl || null;
-  //this.initialData = options.initialData || {};
-  this.assetName = options.assetName || 'N/A';
-  this.hasLatewood = options.hasLatewood || true;
+  this.meta = {
+    'ppm': options.ppm || 468,
+    'saveURL': options.saveURL || '',
+    'savePermission': options.savePermission || false,
+    'popoutUrl': options.popoutUrl || null,
+    'assetName': options.assetName || 'N/A',
+    'hasLatewood': options.hasLatewood || true,
+  }
 
   if (options.ppm === 0) {
     alert('Please set up PPM in asset metadata. PPM will default to 468.');
   }
 
-  this.mData = new MeasurementData(options.initialData);
+  this.data = new MeasurementData(options.initialData);
   this.autoscroll = new Autoscroll(this.viewer);
   this.mouseLine = new InteractiveMouse(this);
   this.visualAsset = new VisualAsset(this);
@@ -43,13 +44,20 @@ function LTreering(viewer, basePath, options) {
   this.dating = new Dating(this);
   
   this.createPoint = new CreatePoint(this);
-  this.zeroGrowth = new ZeroGrowth(this);
+  this.zeroGrowth = new CreateZeroGrowth(this);
   this.createBreak = new CreateBreak(this);
+  
+  this.deletePoint = new DeletePoint(this);
+  this.cut = new Cut(this);
+  this.insertPoint = new InsertPoint(this);
+  this.insertZeroGrowth = new InsertZeroGrowth(this);
+  this.insertBreak = new InsertBreak(this);
   
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
+  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], '<i class="material-icons md-18">edit</i>', 'Edit and delete data points from the series');
   
-  this.data = new Data(this);
+  this.viewData = new ViewData(this);
 }
 
 
@@ -80,9 +88,10 @@ LTreering.prototype.loadInterface = function () {
 //    undoRedoBar.addTo(Lt.map);
   } else {
     self.popout.btn.addTo(self.viewer);
-    self.data.btn.addTo(self.viewer);
+    self.viewData.btn.addTo(self.viewer);
     self.dating.btn.addTo(self.viewer);
     self.createTools.bar.addTo(self.viewer);
+    self.editTools.bar.addTo(self.viewer);
     self.undoRedoBar.addTo(self.viewer);
 //    data.btn.addTo(Lt.map);
 //    fileBar.addTo(Lt.map);
@@ -101,11 +110,6 @@ LTreering.prototype.loadInterface = function () {
 LTreering.prototype.loadData = function () {
   this.visualAsset.reload();
 //  annotation.reload();
-//
-//  setYear.disable();
-//  annotation.disable();
-//  edit.collapse();
-//  create.collapse();
 };
 
 /*******************************************************************************/
@@ -118,6 +122,8 @@ LTreering.prototype.loadData = function () {
  * @param {object} dataObject -
  */
 function MeasurementData(dataObject) {
+  var self = this;
+  
   this.saveDate = dataObject.saveDate || {};
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
@@ -143,6 +149,205 @@ function MeasurementData(dataObject) {
     }
     this.index++;
   };
+  
+  MeasurementData.prototype.deletePoint = function(i, hasLatewood) {
+    if (this.points[i].start) {
+      if (this.points[i - 1] != undefined && this.points[i - 1].break) {
+        i--;
+        var second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+        var shift = this.points[i + 2].year - this.points[i - 1].year - 1;
+        second_points.map(function(e) {
+          e.year -= shift;
+          this.points[i] = e;
+          i++;
+        });
+        this.year -= shift;
+        this.index = index - 2;
+        delete this.points[index];
+        delete this.points[index + 1];
+      } else {
+        var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+        second_points.map(function(e) {
+          if (!i) {
+            self.points[i] = {'start': true, 'skip': false, 'break': false,
+              'latLng': e.latLng};
+          } else {
+            self.points[i] = e;
+          }
+          i++;
+        });
+        this.index--;
+        delete this.points[this.index];
+      }
+    } else if (this.points[i].break) {
+      var second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+      var shift = this.points[i + 2].year - this.points[i - 1].year - 1;
+      second_points.map(function(e) {
+        e.year -= shift;
+        self.points[i] = e;
+        i++;
+      });
+      this.year -= shift;
+      this.index = index - 2;
+      delete this.points[this.index];
+      delete this.points[this.index + 1];
+    } else {
+      var new_points = this.points;
+      var k = i;
+      var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+      second_points.map(function(e) {
+        if (!e.start && !e.break) {
+          if (hasLatewood) {
+            e.earlywood = !e.earlywood;
+            if (!e.earlywood) {
+              e.year--;
+            }
+          } else {
+            e.year--;
+          }
+        }
+        new_points[k] = e;
+        k++;
+      });
+
+      this.points = new_points;
+      this.index--;
+      delete this.points[this.index];
+      this.earlywood = !this.earlywood;
+      if (this.points[this.index - 1].earlywood) {
+        this.year--;
+      }
+    }
+  }
+  
+  MeasurementData.prototype.cut = function(i, j) {
+    if (i > j) {
+      var trimmed_points = Object.values(this.points).splice(i, this.index - 1);
+      var k = 0;
+      this.points = {};
+      trimmed_points.map(function(e) {
+        if (!k) {
+          this.points[k] = {'start': true, 'skip': false, 'break': false,
+            'latLng': e.latLng};
+        } else {
+          this.points[k] = e;
+        }
+        k++;
+      });
+      this.index = k;
+    } else if (i < j) {
+      this.points = Object.values(this.points).splice(0, i);
+      this.index = i;
+    } else {
+      alert('You cannot select the same point');
+    }
+  };
+  
+  MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
+    var i = 0;
+    while (this.points[i] != undefined &&
+        this.points[i].latLng.lng < latLng.lng) {
+      i++;
+    }
+    if (this.points[i] == null) {
+      alert('New point must be within existing points.' +
+          'Use the create toolbar to add new points to the series.');
+      return;
+    }
+
+    var new_points = this.points;
+    var second_points = Object.values(this.points).splice(i, this.index - 1);
+    var k = i;
+    var year_adjusted = this.points[i].year;
+    var earlywood_adjusted = true;
+
+    if (this.points[i - 1].earlywood && hasLatewood) {
+      year_adjusted = this.points[i - 1].year;
+      earlywood_adjusted = false;
+    } else if (this.points[i - 1].start) {
+      year_adjusted = this.points[i + 1].year;
+    } else {
+      year_adjusted = this.points[i - 1].year + 1;
+    }
+    new_points[k] = {'start': false, 'skip': false, 'break': false,
+      'year': year_adjusted, 'earlywood': earlywood_adjusted,
+      'latLng': latLng};
+
+    var tempK = k;
+    
+    //visualAsset.newLatLng(new_points, k, latLng);
+    k++;
+
+    second_points.map(function(e) {
+      if (!e.start && !e.break) {
+        if (hasLatewood) {
+          e.earlywood = !e.earlywood;
+          if (e.earlywood) {
+            e.year++;
+          }
+        }
+        else {
+          e.year++;
+        }
+      }
+      new_points[k] = e;
+      k++;
+    });
+
+    this.points = new_points;
+    this.index = k;
+    if (hasLatewood) {
+      this.earlywood = !this.earlywood;
+    }
+    if (!this.points[this.index - 1].earlywood || !hasLatewood) {
+      this.year++;
+    }
+    
+    return tempK;
+  };
+  
+  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, hasLatewood) {
+    var new_points = this.points;
+    var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+    var k = i + 1;
+
+    var year_adjusted = this.points[i].year + 1;
+
+    new_points[k] = {'start': false, 'skip': false, 'break': false,
+      'year': year_adjusted, 'earlywood': true, 'latLng': latLng};
+    
+//    visualAsset.newLatLng(new_points, k, latLng);
+    k++;
+
+    if (hasLatewood) {
+      new_points[k] = {'start': false, 'skip': false, 'break': false,
+        'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
+//      visualAsset.newLatLng(new_points, k, latLng);
+      k++;
+    }
+    
+    var tempK = k-1;
+
+    second_points.map(function(e) {
+      if (!e.start && !e.break) {
+        e.year++;
+      }
+      new_points[k] = e;
+      k++;
+    });
+
+    this.points = new_points;
+    this.index = k;
+    this.year++;
+    
+    return tempK;
+  }
+  
+  MeasurementData.prototype.year = function() { return this.year; }
+  MeasurementData.prototype.earlywood = function() { return this.earlywood; }
+  MeasurementData.prototype.points = function() { return this.points; }
+  MeasurementData.prototype.index = function() { return this.index; }
+
 }
 
 /**
@@ -248,8 +453,20 @@ function MarkerIcon(color, LtBasePath) {
  * @param {LTreering} Lt - a refrence to the leaflet treering object
  */
 function InteractiveMouse(Lt) {
+  var self = this;
   
   this.layer = L.layerGroup().addTo(Lt.viewer);
+  this.active = false;
+  
+  InteractiveMouse.prototype.enable = function() {
+    this.active = true;
+  }
+  
+  InteractiveMouse.prototype.disable = function() {
+    this.active = false;
+    $(Lt.viewer._container).off('mousemove');
+    this.layer.clearLayers();
+  }
   
   /**
   * A method to create a new line from a given latLng
@@ -257,10 +474,8 @@ function InteractiveMouse(Lt) {
   * create a line from
   */
   InteractiveMouse.prototype.from = function (latLng) {
-    var self = this;
-    
     $(Lt.viewer._container).mousemove(function(e) {
-      if (Lt.createPoint.active) {
+      if (self.active) {
         self.layer.clearLayers();
         var mousePoint = Lt.viewer.mouseEventToLayerPoint(e);
         var mouseLatLng = Lt.viewer.mouseEventToLatLng(e);
@@ -301,7 +516,7 @@ function InteractiveMouse(Lt) {
             (mousePoint.y - point.y) * Math.cos(Math.PI / 2 * 3);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        if (Lt.mData.earlywood || !Lt.hasLatewood) {
+        if (Lt.data.earlywood || !Lt.meta.hasLatewood) {
           var color = '#00BCD4';
         } else {
           var color = '#00838f';
@@ -334,7 +549,6 @@ function VisualAsset(Lt) {
   this.lineLayer = L.layerGroup().addTo(Lt.viewer);
   this.previousLatLng = undefined;
   
-  
   /**
    * A method to reload all visual assets on the viewer
    */
@@ -347,10 +561,10 @@ function VisualAsset(Lt) {
     this.lines = new Array();
 
     //plot the data back onto the map
-    if (Lt.mData.points !== undefined) {
-      Object.values(Lt.mData.points).map(function(e, i) {
+    if (Lt.data.points !== undefined) {
+      Object.values(Lt.data.points).map(function(e, i) {
         if (e != undefined) {
-          Lt.visualAsset.newLatLng(Lt.mData.points, i, e.latLng);
+          Lt.visualAsset.newLatLng(Lt.data.points, i, e.latLng);
         }
       });
     }
@@ -381,7 +595,7 @@ function VisualAsset(Lt) {
     } else if (pts[i].break) { //check if point is a break
       marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
         draggable: draggable, title: 'Break Point', riseOnHover: true});
-    } else if (Lt.hasLatewood) { //check if point is earlywood
+    } else if (Lt.meta.hasLatewood) { //check if point is earlywood
       if (pts[i].earlywood) {
         marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
           draggable: draggable, title: 'Year ' + pts[i].year +
@@ -439,29 +653,28 @@ function VisualAsset(Lt) {
 
     //tell marker what to do when clicked
     this.markers[i].on('click', function(e) {
-//      if (Lt.edit.deletePoint.active) {
-//        Lt.edit.deletePoint.action(i);
-//      }
-//      console.log(pts[i]);
-//
-//      if (Lt.edit.cut.active) {
-//        if (edit.cut.point != -1) {
-//          Lt.edit.cut.action(edit.cut.point, i);
-//        } else {
-//          Lt.edit.cut.point = i;
-//        }
-//      }
-//      if (Lt.edit.addZeroGrowth.active) {
-//        if ((pts[i].earlywood && Lt.hasLatewood) || pts[i].start ||
-//            pts[i].break) {
-//          alert('Missing year can only be placed at the end of a year!');
-//        } else {
-//          Lt.edit.addZeroGrowth.action(i);
-//        }
-//      }
-//      if (Lt.edit.addBreak.active) {
-//        Lt.edit.addBreak.action(i);
-//      }
+      if (Lt.deletePoint.active) {
+        Lt.deletePoint.action(i);
+      }
+      
+      if (Lt.cut.active) {
+        if (Lt.cut.point != -1) {
+          Lt.cut.action(i);
+        } else {
+          Lt.cut.fromPoint(i);
+        }
+      }
+      if (Lt.insertZeroGrowth.active) {
+        if ((pts[i].earlywood && Lt.meta.hasLatewood) || pts[i].start ||
+            pts[i].break) {
+          alert('Missing year can only be placed at the end of a year!');
+        } else {
+          Lt.insertZeroGrowth.action(i);
+        }
+      }
+      if (Lt.insertBreak.active) {
+        Lt.insertBreak.action(i);
+      }
       if (Lt.dating.active) {
         Lt.dating.action(i);
       }
@@ -469,7 +682,7 @@ function VisualAsset(Lt) {
 
     //drawing the line if the previous point exists
     if (pts[i - 1] != undefined && !pts[i].start) {
-      if (pts[i].earlywood || !Lt.hasLatewood || 
+      if (pts[i].earlywood || !Lt.meta.hasLatewood || 
           (!pts[i - 1].earlywood && pts[i].break)) {
         var color = '#00BCD4';
       } else {
@@ -497,14 +710,14 @@ function VisualAsset(Lt) {
  */
 function ButtonBar(Lt, btns, icon, title) {
   var self = this;
+  
+  this.btns = btns;
 
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'collapse',
-//        icon: '<i class="material-icons md-18">straighten</i>',
         icon: icon,
-//        title: 'Create new data points',
         title: title,
         onClick: function(btn, map) {
           self.btn.state('expand');
@@ -531,14 +744,14 @@ function ButtonBar(Lt, btns, icon, title) {
       }]
   });
   
-  this.bar = L.easyBar([self.btn].concat(btns));
+  this.bar = L.easyBar([self.btn].concat(this.btns));
   
   ButtonBar.prototype.expand = function() {
-    btns.forEach(function(e) { e.enable() });
+    this.btns.forEach(function(e) { e.enable() });
   }
   
   ButtonBar.prototype.collapse = function() {
-    btns.forEach(function(e) { e.disable() });
+    this.btns.forEach(function(e) { e.disable() });
   }
   
   this.collapse();
@@ -558,7 +771,7 @@ function Popout(Lt) {
       icon: '<i class="material-icons md-18">launch</i>',
       title: 'Popout Window',
       onClick: function() {
-        window.open(Lt.popoutUrl, 'popout',
+        window.open(Lt.meta.popoutUrl, 'popout',
                     'location=yes,height=600,width=800,scrollbars=yes,status=yes');
       }
     }]
@@ -590,30 +803,30 @@ function Undo(Lt) {
     self.btn.enable();
     Lt.redo.btn.disable();
     Lt.redo.stack.length = 0;
-    var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
-    self.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
-      'index': Lt.mData.index, 'points': restore_points });
+    var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
+    self.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
+      'index': Lt.data.index, 'points': restore_points });
   };
   
   Undo.prototype.pop = function() {
     if (self.stack.length > 0) {
-      if (Lt.mData.points[Lt.mData.index - 1].start) {
+      if (Lt.data.points[Lt.data.index - 1].start) {
         Lt.createPoint.disable();
       } else {
-        Lt.mouseLine.from(Lt.mData.points[Lt.mData.index - 2].latLng);
+        Lt.mouseLine.from(Lt.data.points[Lt.data.index - 2].latLng);
       }
 
       Lt.redo.btn.enable();
-      var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
-      Lt.redo.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
-        'index': Lt.mData.index, 'points': restore_points});
+      var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
+      Lt.redo.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
+        'index': Lt.data.index, 'points': restore_points});
       var dataJSON = self.stack.pop();
 
-      Lt.mData.points = JSON.parse(JSON.stringify(dataJSON.points));
+      Lt.data.points = JSON.parse(JSON.stringify(dataJSON.points));
 
-      Lt.mData.index = dataJSON.index;
-      Lt.mData.year = dataJSON.year;
-      Lt.mData.earlywood = dataJSON.earlywood;
+      Lt.data.index = dataJSON.index;
+      Lt.data.year = dataJSON.year;
+      Lt.data.earlywood = dataJSON.earlywood;
 
       Lt.visualAsset.reload();
 
@@ -648,16 +861,16 @@ function Redo(Lt) {
   
     Redo.prototype.pop = function() {
       Lt.undo.btn.enable();
-      var restore_points = JSON.parse(JSON.stringify(Lt.mData.points));
-      Lt.undo.stack.push({'year': Lt.mData.year, 'earlywood': Lt.mData.earlywood,
-        'index': Lt.mData.index, 'points': restore_points});
+      var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
+      Lt.undo.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
+        'index': Lt.data.index, 'points': restore_points});
       var dataJSON = this.stack.pop();
 
-      Lt.mData.points = JSON.parse(JSON.stringify(dataJSON.points));
+      Lt.data.points = JSON.parse(JSON.stringify(dataJSON.points));
 
-      Lt.mData.index = dataJSON.index;
-      Lt.mData.year = dataJSON.year;
-      Lt.mData.earlywood = dataJSON.earlywood;
+      Lt.data.index = dataJSON.index;
+      Lt.data.year = dataJSON.year;
+      Lt.data.earlywood = dataJSON.earlywood;
 
       Lt.visualAsset.reload();
 
@@ -701,12 +914,12 @@ function Dating(Lt) {
   });
   
   Dating.prototype.action = function(i) {
-    if (Lt.mData.points[i].year != undefined) {
+    if (Lt.data.points[i].year != undefined) {
       var popup = L.popup({closeButton: false})
           .setContent(
           '<input type="number" style="border:none;width:50px;" value="' +
-          Lt.mData.points[i].year + '" id="year_input"></input>')
-          .setLatLng(Lt.mData.points[i].latLng)
+          Lt.data.points[i].year + '" id="year_input"></input>')
+          .setLatLng(Lt.data.points[i].latLng)
           .openOn(Lt.viewer);
 
       document.getElementById('year_input').select();
@@ -730,14 +943,14 @@ function Dating(Lt) {
           } else {
             Lt.undo.push();
 
-            var shift = new_year - Lt.mData.points[i].year;
+            var shift = new_year - Lt.data.points[i].year;
 
-            Object.values(Lt.mData.points).map(function(e, i) {
-              if (Lt.mData.points[i].year != undefined) {
-                Lt.mData.points[i].year += shift;
+            Object.values(Lt.data.points).map(function(e, i) {
+              if (Lt.data.points[i].year != undefined) {
+                Lt.data.points[i].year += shift;
               }
             });
-            Lt.mData.year += shift;
+            Lt.data.year += shift;
             Lt.visualAsset.reload();
           }
           self.disable();
@@ -791,6 +1004,7 @@ function CreatePoint(Lt) {
       
   CreatePoint.prototype.enable = function() {
     self.btn.state('active');
+    Lt.mouseLine.enable();
 
     document.getElementById('map').style.cursor = 'pointer';
 
@@ -811,7 +1025,7 @@ function CreatePoint(Lt) {
       if (self.startPoint) {
         var popup = L.popup({closeButton: false}).setContent(
             '<input type="number" style="border:none; width:50px;"' +
-            'value="' + Lt.mData.year + '" id="year_input"></input>')
+            'value="' + Lt.data.year + '" id="year_input"></input>')
             .setLatLng(latLng)
             .openOn(Lt.viewer);
 
@@ -820,18 +1034,18 @@ function CreatePoint(Lt) {
         $(document).keypress(function(e) {
           var key = e.which || e.keyCode;
           if (key === 13) {
-            Lt.mData.year = parseInt(document.getElementById('year_input').value);
+            Lt.data.year = parseInt(document.getElementById('year_input').value);
             popup.remove(Lt.viewer);
           }
         });
-        Lt.mData.newPoint(self.startPoint, latLng, Lt.hasLatewood);
+        Lt.data.newPoint(self.startPoint, latLng, Lt.meta.hasLatewood);
         self.startPoint = false;
       } else {
-        Lt.mData.newPoint(self.startPoint, latLng, Lt.hasLatewood);
+        Lt.data.newPoint(self.startPoint, latLng, Lt.meta.hasLatewood);
       }
 
       //call newLatLng with current index and new latlng
-      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index-1, latLng);
+      Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index-1, latLng);
 
       //create the next mouseline from the new latlng
       Lt.mouseLine.from(latLng);
@@ -846,9 +1060,8 @@ function CreatePoint(Lt) {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
     this.active = false;
-    Lt.mouseLine.layer.clearLayers(); //clear the mouseline
+    Lt.mouseLine.disable();
     document.getElementById('map').style.cursor = 'default';
-
     this.startPoint = true;
   };
 }
@@ -858,7 +1071,7 @@ function CreatePoint(Lt) {
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
  */
-function ZeroGrowth(Lt) {
+function CreateZeroGrowth(Lt) {
   var self = this;
   
   this.btn = L.easyButton({
@@ -873,23 +1086,23 @@ function ZeroGrowth(Lt) {
       }]
   });
   
-  ZeroGrowth.prototype.add = function() {
-    if (Lt.mData.index) {
-      var latLng = Lt.mData.points[Lt.mData.index - 1].latLng;
+  CreateZeroGrowth.prototype.add = function() {
+    if (Lt.data.index) {
+      var latLng = Lt.data.points[Lt.data.index - 1].latLng;
 
       Lt.undo.push();
 
-      Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': false,
-        'year': Lt.mData.year, 'earlywood': true, 'latLng': latLng};
-      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
-      Lt.mData.index++;
-      if (Lt.hasLatewood) {
-        Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': false,
-          'year': Lt.mData.year, 'earlywood': false, 'latLng': latLng};
-        Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
-        Lt.mData.index++;
+      Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
+        'year': Lt.data.year, 'earlywood': true, 'latLng': latLng};
+      Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
+      Lt.data.index++;
+      if (Lt.meta.hasLatewood) {
+        Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
+          'year': Lt.data.year, 'earlywood': false, 'latLng': latLng};
+        Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
+        Lt.data.index++;
       }
-      Lt.mData.year++;
+      Lt.data.year++;
     } else {
       alert('First year cannot be missing!');
     }
@@ -913,7 +1126,7 @@ function CreateBreak(Lt) {
         onClick: function(btn, map) {
           Lt.createPoint.disable();
           self.enable();
-          Lt.mouseLine.from(Lt.mData.points[Lt.mData.index - 1].latLng);
+          Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
         }
       },
       {
@@ -929,7 +1142,7 @@ function CreateBreak(Lt) {
   CreateBreak.prototype.enable = function() {
     self.btn.state('active');
 
-    Lt.createPoint.active = true;
+    Lt.mouseLine.enable();
 
     document.getElementById('map').style.cursor = 'pointer';
 
@@ -943,10 +1156,10 @@ function CreateBreak(Lt) {
       Lt.undo.push();
 
       Lt.viewer.dragging.disable();
-      Lt.mData.points[Lt.mData.index] = {'start': false, 'skip': false, 'break': true,
+      Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': true,
         'latLng': latLng};
-      Lt.visualAsset.newLatLng(Lt.mData.points, Lt.mData.index, latLng);
-      Lt.mData.index++;
+      Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
+      Lt.data.index++;
       self.disable();
 
       Lt.createPoint.enable();
@@ -957,13 +1170,375 @@ function CreateBreak(Lt) {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
     Lt.viewer.dragging.enable();
-    Lt.mouseLine.layer.clearLayers();
-    Lt.createPoint.active = false;
+    Lt.mouseLine.disable();
   };
       
 }
 
-function Data(Lt) {
+/**
+ * Delete a measurement point
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function DeletePoint(Lt) {
+  var self = this;
+  
+  this.active = false;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">delete</i>',
+        title: 'Delete a point',
+        onClick: function(btn, map) {
+//          edit.cut.disable();
+//          edit.addData.disable();
+//          edit.addZeroGrowth.disable();
+//          edit.addBreak.disable();
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+  
+  DeletePoint.prototype.action = function(i) {
+    Lt.undo.push();
+    
+    Lt.data.deletePoint(i, Lt.meta.hasLatewood);
+
+    Lt.visualAsset.reload();
+  };
+  
+  DeletePoint.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+  };
+  
+  DeletePoint.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+  };
+  
+}
+
+/**
+ * Delete several points on either end of a chronology
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Cut(Lt) {
+  var self = this;
+  
+  this.active = false;
+  this.point = -1;
+  
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">content_cut</i>',
+        title: 'Cut a portion of the series',
+        onClick: function(btn, map) {
+//          edit.deletePoint.disable();
+//          edit.addData.disable();
+//          edit.addZeroGrowth.disable();
+//          edit.addBreak.disable();
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+  
+  Cut.prototype.fromPoint = function(i) {
+    this.point = i;
+  };
+  
+  Cut.prototype.action = function(i) {
+    Lt.undo.push();
+    
+    Lt.data.cut(this.point, i);
+
+    Lt.visualAsset.reload();
+    this.disable();
+  };
+
+  Cut.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+    this.point = -1;
+  };
+  
+  Cut.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+    this.point = -1;
+  };
+            
+}
+
+/**
+ * Insert a new measurement point in the middle of chronology
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function InsertPoint(Lt) {
+  var self = this;
+  
+  this.active = false;
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">add_circle_outline</i>',
+        title: 'Add a point in the middle of the series',
+        onClick: function(btn, map) {
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  });
+     
+  InsertPoint.prototype.action = function() {
+    document.getElementById('map').style.cursor = 'pointer';
+
+    $(Lt.viewer._container).click(function(e) {
+      var latLng = Lt.viewer.mouseEventToLatLng(e);
+
+      Lt.undo.push();
+      
+      var k = Lt.data.insertPoint(latLng, Lt.meta.hasLatewood);
+      if (k != null) {
+        Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
+        Lt.visualAsset.reload();
+      }
+      
+      self.disable();
+    });
+  };
+  
+  InsertPoint.prototype.enable = function() {
+    this.btn.state('active');
+    this.action();
+    this.active = true;
+  };
+  
+  InsertPoint.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+  };
+}
+  
+/**
+ * Insert a zero growth measurement in the middle of a chronology
+ * @constructor
+ * @param {Ltrering} Lt - Leaflet treering object
+ */
+function InsertZeroGrowth(Lt) {
+  var self = this;
+  
+  this.active = false;
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">exposure_zero</i>',
+        title: 'Add a zero growth year in the middle of the series',
+        onClick: function(btn, map) {
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  })
+  
+  
+  InsertZeroGrowth.prototype.action = function(i) {
+    var latLng = Lt.data.points[i].latLng;
+
+    Lt.undo.push();
+    
+    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.meta.hasLatewood);
+    if (k !== null) {
+      if (Lt.meta.hasLatewood) Lt.visualAsset.newLatLng(Lt.data.points, k-1, latLng);
+      Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
+      Lt.visualAsset.reload();
+    }
+    
+    this.disable();
+  };
+  
+  InsertZeroGrowth.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+  };
+  
+  InsertZeroGrowth.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    document.getElementById('map').style.cursor = 'default';
+    this.active = false;
+    Lt.viewer.dragging.enable();
+    Lt.mouseLine.disable();
+  };
+
+}
+
+/**
+ * Insert a break in the middle of a chronology
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function InsertBreak(Lt) {
+  var self = this;
+  
+  this.active = false;
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">broken_image</i>',
+        title: 'Add a break in the series',
+        onClick: function(btn, map) {
+          self.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        onClick: function(btn, map) {
+          self.disable();
+        }
+      }]
+  })
+  
+  InsertBreak.prototype.action = function(i) {
+    var new_points = Lt.data.points;
+    var second_points = Object.values(Lt.data.points).splice(i + 1, Lt.data.index - 1);
+    var first_point = true;
+    var second_point = false;
+    var k = i + 1;
+
+    Lt.mouseLine.enable();
+    Lt.mouseLine.from(Lt.data.points[i].latLng);
+
+    $(Lt.viewer._container).click(function(e) {
+      var latLng = Lt.viewer.mouseEventToLatLng(e);
+      Lt.viewer.dragging.disable();
+
+      if (first_point) {
+        Lt.mouseLine.from(latLng);
+        new_points[k] = {'start': false, 'skip': false, 'break': true,
+          'latLng': latLng};
+        Lt.visualAsset.newLatLng(new_points, k, latLng);
+        k++;
+        first_point = false;
+        second_point = true;
+      } else if (second_point) {
+        self.disable();
+        second_point = false;
+        self.active = false;
+        Lt.mouseLine.layer.clearLayers();
+
+        new_points[k] = {'start': true, 'skip': false, 'break': false,
+          'latLng': latLng};
+        Lt.visualAsset.newLatLng(new_points, k, latLng);
+        k++;
+
+        var popup = L.popup({closeButton: false}).setContent(
+            '<input type="number" style="border:none;width:50px;"' +
+            'value="' + second_points[0].year +
+            '" id="year_input"></input>').setLatLng(latLng)
+            .openOn(Lt.viewer);
+
+        document.getElementById('year_input').select();
+
+        $(document).keypress(function(e) {
+          var key = e.which || e.keyCode;
+          if (key === 13) {
+            var new_year = parseInt(document.getElementById('year_input').value);
+            popup.remove(Lt.viewer);
+
+            var shift = new_year - second_points[0].year;
+
+            second_points.map(function(e) {
+              e.year += shift;
+              new_points[k] = e;
+              k++;
+            });
+            Lt.data.year += shift;
+
+            $(Lt.viewer._container).off('click');
+
+            Lt.undo.push();
+
+            Lt.data.points = new_points;
+            Lt.data.index = k;
+
+            Lt.visualAsset.reload();
+            self.disable();
+          }
+        });
+      } else {
+        self.disable();
+        Lt.visualAsset.reload();
+      }
+    });
+  };
+      
+  InsertBreak.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+  };
+  
+  InsertBreak.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.dragging.enable();
+    Lt.mouseLine.disable();
+  };
+}
+
+function ViewData(Lt) {
   var self = this;
   
   this.btn = L.easyButton({
@@ -995,7 +1570,7 @@ function Data(Lt) {
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
   
-  Data.prototype.distance = function(p1, p2) {
+  ViewData.prototype.distance = function(p1, p2) {
     var lastPoint = Lt.viewer.project(p1, Lt.viewer.getMaxZoom());
     var newPoint = Lt.viewer.project(p2, Lt.viewer.getMaxZoom());
     var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
@@ -1003,7 +1578,7 @@ function Data(Lt) {
     var pixelsPerMillimeter = 1;
     Lt.viewer.eachLayer(function(layer) {
       if (layer.options.pixelsPerMillimeter > 0) {
-        pixelsPerMillimeter = Lt.ppm;
+        pixelsPerMillimeter = Lt.meta.ppm;
       }
     });
     length = length / pixelsPerMillimeter;
@@ -1014,7 +1589,7 @@ function Data(Lt) {
     return length * retinaFactor;
   }
   
-  Data.prototype.download = function() {
+  ViewData.prototype.download = function() {
     
     var toFourCharString = function(n) {
       var string = n.toString();
@@ -1088,7 +1663,7 @@ function Data(Lt) {
       return string;
     };
     
-    if (Lt.mData.points != undefined && Lt.mData.points[1] != undefined) {
+    if (Lt.data.points != undefined && Lt.data.points[1] != undefined) {
       
       var sum_points;
       var sum_string = '';
@@ -1096,14 +1671,14 @@ function Data(Lt) {
       var break_length;
       var length_string;
       
-      if (Lt.hasLatewood) {
+      if (Lt.meta.hasLatewood) {
 
         var sum_string = '';
         var ew_string = '';
         var lw_string = '';
 
-        y = Lt.mData.points[1].year;
-        var sum_points = Object.values(Lt.mData.points).filter(function(e) {
+        y = Lt.data.points[1].year;
+        var sum_points = Object.values(Lt.data.points).filter(function(e) {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -1113,7 +1688,7 @@ function Data(Lt) {
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
-              toEightCharString(Lt.assetName) +
+              toEightCharString(Lt.meta.assetName) +
               toFourCharString(sum_points[1].year));
         }
 
@@ -1129,7 +1704,7 @@ function Data(Lt) {
           } else {
             if (e.year % 10 == 0) {
               sum_string = sum_string.concat('\r\n' +
-                  toEightCharString(Lt.assetName) +
+                  toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
             while (e.year > y) {
@@ -1162,19 +1737,19 @@ function Data(Lt) {
         });
         sum_string = sum_string.concat(' -9999');
 
-        y = Lt.mData.points[1].year;
+        y = Lt.data.points[1].year;
 
-        if (Lt.mData.points[1].year % 10 > 0) {
+        if (Lt.data.points[1].year % 10 > 0) {
           ew_string = ew_string.concat(
-              toEightCharString(Lt.assetName) +
-              toFourCharString(Lt.mData.points[1].year));
+              toEightCharString(Lt.meta.assetName) +
+              toFourCharString(Lt.data.points[1].year));
           lw_string = lw_string.concat(
-              toEightCharString(Lt.assetName) +
-              toFourCharString(Lt.mData.points[1].year));
+              toEightCharString(Lt.meta.assetName) +
+              toFourCharString(Lt.data.points[1].year));
         }
 
         break_point = false;
-        Object.values(Lt.mData.points).map(function(e, i, a) {
+        Object.values(Lt.data.points).map(function(e, i, a) {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
@@ -1185,11 +1760,11 @@ function Data(Lt) {
             if (e.year % 10 == 0) {
               if (e.earlywood) {
                 ew_string = ew_string.concat('\r\n' +
-                    toEightCharString(Lt.assetName) +
+                    toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               } else {
                 lw_string = lw_string.concat('\r\n' +
-                    toEightCharString(Lt.assetName) +
+                    toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               }
             }
@@ -1199,10 +1774,10 @@ function Data(Lt) {
               y++;
               if (y % 10 == 0) {
                 ew_string = ew_string.concat('\r\n' +
-                    toEightCharString(Lt.assetName) +
+                    toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
                 lw_string = lw_string.concat('\r\n' +
-                    toEightCharString(Lt.assetName) +
+                    toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               }
             }
@@ -1239,25 +1814,25 @@ function Data(Lt) {
         console.log(lw_string);
 
         var zip = new JSZip();
-        zip.file((Lt.assetName + '.raw'), sum_string);
-        zip.file((Lt.assetName + '.lwr'), lw_string);
-        zip.file((Lt.assetName + '.ewr'), ew_string);
+        zip.file((Lt.meta.assetName + '.raw'), sum_string);
+        zip.file((Lt.meta.assetName + '.lwr'), lw_string);
+        zip.file((Lt.meta.assetName + '.ewr'), ew_string);
 
       } else {
 
-        var y = Lt.mData.points[1].year;
-        sum_points = Object.values(Lt.mData.points);
+        var y = Lt.data.points[1].year;
+        sum_points = Object.values(Lt.data.points);
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
-              toEightCharString(Lt.assetName) +
+              toEightCharString(Lt.meta.assetName) +
               toFourCharString(sum_points[1].year));
         }
         sum_points.map(function(e, i, a) {
           if (!e.start) {
             if (e.year % 10 == 0) {
               sum_string = sum_string.concat('\r\n' +
-                  toEightCharString(Lt.assetName) +
+                  toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
             while (e.year > y) {
@@ -1289,31 +1864,31 @@ function Data(Lt) {
         sum_string = sum_string.concat(' -9999');
 
         var zip = new JSZip();
-        zip.file((Lt.assetName + '.raw'), sum_string);
+        zip.file((Lt.meta.assetName + '.raw'), sum_string);
       }
 
       zip.generateAsync({type: 'blob'})
           .then(function(blob) {
-            saveAs(blob, (Lt.assetName + '.zip'));
+            saveAs(blob, (Lt.meta.assetName + '.zip'));
           });
     } else {
       alert('There is no data to download');
     }
   };
   
-  Data.prototype.clean = function() {
-    for (var i in Lt.mData.points) {
-      if (Lt.mData.points[i] === null || Lt.mData.points[i] === undefined) {
-        delete Lt.mData.points[i];
+  ViewData.prototype.clean = function() {
+    for (var i in Lt.data.points) {
+      if (Lt.data.points[i] === null || Lt.data.points[i] === undefined) {
+        delete Lt.data.points[i];
       }
     }
   };
   
-  Data.prototype.enable = function() {
+  ViewData.prototype.enable = function() {
     this.btn.state('expand');
     var string;
-    if (Lt.mData.points[0] != undefined) {
-      var y = Lt.mData.points[1].year;
+    if (Lt.data.points[0] != undefined) {
+      var y = Lt.data.points[1].year;
       string = '<div><button id="download-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>download</button><button id="refresh-button"' +
@@ -1330,7 +1905,7 @@ function Data(Lt) {
       var break_point;
       var length;
       this.clean();
-      Object.values(Lt.mData.points).map(function(e, i, a) {
+      Object.values(Lt.data.points).map(function(e, i, a) {
         
         if (e.start) {
           last_latLng = e.latLng;
@@ -1353,7 +1928,7 @@ function Data(Lt) {
           if (length == 9.999) {
             length = 9.998;
           }
-          if (Lt.hasLatewood) {
+          if (Lt.meta.hasLatewood) {
             var wood;
             var row_color;
             if (e.earlywood) {
@@ -1411,10 +1986,10 @@ function Data(Lt) {
       $('#confirm-delete').click(function() {
         Lt.undo.push();
 
-        Lt.mData.points = {};
-        Lt.mData.year = 0;
-        Lt.mData.earlywood = true;
-        Lt.mData.index = 0;
+        Lt.data.points = {};
+        Lt.data.year = 0;
+        Lt.data.earlywood = true;
+        Lt.data.index = 0;
 
         Lt.visualAsset.reload();
 
@@ -1427,7 +2002,7 @@ function Data(Lt) {
     });
   },
   
-  Data.prototype.disable = function() {
+  ViewData.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('collapse');
     $('#confirm-delete').off('click');
