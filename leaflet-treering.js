@@ -5,16 +5,16 @@
  */
 
 'use strict';
-
+  
 /**
  * A leaflet treering object
  * @constructor
  * @param {Leaflet Map Object} viewer - the leaflet map object that will used
- * as a viewer for treering image.
+ *   as a viewer for treering image.
  * @param {string} basePath - this is a path to the treering image folder
- * @param {object} options - 
+ * @param {object} options -
  */
-function LTreering(viewer, basePath, options) {
+function LTreering (viewer, basePath, options) {
   this.viewer = viewer;
   this.basePath = basePath;
 
@@ -34,96 +34,114 @@ function LTreering(viewer, basePath, options) {
 
   this.data = new MeasurementData(options.initialData);
   this.autoscroll = new Autoscroll(this.viewer);
-  this.mouseLine = new InteractiveMouse(this);
+  this.mouseLine = new MouseLine(this);
   this.visualAsset = new VisualAsset(this);
-  
+
   this.popout = new Popout(this);
   this.undo = new Undo(this);
   this.redo = new Redo(this);
+
+  this.viewData = new ViewData(this);
+
+  this.imageAdjustment = new ImageAdjustment(this);
   
+  this.calibration = new Calibration(this);
+
+  this.annotation = new Annotation(this);
+
   this.dating = new Dating(this);
-  
+
   this.createPoint = new CreatePoint(this);
   this.zeroGrowth = new CreateZeroGrowth(this);
   this.createBreak = new CreateBreak(this);
-  
+
   this.deletePoint = new DeletePoint(this);
   this.cut = new Cut(this);
   this.insertPoint = new InsertPoint(this);
   this.insertZeroGrowth = new InsertZeroGrowth(this);
   this.insertBreak = new InsertBreak(this);
-  
+
+  this.saveLocal = new SaveLocal(this);
+  this.loadLocal = new LoadLocal(this);
+  var ioBtns = [this.saveLocal.btn, this.loadLocal.btn];
+  if (options.savePermission) {
+    this.saveCloud = new SaveCloud(this);
+    ioBtns.push(this.saveCloud.btn);
+  }
+
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], '<i class="material-icons md-18">edit</i>', 'Edit and delete data points from the series');
-  
-  this.viewData = new ViewData(this);
+  this.iotools = new ButtonBar(this, ioBtns, '<i class="material-icons md-18">folder_open</i>', 'View and download data');
+
+  this.tools = [this.viewData, this.calibration, this.annotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment];
+
+
+  /**
+   * Load the interface of the treering viewer
+   * @function loadInterface
+   */
+  LTreering.prototype.loadInterface = function() {
+    console.log(this);
+
+    this.autoscroll.on();
+    this.viewer.on('resize', () => {
+      this.autoscroll.reset();
+    });
+
+    $('#map').css('cursor', 'default');
+
+    // if popout is opened display measuring tools
+    if (window.name == 'popout') {
+      // TODO
+
+    } else {
+      this.popout.btn.addTo(this.viewer);
+      this.viewData.btn.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
+      this.calibration.btn.addTo(this.viewer);
+      this.annotation.btn.addTo(this.viewer);
+      this.dating.btn.addTo(this.viewer);
+      this.createTools.bar.addTo(this.viewer);
+      this.editTools.bar.addTo(this.viewer);
+      this.iotools.bar.addTo(this.viewer);
+      this.undoRedoBar.addTo(this.viewer);
+  //    data.btn.addTo(Lt.map);
+  //    fileBar.addTo(Lt.map);
+    }
+
+    //L.control.layers(baseLayer, overlay).addTo(this.viewer);
+
+    this.loadData();
+
+  };
+
+  /**
+   * Load the JSON data attached to the treering image
+   * @function loadData
+   */
+  LTreering.prototype.loadData = function() {
+    this.visualAsset.reload();
+  //  annotation.reload();
+  };
+
+  /**
+   * Disable any tools
+   * @function disableTools
+   */
+  LTreering.prototype.disableTools = function() {
+    this.tools.forEach(e => { e.disable() });
+  };
 }
 
-
-/**
- * Load the interface of the treering viewer
- */
-LTreering.prototype.loadInterface = function () {
-  var self = this;
-  console.log(self);
-
-  self.autoscroll.on();
-  self.viewer.on('resize', function () {
-    self.autoscroll.reset();
-  });
-
-  $('#map').css('cursor', 'default');
-  
-  // if popout is opened display measuring tools
-  if (window.name == 'popout') {
-//    miniMap.addTo(Lt.map);
-
-//    data.btn.addTo(Lt.map);
-//    annotation.btn.addTo(Lt.map);
-//    setYear.btn.addTo(Lt.map);
-    
-//    editBar.addTo(Lt.map);
-//    fileBar.addTo(Lt.map);
-//    undoRedoBar.addTo(Lt.map);
-  } else {
-    self.popout.btn.addTo(self.viewer);
-    self.viewData.btn.addTo(self.viewer);
-    self.dating.btn.addTo(self.viewer);
-    self.createTools.bar.addTo(self.viewer);
-    self.editTools.bar.addTo(self.viewer);
-    self.undoRedoBar.addTo(self.viewer);
-//    data.btn.addTo(Lt.map);
-//    fileBar.addTo(Lt.map);
-  }
-
-  //L.control.layers(baseLayer, overlay).addTo(self.viewer);
-  
-  self.loadData();
-  
-};
-
-
-/**
- * Load the JSON data attached to the treering image
- */
-LTreering.prototype.loadData = function () {
-  this.visualAsset.reload();
-//  annotation.reload();
-};
-
 /*******************************************************************************/
-
-
-
+  
 /**
  * A measurement data object
  * @constructor
  * @param {object} dataObject -
  */
-function MeasurementData(dataObject) {
-  var self = this;
-  
+function MeasurementData (dataObject) {
   this.saveDate = dataObject.saveDate || {};
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
@@ -131,6 +149,10 @@ function MeasurementData(dataObject) {
   this.points = dataObject.points || {};
   this.annotations = dataObject.annotations || {};
   
+ /**
+  * Add a new point into the measurement data
+  * @function newPoint
+  */
   MeasurementData.prototype.newPoint = function(start, latLng, hasLatewood) {
     if (start) {
       this.points[this.index] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng};
@@ -150,29 +172,35 @@ function MeasurementData(dataObject) {
     this.index++;
   };
   
+  /**
+   * delete a point from the measurement data
+   * @function deletePoint
+   */
   MeasurementData.prototype.deletePoint = function(i, hasLatewood) {
+    var second_points;
+    var shift;
     if (this.points[i].start) {
       if (this.points[i - 1] != undefined && this.points[i - 1].break) {
         i--;
-        var second_points = Object.values(this.points).splice(i + 2, this.index - 1);
-        var shift = this.points[i + 2].year - this.points[i - 1].year - 1;
-        second_points.map(function(e) {
+        second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+        shift = this.points[i + 2].year - this.points[i - 1].year - 1;
+        second_points.map(e => {
           e.year -= shift;
           this.points[i] = e;
           i++;
         });
         this.year -= shift;
-        this.index = index - 2;
-        delete this.points[index];
-        delete this.points[index + 1];
+        this.index -= 2;
+        delete this.points[this.index];
+        delete this.points[this.index + 1];
       } else {
-        var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
-        second_points.map(function(e) {
+        second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+        second_points.map(e => {
           if (!i) {
-            self.points[i] = {'start': true, 'skip': false, 'break': false,
+            this.points[i] = {'start': true, 'skip': false, 'break': false,
               'latLng': e.latLng};
           } else {
-            self.points[i] = e;
+            this.points[i] = e;
           }
           i++;
         });
@@ -180,22 +208,22 @@ function MeasurementData(dataObject) {
         delete this.points[this.index];
       }
     } else if (this.points[i].break) {
-      var second_points = Object.values(this.points).splice(i + 2, this.index - 1);
-      var shift = this.points[i + 2].year - this.points[i - 1].year - 1;
-      second_points.map(function(e) {
+      second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+      shift = this.points[i + 2].year - this.points[i - 1].year - 1;
+      second_points.map(e => {
         e.year -= shift;
-        self.points[i] = e;
+        this.points[i] = e;
         i++;
       });
       this.year -= shift;
-      this.index = index - 2;
+      this.index -= 2;
       delete this.points[this.index];
       delete this.points[this.index + 1];
     } else {
       var new_points = this.points;
       var k = i;
-      var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
-      second_points.map(function(e) {
+      second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+      second_points.map(e => {
         if (!e.start && !e.break) {
           if (hasLatewood) {
             e.earlywood = !e.earlywood;
@@ -218,14 +246,18 @@ function MeasurementData(dataObject) {
         this.year--;
       }
     }
-  }
+  };
   
+  /**
+   * remove a range of points from the measurement data
+   * @function cut
+   */
   MeasurementData.prototype.cut = function(i, j) {
     if (i > j) {
       var trimmed_points = Object.values(this.points).splice(i, this.index - 1);
       var k = 0;
       this.points = {};
-      trimmed_points.map(function(e) {
+      trimmed_points.map(e => {
         if (!k) {
           this.points[k] = {'start': true, 'skip': false, 'break': false,
             'latLng': e.latLng};
@@ -243,6 +275,10 @@ function MeasurementData(dataObject) {
     }
   };
   
+  /**
+   * insert a point in the middle of the measurement data
+   * @function insertPoint
+   */
   MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
     var i = 0;
     while (this.points[i] != undefined &&
@@ -278,7 +314,7 @@ function MeasurementData(dataObject) {
     //visualAsset.newLatLng(new_points, k, latLng);
     k++;
 
-    second_points.map(function(e) {
+    second_points.map(e => {
       if (!e.start && !e.break) {
         if (hasLatewood) {
           e.earlywood = !e.earlywood;
@@ -306,6 +342,10 @@ function MeasurementData(dataObject) {
     return tempK;
   };
   
+  /**
+   * insert a zero growth year in the middle of the measurement data
+   * @function insertZeroGrowth
+   */
   MeasurementData.prototype.insertZeroGrowth = function(i, latLng, hasLatewood) {
     var new_points = this.points;
     var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
@@ -316,19 +356,17 @@ function MeasurementData(dataObject) {
     new_points[k] = {'start': false, 'skip': false, 'break': false,
       'year': year_adjusted, 'earlywood': true, 'latLng': latLng};
     
-//    visualAsset.newLatLng(new_points, k, latLng);
     k++;
 
     if (hasLatewood) {
       new_points[k] = {'start': false, 'skip': false, 'break': false,
         'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
-//      visualAsset.newLatLng(new_points, k, latLng);
       k++;
     }
     
     var tempK = k-1;
 
-    second_points.map(function(e) {
+    second_points.map(e => {
       if (!e.start && !e.break) {
         e.year++;
       }
@@ -341,76 +379,98 @@ function MeasurementData(dataObject) {
     this.year++;
     
     return tempK;
-  }
+  };
   
-  MeasurementData.prototype.year = function() { return this.year; }
-  MeasurementData.prototype.earlywood = function() { return this.earlywood; }
-  MeasurementData.prototype.points = function() { return this.points; }
-  MeasurementData.prototype.index = function() { return this.index; }
+  /**
+   * remove any entries in the data
+   * @function clean
+   */
+  MeasurementData.prototype.clean =function() {
+    for (var i in this.points) {
+      if (this.points[i] === null || this.points[i] === undefined) {
+        delete this.points[i];
+      }
+    }
+  };
+  
+  /**
+   * getter for all data
+   * @function data
+   */
+  MeasurementData.prototype.data = function() {
+    return {'saveDate': this.saveDate, 'year': this.year,
+        'earlywood': this.earlywood, 'index': this.index, 'points': this.points,
+        'annotations': this.annotations};
+  };
+  
+//  MeasurementData.prototype.year = function() { return this.year; }
+//  MeasurementData.prototype.earlywood = function() { return this.earlywood; }
+//  MeasurementData.prototype.points = function() { return this.points; }
+//  MeasurementData.prototype.index = function() { return this.index; }
 
 }
 
 /**
- * A mouse autoscroll object
+ * Autoscroll feature for mouse
  * @constructor
- * @param {Leaflet Map Object} LtViewer - a refrence to the leaflet map object
+ * @param {Leaflet Map Object} viewer - a refrence to the leaflet map object
  */
-function Autoscroll(LtViewer) {
-  /**
-  * A method to turn on autoscroll based on viewer dimmensions
-  */
-  Autoscroll.prototype.on = function () {
-    //map scrolling
-    var mapSize = LtViewer.getSize();  // Map size used for map scrolling
-    var mousePos = 0;         // An initial mouse position
+function Autoscroll (viewer) {
 
-    LtViewer.on('mousemove', function (e) {
-      var oldMousePos = mousePos;    // Save the old mouse position
-      mousePos = e.containerPoint;  // Container point of the mouse
-//      var mouseLatLng = e.latlng;     // latLng of the mouse
-//      var mapCenter = LtViewer.getCenter();  // Center of the map
+  /**
+   * Turn on autoscroll based on viewer dimmensions
+   * @function on
+   */
+  Autoscroll.prototype.on = function() {
+    var mapSize = viewer.getSize();   // Map size used for map scrolling
+    var mousePos = 0;                 // An initial mouse position
+
+    viewer.on('mousemove', (e) => {
+      var oldMousePos = mousePos;     // Save the old mouse position
+      mousePos = e.containerPoint;    // Container point of the mouse
 
       //left bound of the map
-      if (mousePos.x <= 40 && mousePos.y > 450 &&
-          oldMousePos.x > mousePos.x) {
-        LtViewer.panBy([-200, 0]);
+      if (mousePos.x <= 40 && mousePos.y > 450 && oldMousePos.x > mousePos.x) {
+        viewer.panBy([-200, 0]);
       }
       //right bound of the map
-      if (mousePos.x + 40 > mapSize.x &&
-          mousePos.y > 100 && oldMousePos.x < mousePos.x) {
-        LtViewer.panBy([200, 0]);
+      if (mousePos.x + 40 > mapSize.x && mousePos.y > 100 && oldMousePos.x < mousePos.x) {
+        viewer.panBy([200, 0]);
       }
       //upper bound of the map
-      if (mousePos.x > 100 && mousePos.x + 100 < mapSize.x &&
-          mousePos.y < 40 && oldMousePos.y > mousePos.y) {
-        LtViewer.panBy([0, -70]);
+      if (mousePos.x > 100 && mousePos.x + 100 < mapSize.x && mousePos.y < 40 && oldMousePos.y > mousePos.y) {
+        viewer.panBy([0, -70]);
       }
       //lower bound of the map
-      if (mousePos.x >= 40 && mousePos.y > mapSize.y - 40 &&
-          oldMousePos.y < mousePos.y) {
-        LtViewer.panBy([0, 70]);
+      if (mousePos.x >= 40 && mousePos.y > mapSize.y - 40 && oldMousePos.y < mousePos.y) {
+        viewer.panBy([0, 70]);
       }
     });
   };
 
   /**
-  * A method to turn off autoscroll
-  */
-  Autoscroll.prototype.off = function () {
-    LtViewer.off('mousemove');
+   * Turn off autoscroll
+   * @function off
+   */
+  Autoscroll.prototype.off = function() {
+    viewer.off('mousemove');
   };
 
   /**
-  * A method to reset autoscroll when the viewer's dimmensions are resized
-  */
-  Autoscroll.prototype.reset = function () {
+   * Reset autoscroll when the viewer's dimmensions are resized
+   * @function reset
+   */
+  Autoscroll.prototype.reset = function() {
     this.off();
     this.on();
   };
 }
 
-
-// Colored icons for points
+/**
+ * A function that returns a leaflet icon given a particular color
+ * @function
+ * @param {LTreering} Lt - a refrence to the leaflet treering object
+ */
 function MarkerIcon(color, LtBasePath) {
 
   var colors = {
@@ -428,107 +488,99 @@ function MarkerIcon(color, LtBasePath) {
     iconUrl : LtBasePath + colors[color].path,
     iconSize: colors[color].size
   });
-
-    // light_blue: L.icon({
-    //   iconUrl: Lt.basePath + 'images/light_blue_tick_icon.png',
-    //   iconSize: [32, 48] // size of the icon
-    // }),
-    // dark_blue: L.icon({
-    //   iconUrl: Lt.basePath + 'images/dark_blue_tick_icon.png',
-    //   iconSize: [32, 48] // size of the icon
-    // }),
-    // white: L.icon({
-    //   iconUrl: Lt.basePath + 'images/white_tick_icon.png',
-    //   iconSize: [32, 48] // size of the icon
-    // }),
-    // red: L.icon({
-    //   iconUrl: Lt.basePath + 'images/red_dot_icon.png',
-    //   iconSize: [12, 12] // size of the icon
-    // }),
 }
-
+  
 /**
- * An object for the line created between a click location and the cursor
+ * The mouse line created between a click location and the cursor
  * @constructor
  * @param {LTreering} Lt - a refrence to the leaflet treering object
  */
-function InteractiveMouse(Lt) {
-  var self = this;
-  
+function MouseLine (Lt) {
   this.layer = L.layerGroup().addTo(Lt.viewer);
   this.active = false;
-  
-  InteractiveMouse.prototype.enable = function() {
+   
+  /**
+   * Enable the mouseline
+   * @function enable
+   */
+  MouseLine.prototype.enable = function() {
     this.active = true;
   }
   
-  InteractiveMouse.prototype.disable = function() {
+  /**
+   * Disable the mouseline
+   * @function disable
+   */
+  MouseLine.prototype.disable = function() {
     this.active = false;
     $(Lt.viewer._container).off('mousemove');
     this.layer.clearLayers();
   }
   
   /**
-  * A method to create a new line from a given latLng
-  * @param {Leatlet LatLng Object} latLng - the latLng coordinate on the viewer to
-  * create a line from
-  */
-  InteractiveMouse.prototype.from = function (latLng) {
-    $(Lt.viewer._container).mousemove(function(e) {
-      if (self.active) {
-        self.layer.clearLayers();
+   * A method to create a new line from a given latLng
+   * @function from
+   * @param {Leatlet LatLng Object} latLng - the latLng coordinate on the viewer 
+   *   to create a line from
+   */
+  MouseLine.prototype.from = function(latLng) {
+    var newX, newY;
+    $(Lt.viewer._container).mousemove(e => {
+      if (this.active) {
+        this.layer.clearLayers();
         var mousePoint = Lt.viewer.mouseEventToLayerPoint(e);
         var mouseLatLng = Lt.viewer.mouseEventToLatLng(e);
         var point = Lt.viewer.latLngToLayerPoint(latLng);
 
         /* Getting the four points for the h bars,
       this is doing 90 degree rotations on mouse point */
-        var newX = mousePoint.x +
+        newX = mousePoint.x +
             (point.x - mousePoint.x) * Math.cos(Math.PI / 2) -
             (point.y - mousePoint.y) * Math.sin(Math.PI / 2);
-        var newY = mousePoint.y +
+        newY = mousePoint.y +
             (point.x - mousePoint.x) * Math.sin(Math.PI / 2) +
             (point.y - mousePoint.y) * Math.cos(Math.PI / 2);
         var topRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        var newX = mousePoint.x +
+        newX = mousePoint.x +
             (point.x - mousePoint.x) * Math.cos(Math.PI / 2 * 3) -
             (point.y - mousePoint.y) * Math.sin(Math.PI / 2 * 3);
-        var newY = mousePoint.y +
+        newY = mousePoint.y +
             (point.x - mousePoint.x) * Math.sin(Math.PI / 2 * 3) +
             (point.y - mousePoint.y) * Math.cos(Math.PI / 2 * 3);
         var bottomRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //doing rotations 90 degree rotations on latlng
-        var newX = point.x +
+        newX = point.x +
             (mousePoint.x - point.x) * Math.cos(Math.PI / 2) -
             (mousePoint.y - point.y) * Math.sin(Math.PI / 2);
-        var newY = point.y +
+        newY = point.y +
             (mousePoint.x - point.x) * Math.sin(Math.PI / 2) +
             (mousePoint.y - point.y) * Math.cos(Math.PI / 2);
         var topLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        var newX = point.x +
+        newX = point.x +
             (mousePoint.x - point.x) * Math.cos(Math.PI / 2 * 3) -
             (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
-        var newY = point.y +
+        newY = point.y +
             (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3) +
             (mousePoint.y - point.y) * Math.cos(Math.PI / 2 * 3);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
+        var color;
         if (Lt.data.earlywood || !Lt.meta.hasLatewood) {
-          var color = '#00BCD4';
+          color = '#00BCD4';
         } else {
-          var color = '#00838f';
+          color = '#00838f';
         }
 
-        self.layer.addLayer(L.polyline([latLng, mouseLatLng],
+        this.layer.addLayer(L.polyline([latLng, mouseLatLng],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
-        self.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
+        this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
-        self.layer.addLayer(L.polyline([topRightPoint, bottomRightPoint],
+        this.layer.addLayer(L.polyline([topRightPoint, bottomRightPoint],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
       }
@@ -536,13 +588,12 @@ function InteractiveMouse(Lt) {
   }
 }
 
-
 /**
- * An object for all visual assets on the map such as markers and lines
+ * Visual assets on the map such as markers and lines
  * @constructor
  * @param {LTreering} Lt - a refrence to the leaflet treering object
  */
-function VisualAsset(Lt) {
+function VisualAsset (Lt) {
   this.markers = new Array();
   this.lines = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
@@ -550,9 +601,10 @@ function VisualAsset(Lt) {
   this.previousLatLng = undefined;
   
   /**
-   * A method to reload all visual assets on the viewer
+   * Reload all visual assets on the viewer
+   * @function reload
    */
-  VisualAsset.prototype.reload = function () {
+  VisualAsset.prototype.reload = function() {
     //erase the markers
     this.markerLayer.clearLayers();
     this.markers = new Array();
@@ -562,97 +614,112 @@ function VisualAsset(Lt) {
 
     //plot the data back onto the map
     if (Lt.data.points !== undefined) {
-      Object.values(Lt.data.points).map(function(e, i) {
+      Object.values(Lt.data.points).map((e, i) => {
         if (e != undefined) {
-          Lt.visualAsset.newLatLng(Lt.data.points, i, e.latLng);
+          this.newLatLng(Lt.data.points, i, e.latLng);
         }
       });
     }
-  };
+  }
   
   /**
    * A method used to create new markers and lines on the viewer
+   * @function newLatLng
    * @param {Array} points - 
    * @param {int} i - index of points
    * @param {Leaflet LatLng Object} latLng -
    */
-  VisualAsset.prototype.newLatLng = function (pts, i, latLng) {
+  VisualAsset.prototype.newLatLng = function(pts, i, latLng) {
     var leafLatLng = L.latLng(latLng);
 
+    var draggable = false;
     if (window.name === 'popout') {
-      var draggable = true;
-    } else {
-      var draggable = false;
+      draggable = true;
     }
 
-    var draggable = true;
+    draggable = true; //// DEBUGGING REMOVE
     var marker;
 
     //check if index is the start point
     if (pts[i].start) {
-      marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
-        draggable: draggable, title: 'Start Point', riseOnHover: true});
+      marker = L.marker(leafLatLng, {
+        icon: new MarkerIcon('white', Lt.basePath),
+        draggable: draggable,
+        title: 'Start Point',
+        riseOnHover: true
+      });
     } else if (pts[i].break) { //check if point is a break
-      marker = L.marker(leafLatLng, {icon: new MarkerIcon('white', Lt.basePath),
-        draggable: draggable, title: 'Break Point', riseOnHover: true});
+      marker = L.marker(leafLatLng, {
+        icon: new MarkerIcon('white', Lt.basePath),
+        draggable: draggable,
+        title: 'Break Point',
+        riseOnHover: true
+      });
     } else if (Lt.meta.hasLatewood) { //check if point is earlywood
       if (pts[i].earlywood) {
-        marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
-          draggable: draggable, title: 'Year ' + pts[i].year +
-              ', earlywood', riseOnHover: true});
+        marker = L.marker(leafLatLng, {
+          icon: new MarkerIcon('light_blue', Lt.basePath),
+          draggable: draggable,
+          title: 'Year ' + pts[i].year + ', earlywood',
+          riseOnHover: true
+        });
       } else { //otherwise it's latewood
-        marker = L.marker(leafLatLng, {icon: new MarkerIcon('dark_blue', Lt.basePath),
-          draggable: draggable, title: 'Year ' + pts[i].year +
-            ', latewood',
-          riseOnHover: true});
+        marker = L.marker(leafLatLng, {
+          icon: new MarkerIcon('dark_blue', Lt.basePath),
+          draggable: draggable,
+          title: 'Year ' + pts[i].year + ', latewood',
+          riseOnHover: true
+        });
       }
     } else {
-      marker = L.marker(leafLatLng, {icon: new MarkerIcon('light_blue', Lt.basePath),
-        draggable: draggable, title: 'Year ' + pts[i].year,
-        riseOnHover: true});
+      marker = L.marker(leafLatLng, {
+        icon: new MarkerIcon('light_blue', Lt.basePath),
+        draggable: draggable,
+        title: 'Year ' + pts[i].year,
+        riseOnHover: true
+      });
     }
 
     this.markers[i] = marker;   //add created marker to marker_list
-    var self = this;
 
     //tell marker what to do when being dragged
-    this.markers[i].on('drag', function(e) {
+    this.markers[i].on('drag', (e) => {
       if (!pts[i].start) {
-        self.lineLayer.removeLayer(self.lines[i]);
-        self.lines[i] =
-            L.polyline([self.lines[i]._latlngs[0], e.target._latlng],
-            { color: self.lines[i].options.color,
+        this.lineLayer.removeLayer(this.lines[i]);
+        this.lines[i] =
+            L.polyline([this.lines[i]._latlngs[0], e.target._latlng],
+            { color: this.lines[i].options.color,
               opacity: '.75', weight: '3'});
-        self.lineLayer.addLayer(self.lines[i]);
+        this.lineLayer.addLayer(this.lines[i]);
       }
-      if (self.lines[i + 1] !== undefined) {
-        self.lineLayer.removeLayer(self.lines[i + 1]);
-        self.lines[i + 1] =
-            L.polyline([e.target._latlng, self.lines[i + 1]._latlngs[1]],
-            { color: self.lines[i + 1].options.color,
+      if (this.lines[i + 1] !== undefined) {
+        this.lineLayer.removeLayer(this.lines[i + 1]);
+        this.lines[i + 1] =
+            L.polyline([e.target._latlng, this.lines[i + 1]._latlngs[1]],
+            { color: this.lines[i + 1].options.color,
               opacity: '.75',
               weight: '3'
             });
-        self.lineLayer.addLayer(self.lines[i + 1]);
-      } else if (self.lines[i + 2] !== undefined && !pts[i + 1].start) {
-        self.lineLayer.removeLayer(self.lines[i + 2]);
-        self.lines[i + 2] =
-            L.polyline([e.target._latlng, self.lines[i + 2]._latlngs[1]],
-            { color: self.lines[i + 2].options.color,
+        this.lineLayer.addLayer(this.lines[i + 1]);
+      } else if (this.lines[i + 2] !== undefined && !pts[i + 1].start) {
+        this.lineLayer.removeLayer(this.lines[i + 2]);
+        this.lines[i + 2] =
+            L.polyline([e.target._latlng, this.lines[i + 2]._latlngs[1]],
+            { color: this.lines[i + 2].options.color,
               opacity: '.75',
               weight: '3' });
-        self.lineLayer.addLayer(self.lines[i + 2]);
+        this.lineLayer.addLayer(this.lines[i + 2]);
       }
     });
 
     //tell marker what to do when the draggin is done
-    this.markers[i].on('dragend', function(e) {
+    this.markers[i].on('dragend', (e) => {
       Lt.undo.push();
       pts[i].latLng = e.target._latlng;
     });
 
     //tell marker what to do when clicked
-    this.markers[i].on('click', function(e) {
+    this.markers[i].on('click', (e) => {
       if (Lt.deletePoint.active) {
         Lt.deletePoint.action(i);
       }
@@ -709,8 +776,6 @@ function VisualAsset(Lt) {
  * @param 
  */
 function ButtonBar(Lt, btns, icon, title) {
-  var self = this;
-  
   this.btns = btns;
 
   this.btn = L.easyButton({
@@ -719,52 +784,50 @@ function ButtonBar(Lt, btns, icon, title) {
         stateName: 'collapse',
         icon: icon,
         title: title,
-        onClick: function(btn, map) {
-          self.btn.state('expand');
-          self.expand();
-          
-//          create.dataPoint.btn.enable();
-//          create.zeroGrowth.btn.enable();
-//          create.breakPoint.btn.enable();
-//
-//          data.disable();
-//          edit.collapse();
-//          annotation.disable();
-//          setYear.disable();
+        onClick: () => {
+          this.btn.state('expand');
+          Lt.disableTools();
+          this.expand();
         }
       },
       {
         stateName: 'expand',
         icon: '<i class="material-icons md-18">expand_less</i>',
         title: 'Collapse',
-        onClick: function(btn, map) {
-          self.btn.state('collapse');
-          self.collapse();
+        onClick: () => {
+          this.btn.state('collapse');
+          this.collapse();
         }
       }]
   });
   
-  this.bar = L.easyBar([self.btn].concat(this.btns));
+  this.bar = L.easyBar([this.btn].concat(this.btns));
   
+  /**
+   * Expand the menu bar
+   * @function expand
+   */
   ButtonBar.prototype.expand = function() {
-    this.btns.forEach(function(e) { e.enable() });
+    this.btns.forEach(e => { e.enable() });
   }
   
+  /**
+   * Collapse the menu bar
+   * @function collapse
+   */
   ButtonBar.prototype.collapse = function() {
-    this.btns.forEach(function(e) { e.disable() });
+    this.btns.forEach(e => { e.disable() });
   }
   
   this.collapse();
 }
 
 /**
- * A popout object
+ * A popout of the leaflet viewer
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  var self = this;
-  
   this.btn = L.easyButton({
     states: [{
       stateName: 'popout',
@@ -784,8 +847,6 @@ function Popout(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Undo(Lt) {
-  var self = this;
-  
   this.stack = new Array();
   this.btn = L.easyButton({
     states: [
@@ -793,23 +854,32 @@ function Undo(Lt) {
         stateName: 'undo',
         icon: '<i class="material-icons md-18">undo</i>',
         title: 'Undo',
-        onClick: function(btn, map) {
-          self.pop();
+        onClick: () => {
+          this.pop();
         }
       }]
   });
+  this.btn.disable();
   
+  /**
+   * Push the current state into stack to retrieve in the case of an undo event
+   * @function push
+   */
   Undo.prototype.push = function() {
-    self.btn.enable();
+    this.btn.enable();
     Lt.redo.btn.disable();
     Lt.redo.stack.length = 0;
     var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
-    self.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
+    this.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
       'index': Lt.data.index, 'points': restore_points });
   };
   
+  /**
+   * Pop the last state from the stack, update the data, and push to the redo stack
+   * @function pop
+   */
   Undo.prototype.pop = function() {
-    if (self.stack.length > 0) {
+    if (this.stack.length > 0) {
       if (Lt.data.points[Lt.data.index - 1].start) {
         Lt.createPoint.disable();
       } else {
@@ -819,50 +889,6 @@ function Undo(Lt) {
       Lt.redo.btn.enable();
       var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
       Lt.redo.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
-        'index': Lt.data.index, 'points': restore_points});
-      var dataJSON = self.stack.pop();
-
-      Lt.data.points = JSON.parse(JSON.stringify(dataJSON.points));
-
-      Lt.data.index = dataJSON.index;
-      Lt.data.year = dataJSON.year;
-      Lt.data.earlywood = dataJSON.earlywood;
-
-      Lt.visualAsset.reload();
-
-      if (self.stack.length == 0) {
-        self.btn.disable();
-      }
-    }
-  };
-}
-
-/**
- * Redo actions
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function Redo(Lt) {
-    var self = this;
-  
-    this.stack = new Array();
-  
-    this.btn = L.easyButton({
-      states: [
-        {
-          stateName: 'redo',
-          icon: '<i class="material-icons md-18">redo</i>',
-          title: 'Redo',
-          onClick: function(btn, map) {
-            self.pop();
-          }
-        }]
-    });
-  
-    Redo.prototype.pop = function() {
-      Lt.undo.btn.enable();
-      var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
-      Lt.undo.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
         'index': Lt.data.index, 'points': restore_points});
       var dataJSON = this.stack.pop();
 
@@ -877,7 +903,156 @@ function Redo(Lt) {
       if (this.stack.length == 0) {
         this.btn.disable();
       }
-    };
+    }
+  };
+}
+
+/**
+ * Redo actions
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Redo(Lt) {
+  this.stack = new Array(); 
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'redo',
+        icon: '<i class="material-icons md-18">redo</i>',
+        title: 'Redo',
+        onClick: () => {
+          this.pop();
+        }
+      }]
+  });
+  this.btn.disable();
+
+  /**
+   * Pop the last state in the stack and update data
+   * @function pop
+   */
+  Redo.prototype.pop = function() {
+    Lt.undo.btn.enable();
+    var restore_points = JSON.parse(JSON.stringify(Lt.data.points));
+    Lt.undo.stack.push({'year': Lt.data.year, 'earlywood': Lt.data.earlywood,
+      'index': Lt.data.index, 'points': restore_points});
+    var dataJSON = this.stack.pop();
+
+    Lt.data.points = JSON.parse(JSON.stringify(dataJSON.points));
+
+    Lt.data.index = dataJSON.index;
+    Lt.data.year = dataJSON.year;
+    Lt.data.earlywood = dataJSON.earlywood;
+
+    Lt.visualAsset.reload();
+
+    if (this.stack.length == 0) {
+      this.btn.disable();
+    }
+  };
+}
+
+/**
+ * Calibrate the ppm using a known measurement
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Calibration(Lt) {
+  this.active = false;
+  this.popup = L.popup({closeButton: false}).setContent(
+              '<input type="number" style="border:none; width:50px;"' +
+              'value="10" id="length"></input> mm')
+  this.btn = L.easyButton ({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">build</i>',
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: () => {
+          this.disable();
+        }
+      }
+    ]
+  });
+  
+  Calibration.prototype.calculatePPM = function(p1, p2, length) {
+    var startPoint = Lt.viewer.project(p1, Lt.viewer.getMaxZoom());
+    var endPoint = Lt.viewer.project(p2, Lt.viewer.getMaxZoom());
+    var pixel_length = Math.sqrt(Math.pow(Math.abs(startPoint.x - endPoint.x), 2) +
+        Math.pow(Math.abs(endPoint.y - startPoint.y), 2));
+    var pixelsPerMillimeter = pixel_length / length;
+    var retinaFactor = 1;
+    if (L.Browser.retina) {
+      retinaFactor = 2; // this is potentially incorrect for 3x+ devices
+    }
+    Lt.meta.ppm = pixelsPerMillimeter / retinaFactor;
+  }
+  
+  Calibration.prototype.enable = function() {
+    this.btn.state('active');
+    Lt.mouseLine.enable();
+    
+    
+    document.getElementById('map').style.cursor = 'pointer';
+
+    $(document).keyup(e => {
+      var key = e.which || e.keyCode;
+      if (key === 27) {
+        this.disable();
+      }
+    });
+
+    var latLng_1 = null;
+    var latLng_2 = null;
+    $(Lt.viewer._container).click(e => {
+      document.getElementById('map').style.cursor = 'pointer';
+      
+      
+      if (latLng_1 === null) {
+        latLng_1 = Lt.viewer.mouseEventToLatLng(e);
+        Lt.mouseLine.from(latLng_1);
+      } else if (latLng_2 === null) {
+        latLng_2 = Lt.viewer.mouseEventToLatLng(e);
+        
+        this.popup.setLatLng(latLng_2).openOn(Lt.viewer);
+        Lt.mouseLine.disable();
+
+        document.getElementById('length').select();
+
+        $(document).keypress(e => {
+          var key = e.which || e.keyCode;
+          if (key === 13) {
+            var length = parseInt(document.getElementById('length').value);
+            this.calculatePPM(latLng_1, latLng_2, length);
+            this.disable();
+          }
+        });
+      } else {
+        var length = parseInt(document.getElementById('length').value);
+        this.calculatePPM(latLng_1, latLng_2, length);
+        this.disable();
+      }
+    });
+  };
+  
+  Calibration.prototype.disable = function() {
+    $(document).off('keyup');
+    // turn off the mouse clicks from previous function
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    Lt.mouseLine.disable();
+    document.getElementById('map').style.cursor = 'default';
+    this.popup.remove(Lt.viewer);
+  };
 }
 
 /**
@@ -886,33 +1061,32 @@ function Redo(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Dating(Lt) {
-  var self = this;
-  
   this.active = false;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">access_time</i>',
         title: 'Set the year of any point and adjust all other points',
-        onClick: function(btn, map) {
-//          annotation.disable();
-//          edit.collapse();
-//          create.collapse();
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
   
+  /**
+   * Open a text container for user to input date
+   * @function action
+   */
   Dating.prototype.action = function(i) {
     if (Lt.data.points[i].year != undefined) {
       var popup = L.popup({closeButton: false})
@@ -924,12 +1098,12 @@ function Dating(Lt) {
 
       document.getElementById('year_input').select();
 
-      $(Lt.viewer._container).click(function(e) {
+      $(Lt.viewer._container).click(e => {
         popup.remove(Lt.viewer);
-        self.disable();
+        this.disable();
       });
 
-      $(document).keypress(function(e) {
+      $(document).keypress(e => {
         var key = e.which || e.keyCode;
         if (key === 13) {
           var new_year = parseInt(document.getElementById('year_input').value);
@@ -945,7 +1119,7 @@ function Dating(Lt) {
 
             var shift = new_year - Lt.data.points[i].year;
 
-            Object.values(Lt.data.points).map(function(e, i) {
+            Object.values(Lt.data.points).map((e, i) => {
               if (Lt.data.points[i].year != undefined) {
                 Lt.data.points[i].year += shift;
               }
@@ -953,17 +1127,25 @@ function Dating(Lt) {
             Lt.data.year += shift;
             Lt.visualAsset.reload();
           }
-          self.disable();
+          this.disable();
         }
       });
     }
   };
   
+  /**
+   * Enable dating
+   * @function enable
+   */
   Dating.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
   };
 
+  /**
+   * Disable dating
+   * @function disable
+   */
   Dating.prototype.disable = function() {
     this.btn.state('inactive');
     $(Lt.viewer._container).off('click');
@@ -978,8 +1160,6 @@ function Dating(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreatePoint(Lt) {
-  var self = this;
-  
   this.active = false;
   this.startPoint = true;
   this.btn = L.easyButton({
@@ -988,41 +1168,46 @@ function CreatePoint(Lt) {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">linear_scale</i>',
         title: 'Create measurable points',
-        onClick: function(btn, map) {
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'End (Esc)',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
-      
+  
+  /**
+   * Enable creating new points on click events
+   * @function enable
+   */
   CreatePoint.prototype.enable = function() {
-    self.btn.state('active');
+    this.btn.state('active');
     Lt.mouseLine.enable();
 
     document.getElementById('map').style.cursor = 'pointer';
 
-    $(document).keyup(function(e) {
+    $(document).keyup(e => {
       var key = e.which || e.keyCode;
       if (key === 27) {
-        self.disable();
+        this.disable();
       }
     });
 
-    $(Lt.viewer._container).click(function(e) {
+    $(Lt.viewer._container).click(e => {
       document.getElementById('map').style.cursor = 'pointer';
 
       var latLng = Lt.viewer.mouseEventToLatLng(e);
 
       Lt.undo.push();
 
-      if (self.startPoint) {
+      if (this.startPoint) {
         var popup = L.popup({closeButton: false}).setContent(
             '<input type="number" style="border:none; width:50px;"' +
             'value="' + Lt.data.year + '" id="year_input"></input>')
@@ -1031,17 +1216,17 @@ function CreatePoint(Lt) {
 
         document.getElementById('year_input').select();
 
-        $(document).keypress(function(e) {
+        $(document).keypress(e => {
           var key = e.which || e.keyCode;
           if (key === 13) {
             Lt.data.year = parseInt(document.getElementById('year_input').value);
             popup.remove(Lt.viewer);
           }
         });
-        Lt.data.newPoint(self.startPoint, latLng, Lt.meta.hasLatewood);
-        self.startPoint = false;
+        Lt.data.newPoint(this.startPoint, latLng, Lt.meta.hasLatewood);
+        this.startPoint = false;
       } else {
-        Lt.data.newPoint(self.startPoint, latLng, Lt.meta.hasLatewood);
+        Lt.data.newPoint(this.startPoint, latLng, Lt.meta.hasLatewood);
       }
 
       //call newLatLng with current index and new latlng
@@ -1050,10 +1235,14 @@ function CreatePoint(Lt) {
       //create the next mouseline from the new latlng
       Lt.mouseLine.from(latLng);
 
-      self.active = true;   //activate dataPoint after one point is made
+      this.active = true;   //activate dataPoint after one point is made
     });
   };
   
+  /**
+   * Disable creating new points
+   * @function disable
+   */
   CreatePoint.prototype.disable = function() {
     $(document).off('keyup');
     // turn off the mouse clicks from previous function
@@ -1072,20 +1261,22 @@ function CreatePoint(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateZeroGrowth(Lt) {
-  var self = this;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'skip-year',
         icon: '<i class="material-icons md-18">exposure_zero</i>',
         title: 'Add a zero growth year',
-        onClick: function(btn, map) {
-          self.add();
+        onClick: () => {
+          this.add();
         }
       }]
   });
   
+  /**
+   * Use previous point to add point in the same location to mimic zero growth
+   * @function add
+   */
   CreateZeroGrowth.prototype.add = function() {
     if (Lt.data.index) {
       var latLng = Lt.data.points[Lt.data.index - 1].latLng;
@@ -1115,17 +1306,15 @@ function CreateZeroGrowth(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateBreak(Lt) {
-  var self = this;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">broken_image</i>',
         title: 'Create a break point',
-        onClick: function(btn, map) {
-          Lt.createPoint.disable();
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
           Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
         }
       },
@@ -1133,20 +1322,24 @@ function CreateBreak(Lt) {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   })
   
+  /**
+   * Enable adding a break point from the last point
+   * @function enable
+   */
   CreateBreak.prototype.enable = function() {
-    self.btn.state('active');
+    this.btn.state('active');
 
     Lt.mouseLine.enable();
 
     document.getElementById('map').style.cursor = 'pointer';
 
-    $(Lt.viewer._container).click(function(e) {
+    $(Lt.viewer._container).click(e => {
       document.getElementById('map').style.cursor = 'pointer';
 
       var latLng = Lt.viewer.mouseEventToLatLng(e);
@@ -1160,12 +1353,16 @@ function CreateBreak(Lt) {
         'latLng': latLng};
       Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
       Lt.data.index++;
-      self.disable();
+      this.disable();
 
       Lt.createPoint.enable();
     });
   };
   
+  /**
+   * Disable adding breaks
+   * @function disable
+   */
   CreateBreak.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
@@ -1181,34 +1378,33 @@ function CreateBreak(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function DeletePoint(Lt) {
-  var self = this;
-  
   this.active = false;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">delete</i>',
         title: 'Delete a point',
-        onClick: function(btn, map) {
-//          edit.cut.disable();
-//          edit.addData.disable();
-//          edit.addZeroGrowth.disable();
-//          edit.addBreak.disable();
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
   
+  /**
+   * Delete a point
+   * @function action
+   * @param i int - delete the point at index i
+   */
   DeletePoint.prototype.action = function(i) {
     Lt.undo.push();
     
@@ -1217,19 +1413,26 @@ function DeletePoint(Lt) {
     Lt.visualAsset.reload();
   };
   
+  /**
+   * Enable deleting points on click
+   * @function enable
+   */
   DeletePoint.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
     document.getElementById('map').style.cursor = 'pointer';
   };
   
+  /**
+   * Disable deleting points on click
+   * @function disable
+   */
   DeletePoint.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
     this.active = false;
     document.getElementById('map').style.cursor = 'default';
   };
-  
 }
 
 /**
@@ -1238,39 +1441,43 @@ function DeletePoint(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Cut(Lt) {
-  var self = this;
-  
   this.active = false;
   this.point = -1;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">content_cut</i>',
         title: 'Cut a portion of the series',
-        onClick: function(btn, map) {
-//          edit.deletePoint.disable();
-//          edit.addData.disable();
-//          edit.addZeroGrowth.disable();
-//          edit.addBreak.disable();
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
   
+  /**
+   * Defined the point to cut from
+   * @function fromPoint
+   * @param i int - index of the point to cut from
+   */
   Cut.prototype.fromPoint = function(i) {
     this.point = i;
   };
   
+  /**
+   * Remove all points from the side of point i
+   * @funciton action
+   * @param i int - index of a point that will decide which side to cut
+   */
   Cut.prototype.action = function(i) {
     Lt.undo.push();
     
@@ -1280,6 +1487,10 @@ function Cut(Lt) {
     this.disable();
   };
 
+  /**
+   * Enable cutting
+   * @function enable
+   */
   Cut.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
@@ -1287,6 +1498,10 @@ function Cut(Lt) {
     this.point = -1;
   };
   
+  /**
+   * Disable cutting
+   * @function disable
+   */
   Cut.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
@@ -1303,8 +1518,6 @@ function Cut(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function InsertPoint(Lt) {
-  var self = this;
-  
   this.active = false;
   this.btn = L.easyButton({
     states: [
@@ -1312,24 +1525,29 @@ function InsertPoint(Lt) {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">add_circle_outline</i>',
         title: 'Add a point in the middle of the series',
-        onClick: function(btn, map) {
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
-     
+  
+  /**
+   * Insert a point on click event
+   * @function action
+   */
   InsertPoint.prototype.action = function() {
     document.getElementById('map').style.cursor = 'pointer';
 
-    $(Lt.viewer._container).click(function(e) {
+    $(Lt.viewer._container).click(e => {
       var latLng = Lt.viewer.mouseEventToLatLng(e);
 
       Lt.undo.push();
@@ -1340,16 +1558,24 @@ function InsertPoint(Lt) {
         Lt.visualAsset.reload();
       }
       
-      self.disable();
+      this.disable();
     });
   };
   
+  /**
+   * Enable inserting points
+   * @function enable
+   */
   InsertPoint.prototype.enable = function() {
     this.btn.state('active');
     this.action();
     this.active = true;
   };
   
+  /**
+   * Disable inserting points
+   * @function disable
+   */
   InsertPoint.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
@@ -1364,8 +1590,6 @@ function InsertPoint(Lt) {
  * @param {Ltrering} Lt - Leaflet treering object
  */
 function InsertZeroGrowth(Lt) {
-  var self = this;
-  
   this.active = false;
   this.btn = L.easyButton({
     states: [
@@ -1373,21 +1597,26 @@ function InsertZeroGrowth(Lt) {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">exposure_zero</i>',
         title: 'Add a zero growth year in the middle of the series',
-        onClick: function(btn, map) {
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Cancel',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   })
   
-  
+  /**
+   * Insert a zero growth year after point i
+   * @function action
+   * @param i int - index of a point to add a zero growth year after
+   */
   InsertZeroGrowth.prototype.action = function(i) {
     var latLng = Lt.data.points[i].latLng;
 
@@ -1403,12 +1632,20 @@ function InsertZeroGrowth(Lt) {
     this.disable();
   };
   
+  /**
+   * Enable adding a zero growth year
+   * @function enable
+   */
   InsertZeroGrowth.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
     document.getElementById('map').style.cursor = 'pointer';
   };
   
+  /**
+   * Disable adding a zero growth year
+   * @function disable
+   */
   InsertZeroGrowth.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
@@ -1426,8 +1663,6 @@ function InsertZeroGrowth(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function InsertBreak(Lt) {
-  var self = this;
-  
   this.active = false;
   this.btn = L.easyButton({
     states: [
@@ -1435,19 +1670,25 @@ function InsertBreak(Lt) {
         stateName: 'inactive',
         icon: '<i class="material-icons md-18">broken_image</i>',
         title: 'Add a break in the series',
-        onClick: function(btn, map) {
-          self.enable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'active',
         icon: '<i class="material-icons md-18">clear</i>',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   })
   
+  /**
+   * Insert a break after point i
+   * @function action
+   * @param i int - add the break point after index i
+   */
   InsertBreak.prototype.action = function(i) {
     var new_points = Lt.data.points;
     var second_points = Object.values(Lt.data.points).splice(i + 1, Lt.data.index - 1);
@@ -1458,7 +1699,7 @@ function InsertBreak(Lt) {
     Lt.mouseLine.enable();
     Lt.mouseLine.from(Lt.data.points[i].latLng);
 
-    $(Lt.viewer._container).click(function(e) {
+    $(Lt.viewer._container).click(e => {
       var latLng = Lt.viewer.mouseEventToLatLng(e);
       Lt.viewer.dragging.disable();
 
@@ -1471,9 +1712,9 @@ function InsertBreak(Lt) {
         first_point = false;
         second_point = true;
       } else if (second_point) {
-        self.disable();
+        this.disable();
         second_point = false;
-        self.active = false;
+        this.active = false;
         Lt.mouseLine.layer.clearLayers();
 
         new_points[k] = {'start': true, 'skip': false, 'break': false,
@@ -1489,7 +1730,7 @@ function InsertBreak(Lt) {
 
         document.getElementById('year_input').select();
 
-        $(document).keypress(function(e) {
+        $(document).keypress(e => {
           var key = e.which || e.keyCode;
           if (key === 13) {
             var new_year = parseInt(document.getElementById('year_input').value);
@@ -1497,7 +1738,7 @@ function InsertBreak(Lt) {
 
             var shift = new_year - second_points[0].year;
 
-            second_points.map(function(e) {
+            second_points.map(e => {
               e.year += shift;
               new_points[k] = e;
               k++;
@@ -1512,22 +1753,30 @@ function InsertBreak(Lt) {
             Lt.data.index = k;
 
             Lt.visualAsset.reload();
-            self.disable();
+            this.disable();
           }
         });
       } else {
-        self.disable();
+        this.disable();
         Lt.visualAsset.reload();
       }
     });
   };
-      
+  
+  /**
+   * Enable inserting a break point
+   * @function enable
+   */
   InsertBreak.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
     document.getElementById('map').style.cursor = 'pointer';
   };
   
+  /**
+   * Disable inserting a break point
+   * @function disable
+   */
   InsertBreak.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
@@ -1538,30 +1787,29 @@ function InsertBreak(Lt) {
   };
 }
 
+/**
+ * View data and download data
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
 function ViewData(Lt) {
-  var self = this;
-  
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'collapse',
         icon: '<i class="material-icons md-18">view_list</i>',
         title: 'View and download data',
-        onClick: function(btn, map) {
-          self.enable();
-
-//          create.collapse();
-//          setYear.disable();
-//          edit.collapse();
-//          annotation.disable();
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
         }
       },
       {
         stateName: 'expand',
         icon: '<i class="material-icons md-18">clear</i>',
         title: 'Collapse',
-        onClick: function(btn, map) {
-          self.disable();
+        onClick: () => {
+          this.disable();
         }
       }]
   });
@@ -1570,13 +1818,19 @@ function ViewData(Lt) {
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
   
+  /**
+   * Calculate distance from p1 to p2
+   * @function distance
+   * @param p1 leaflet point - first point
+   * @param p2 leaflet point - second point
+   */
   ViewData.prototype.distance = function(p1, p2) {
     var lastPoint = Lt.viewer.project(p1, Lt.viewer.getMaxZoom());
     var newPoint = Lt.viewer.project(p2, Lt.viewer.getMaxZoom());
     var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
         Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
     var pixelsPerMillimeter = 1;
-    Lt.viewer.eachLayer(function(layer) {
+    Lt.viewer.eachLayer((layer) => {
       if (layer.options.pixelsPerMillimeter > 0) {
         pixelsPerMillimeter = Lt.meta.ppm;
       }
@@ -1589,6 +1843,10 @@ function ViewData(Lt) {
     return length * retinaFactor;
   }
   
+  /**
+   * Format and download data in Dan's archaic format
+   * @function download
+   */
   ViewData.prototype.download = function() {
     
     var toFourCharString = function(n) {
@@ -1678,7 +1936,7 @@ function ViewData(Lt) {
         var lw_string = '';
 
         y = Lt.data.points[1].year;
-        var sum_points = Object.values(Lt.data.points).filter(function(e) {
+        var sum_points = Object.values(Lt.data.points).filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -1693,13 +1951,12 @@ function ViewData(Lt) {
         }
 
         var break_point = false;
-        sum_points.map(function(e, i, a) {
-          
+        sum_points.map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
             break_length = 
-              Math.round(data.distance(last_latLng, e.latLng) * 1000);
+              Math.round(this.distance(last_latLng, e.latLng) * 1000);
               break_point = true;
           } else {
             if (e.year % 10 == 0) {
@@ -1716,7 +1973,7 @@ function ViewData(Lt) {
               }
             }
 
-            var length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            var length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
               break_point = false;
@@ -1749,12 +2006,12 @@ function ViewData(Lt) {
         }
 
         break_point = false;
-        Object.values(Lt.data.points).map(function(e, i, a) {
+        Object.values(Lt.data.points).map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
             break_length = 
-              Math.round(self.distance(last_latLng, e.latLng) * 1000);
+              Math.round(this.distance(last_latLng, e.latLng) * 1000);
             break_point = true;
           } else {
             if (e.year % 10 == 0) {
@@ -1782,7 +2039,7 @@ function ViewData(Lt) {
               }
             }
 
-            length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
               break_point = false;
@@ -1828,7 +2085,7 @@ function ViewData(Lt) {
               toEightCharString(Lt.meta.assetName) +
               toFourCharString(sum_points[1].year));
         }
-        sum_points.map(function(e, i, a) {
+        sum_points.map((e, i, a) => {
           if (!e.start) {
             if (e.year % 10 == 0) {
               sum_string = sum_string.concat('\r\n' +
@@ -1844,7 +2101,7 @@ function ViewData(Lt) {
               }
             }
 
-            length = Math.round(self.distance(last_latLng, e.latLng) * 1000);
+            length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
             if (length == 9999) {
               length = 9998;
             }
@@ -1868,7 +2125,7 @@ function ViewData(Lt) {
       }
 
       zip.generateAsync({type: 'blob'})
-          .then(function(blob) {
+          .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '.zip'));
           });
     } else {
@@ -1876,14 +2133,10 @@ function ViewData(Lt) {
     }
   };
   
-  ViewData.prototype.clean = function() {
-    for (var i in Lt.data.points) {
-      if (Lt.data.points[i] === null || Lt.data.points[i] === undefined) {
-        delete Lt.data.points[i];
-      }
-    }
-  };
-  
+  /**
+   * Open the data viewer box
+   * @function enable
+   */
   ViewData.prototype.enable = function() {
     this.btn.state('expand');
     var string;
@@ -1904,14 +2157,14 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      this.clean();
-      Object.values(Lt.data.points).map(function(e, i, a) {
+      Lt.data.clean();
+      Object.values(Lt.data.points).map((e, i, a) => {
         
         if (e.start) {
           last_latLng = e.latLng;
         } else if (e.break) {
           break_length =
-            Math.round(self.distance(last_latLng, e.latLng) * 1000) / 1000;
+            Math.round(this.distance(last_latLng, e.latLng) * 1000) / 1000;
           break_point = true;
         } else {
           while (e.year > y) {
@@ -1919,7 +2172,7 @@ function ViewData(Lt) {
                 '-</td><td>N/A</td></tr>');
             y++;
           }
-          length = Math.round(self.distance(last_latLng, e.latLng) * 1000) / 1000;
+          length = Math.round(this.distance(last_latLng, e.latLng) * 1000) / 1000;
           if (break_point) {
             length += break_length;
             length = Math.round(length * 1000) / 1000;
@@ -1967,13 +2220,13 @@ function ViewData(Lt) {
     }
     this.dialog.lock();
     this.dialog.open();
-    $('#download-button').click(self.download);
-    $('#refresh-button').click(function() {
-      self.disable();
-      self.enable();
+    $('#download-button').click(this.download);
+    $('#refresh-button').click(() => {
+      this.disable();
+      this.enable();
     });
-    $('#delete-button').click(function() {
-      self.dialog.setContent(
+    $('#delete-button').click(() => {
+      this.dialog.setContent(
           '<p>This action will delete all data points.' +
           'Annotations will not be effected.' +
           'Are you sure you want to continue?</p>' +
@@ -1983,7 +2236,7 @@ function ViewData(Lt) {
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>cancel</button></p>');
 
-      $('#confirm-delete').click(function() {
+      $('#confirm-delete').click(() => {
         Lt.undo.push();
 
         Lt.data.points = {};
@@ -1993,15 +2246,19 @@ function ViewData(Lt) {
 
         Lt.visualAsset.reload();
 
-        self.disable();
+        this.disable();
       });
-      $('#cancel-delete').click(function() {
-        self.disable();
-        self.enable();
+      $('#cancel-delete').click(() => {
+        this.disable();
+        this.enable();
       });
     });
   },
   
+  /**
+   * close the data viewer box
+   * @function disable
+   */
   ViewData.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
     this.btn.state('collapse');
@@ -2012,4 +2269,474 @@ function ViewData(Lt) {
     $('#delete-button').off('click');
     this.dialog.close();
   };
+}
+
+/**
+ * Add annotations
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function Annotation(Lt) {
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'inactive',
+        icon: '<i class="material-icons md-18">comment</i>',
+        title: 'Make an annotation',
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
+        }
+      },
+      {
+        stateName: 'active',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Cancel',
+        onClick: () => {
+          this.disable();
+        }
+      }]
+  });
+  
+  this.annotations = Lt.data.annotations;
+  this.index = 0;
+  this.markers = new Array();
+  this.layer = L.layerGroup().addTo(Lt.viewer);
+  this.active = false;
+  this.markerClicked = false;
+  this.input = L.circle([0, 0], {radius: .0001, color: 'red', weight: '6'})
+      .bindPopup('<textarea class="comment_input" name="message" rows="2"' +
+      'cols="15"></textarea>', {closeButton: false}),
+  
+  Annotation.prototype.reload = function() {
+    this.layer.clearLayers();
+    this.markers = new Array();
+    this.index = 0;
+    if (this.annotations != undefined) {
+      var reduced = Object.values(this.annotations).filter(e => e != undefined);
+      this.annotations = {};
+      reduced.map((e, i) => this.annotations[i] = e);
+
+      Object.values(this.annotations).map((e, i) => {
+        this.newAnnotation(i); this.index++
+      });
+    }
+  };
+  
+  Annotation.prototype.popupMouseover = function(e) {
+    this.openPopup();
+  };
+  
+  Annotation.prototype.popupMouseout = function(e) {
+    this.closePopup();
+  };
+  
+  Annotation.prototype.newAnnotation = function(i) {
+    var ref = this.annotations[i];
+    var circle = L.circle(ref.latLng, {radius: .0001, color: 'red',
+      weight: '6'});
+    circle.bindPopup(ref.text, {closeButton: false});
+    this.markers[i] = circle;
+
+    $(this.markers[i]).click(e => {
+      this.markers[i].closePopup();
+    });
+
+    $(this.markers[i]).mouseover(this.popupMouseover);
+    $(this.markers[i]).mouseout(this.popupMouseout);
+
+    if (window.name == 'popout') {
+      $(this.markers[i]).dblclick(() => {
+        if (!this.active) {
+          $(Lt.viewer._container).click(e => {
+            this.markers[i].setPopupContent(ref.text);
+            $(this.markers[i]).mouseover(this.popupMouseover);
+            $(this.markers[i]).mouseout(this.popupMouseout);
+            this.disable();
+          });
+          this.editAnnotation(i);
+        } else {
+          this.markerClicked = true;
+        }
+      });
+    }
+
+    this.layer.addLayer(this.markers[i]);
+
+    if (ref.text == '') {
+      this.deleteAnnotation(i);
+    }
+  };
+    
+  Annotation.prototype.action = function(i, latLng) {
+    this.input.setLatLng(latLng);
+    this.input.addTo(Lt.viewer);
+    this.input.openPopup();
+
+    document.getElementsByClassName('comment_input')[0].select();
+
+    $(document).keypress(e => {
+      var key = e.which || e.keyCode;
+      if (key === 13) {
+        var string = ($('.comment_input').val()).slice(0);
+
+        this.input.remove();
+
+        if (string != '') {
+          this.annotations[i] = {'latLng': latLng, 'text': string};
+          this.newAnnotation(i);
+          this.index++;
+          this.markers[i].openPopup();
+        }
+
+        $(Lt.viewer._container).off('click');
+        $(document).off('keypress');
+      }
+    });
+  };
+  
+  Annotation.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+
+    Lt.viewer.doubleClickZoom.disable();
+    $(Lt.viewer._container).dblclick(e => {
+      if (!this.markerClicked) {
+        $(Lt.viewer._container).click(e => {
+          this.disable();
+          this.enable();
+        });
+        var latLng = Lt.viewer.mouseEventToLatLng(e);
+        this.action(this.index, latLng);
+      }
+      this.markerClicked = false;
+    });
+  };
+  
+  Annotation.prototype.disable = function() {
+    this.btn.state('inactive');
+    Lt.viewer.doubleClickZoom.enable();
+    $(Lt.viewer._container).off('dblclick');
+    $(Lt.viewer._container).off('click');
+    $(document).off('keypress');
+    document.getElementById('map').style.cursor = 'default';
+    this.input.remove();
+    this.active = false;
+  };
+  
+  Annotation.prototype.editAnnotation = function(i) {
+    var marker = this.markers[i];
+
+    $(marker).off('mouseover');
+    $(marker).off('mouseout');
+
+    marker.setPopupContent('<textarea id="comment_input" name="message"' +
+        'rows="2" cols="15">' + this.annotations[i].text + '</textarea>');
+    marker.openPopup();
+    document.getElementById('comment_input').select();
+
+    $(document).keypress(e => {
+      var key = e.which || e.keyCode;
+      if (key === 13) {
+        if ($('#comment_input').val() != undefined) {
+          var string = ($('#comment_input').val()).slice(0);
+
+          if (string != '') {
+            this.annotations[i].text = string;
+            marker.setPopupContent(string);
+            $(marker).mouseover(this.popupMouseover);
+            $(marker).mouseout(this.popupMouseout);
+          } else {
+            this.deleteAnnotation(i);
+          }
+        }
+        this.disable();
+      }
+    });
+  };
+  
+  Annotation.prototype.deleteAnnotation = function(i) {
+    this.layer.removeLayer(this.markers[i]);
+    delete this.annotations[i];
+    this.reload();
+  };   
+}
+
+/**
+ * Change color properties of image
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function ImageAdjustment(Lt) {
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'collapse',
+        icon: '<i class="material-icons md-18">brightness_6</i>',
+        title: 'Image Adjustments',
+        onClick: () => {
+          Lt.disableTools();
+          this.enable();
+        }
+      },
+      {
+        stateName: 'expand',
+        icon: '<i class="material-icons md-18">clear</i>',
+        title: 'Collapse',
+        onClick: () => {
+          this.disable();
+        }
+      }]
+  });
+
+  this.dialog = L.control.dialog({
+    'size': [340, 220],
+    'anchor': [5, 50],
+    'initOpen': false
+  }).setContent(
+    '<div><label style="text-align:center;display:block;">Brightness</label> \
+    <input class="imageSlider" id="brightness-slider" value=100 min=0 max=300 type=range> \
+    <label style="text-align:center;display:block;">Contrast</label> \
+    <input class="imageSlider" id="contrast-slider" type=range min=50 max=350 value=100></div> \
+    <label style="text-align:center;display:block;">Saturation</label> \
+    <input class="imageSlider" id="saturation-slider" type=range min=0 max=350 value=100></div> \
+    <label style="text-align:center;display:block;">Hue Rotation</label> \
+    <input class="imageSlider" id="hue-slider" type=range min=0 max=360 value=0></div>').addTo(Lt.viewer);
+  
+  /**
+   * Update the image filter to reflect slider values
+   * @function updateFilters
+   */
+  ImageAdjustment.prototype.updateFilters = function() {
+    var brightnessSlider = document.getElementById("brightness-slider");
+    var contrastSlider = document.getElementById("contrast-slider");
+    var saturationSlider = document.getElementById("saturation-slider");
+    var hueSlider = document.getElementById("hue-slider");
+     
+    document.getElementsByClassName("leaflet-pane")[0].style.filter = 
+      "contrast(" + contrastSlider.value + "%) " +
+      "brightness(" + brightnessSlider.value + "%) " +
+      "saturate(" + saturationSlider.value + "%) " +
+      "hue-rotate(" + hueSlider.value + "deg)";
+  };
+  
+  /**
+   * Open the filter sliders dialog
+   * @function enable
+   */
+  ImageAdjustment.prototype.enable = function() {
+    this.dialog.lock();
+    this.dialog.open();
+    var brightnessSlider = document.getElementById("brightness-slider");
+    var contrastSlider = document.getElementById("contrast-slider");
+    var saturationSlider = document.getElementById("saturation-slider");
+    var hueSlider = document.getElementById("hue-slider");
+    this.btn.state('expand');
+    $(".imageSlider").change(() => {
+      this.updateFilters();
+    });
+  };
+  
+  /**
+   * Close the filter sliders dialog
+   * @function disable
+   */
+  ImageAdjustment.prototype.disable = function() {
+    this.dialog.unlock();
+    this.dialog.close();
+    this.btn.state('collapse');
+  };
+  
+}
+
+/**
+ * Save a local copy of the measurement data
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function SaveLocal(Lt) {
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'save',
+        icon: '<i class="material-icons md-18">save</i>',
+        title: 'Save a local copy of measurements and annotation',
+        onClick: () => {
+          this.action();
+        }
+      }]
+  });
+  
+  /**
+   * Save a local copy of the measurement data
+   * @function action
+   */
+  SaveLocal.prototype.action = function() {
+    Lt.data.clean();
+    var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
+      'earlywood': Lt.data.earlywood, 'index': Lt.data.index, 'points': Lt.data.points,
+      'annotations': Lt.data.annotations};
+    var file = new File([JSON.stringify(dataJSON)],
+        (Lt.meta.assetName + '.json'), {type: 'text/plain;charset=utf-8'});
+    saveAs(file);
+  };
+}
+
+/**
+ * Save a copy of the measurement data to the cloud
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function SaveCloud(Lt) {
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'saveCloud',
+        icon: '<i class="material-icons md-18">cloud_upload</i>',
+        title: 'Save to cloud.',
+        onClick: () => {
+          this.action();
+        }
+      }]
+  });
+
+  this.date = new Date(),
+    
+  /**
+   * Update the save date
+   * @function updateDate
+   */
+  SaveCloud.prototype.updateDate = function() {
+    var day = this.date.getDate();
+    var month = this.date.getMonth() + 1;
+    var year = this.date.getFullYear();
+    var minute = this.date.getMinutes();
+    var hour = this.date.getHours();
+    Lt.data.saveDate = {'day': day, 'month': month, 'year': year, 'hour': hour,
+      'minute': minute};
+  };
+  
+  /**
+   * Display the save date in the bottom left corner
+   * @function displayDate
+   */
+  SaveCloud.prototype.displayDate = function() {
+    var date = Lt.data.saveDate;
+    if (date.day != undefined && date.hour != undefined) {
+      var am_pm = 'am';
+      if (date.hour >= 12) {
+        date.hour -= 12;
+        am_pm = 'pm';
+      }
+      if (date.hour == 0) {
+        date.hour += 12;
+      }
+      var minute_string = date.minute;
+      if (date.minute < 10) {
+        minute_string = '0' + date.minute;
+      }
+      document.getElementById('leaflet-save-time-tag').innerHTML =
+          'Saved to cloud at ' + date.hour + ':' + minute_string +
+          am_pm + ' on ' + date.month + '/' + date.day + '/' +
+          date.year;
+    } else {
+      document.getElementById('leaflet-save-time-tag').innerHTML =
+          'No data saved to cloud';
+    }
+    Lt.data.saveDate;
+  };
+  
+  /**
+   * Save the measurement data to the cloud
+   * @function action
+   */
+  SaveCloud.prototype.action = function() {
+    if (Lt.meta.savePermission && Lt.meta.saveURL != "") {
+      Lt.data.clean();
+      var dataJSON = Lt.data.data();
+      $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
+          .done((msg) => {
+            this.updateDate();
+            this.displayDate();
+            console.log('saved');
+          })
+          .fail((xhr, status, error) => {
+            alert('Error: failed to save changes');
+          });
+    } else {
+      alert(
+        'Authentication Error: save to cloud permission not granted');
+    }
+  };
+  
+  /**
+   * Initialize the display date
+   * @function initialize
+   */
+  SaveCloud.prototype.initialize = function() {
+    var saveTimeDiv = document.createElement('div');
+    saveTimeDiv.innerHTML =
+        '<div class="leaflet-control-attribution leaflet-control">' +
+        '<p id="leaflet-save-time-tag"></p></div>';
+    document.getElementsByClassName('leaflet-bottom leaflet-left')[0]
+        .appendChild(saveTimeDiv);
+  };
+  
+}
+
+/**
+ * Load a local copy of the measurement data
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function LoadLocal() {
+  this.btn = L.easyButton({
+    states: [
+      {
+        stateName: 'load',
+        icon: '<i class="material-icons md-18">file_upload</i>',
+        title: 'Load a local file with measurements and annotations',
+        onClick: () => {
+          this.input();
+        }
+      }]
+  });
+  
+  /**
+   * Create an input div on the ui and click it
+   * @function input
+   */
+  LoadLocal.prototype.input = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'file';
+    input.style = 'display: none';
+    input.addEventListener('change', function() {this.action(input)});
+    input.click();
+  };
+
+  /**
+   * Load the file selected in the input
+   * @function action
+   */
+  LoadLocal.prototype.action = function(inputElement) {
+    var files = inputElement.files;
+    console.log(files);
+    if (files.length <= 0) {
+      return false;
+    }
+
+    var fr = new FileReader();
+
+    fr.onload = function(e) {
+      console.log(e);
+      newDataJSON = JSON.parse(e.target.result);
+
+      Lt.loadData(newDataJSON);
+    };
+
+    fr.readAsText(files.item(0));
+  };
+  
 }
