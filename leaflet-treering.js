@@ -33,9 +33,11 @@ function LTreering (viewer, basePath, options) {
   }
 
   this.data = new MeasurementData(options.initialData);
+  this.aData = new AnnotationData(options.initialData.annotations);
   this.autoscroll = new Autoscroll(this.viewer);
   this.mouseLine = new MouseLine(this);
   this.visualAsset = new VisualAsset(this);
+  this.annotationAsset = new AnnotationAsset(this);
 
   this.popout = new Popout(this);
   this.undo = new Undo(this);
@@ -44,10 +46,11 @@ function LTreering (viewer, basePath, options) {
   this.viewData = new ViewData(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
-  
   this.calibration = new Calibration(this);
 
-  this.annotation = new Annotation(this);
+  this.createAnnotation = new CreateAnnotation(this);
+  this.deleteAnnotation = new DeleteAnnotation(this);
+  this.editAnnotation = new EditAnnotation(this);
 
   this.dating = new Dating(this);
 
@@ -70,11 +73,13 @@ function LTreering (viewer, basePath, options) {
   }
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], '<i class="material-icons md-18">straighten</i>', 'Create new measurement point');
-  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], '<i class="material-icons md-18">edit</i>', 'Edit and delete data points from the series');
-  this.iotools = new ButtonBar(this, ioBtns, '<i class="material-icons md-18">folder_open</i>', 'View and download data');
+  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
+  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurement point');
+  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit and delete data points from the series');
+  this.iotools = new ButtonBar(this, ioBtns, 'folder_open', 'View and download data');
+  this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.calibration.btn], 'settings', 'Change image and calibration settings')
 
-  this.tools = [this.viewData, this.calibration, this.annotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment];
+  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment];
 
 
   /**
@@ -93,24 +98,41 @@ function LTreering (viewer, basePath, options) {
 
     // if popout is opened display measuring tools
     if (window.name == 'popout') {
-      // TODO
-
-    } else {
-      this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
-      this.imageAdjustment.btn.addTo(this.viewer);
-      this.calibration.btn.addTo(this.viewer);
-      this.annotation.btn.addTo(this.viewer);
+      this.annotationTools.bar.addTo(this.viewer);
       this.dating.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
       this.iotools.bar.addTo(this.viewer);
+      this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
-  //    data.btn.addTo(Lt.map);
-  //    fileBar.addTo(Lt.map);
+    } else {
+      this.popout.btn.addTo(this.viewer);
+      this.viewData.btn.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
+      this.imageAdjustment.btn.enable();
+      this.iotools.bar.addTo(this.viewer);
     }
 
     //L.control.layers(baseLayer, overlay).addTo(this.viewer);
+    
+        // right and left click controls
+    this.viewer.on('contextmenu', () => {
+      if (!this.createPoint.active && this.data.points[0] !== undefined &&
+          this.createTools.btn._currentState.stateName === 'expand') {
+        this.createPoint.startPoint = false;
+        this.createPoint.active = true;
+        this.createPoint.enable();
+        this.mouseLine.from(points[index - 1].latLng);
+      } else {
+        this.disableTools();
+      }
+    });
+    
+    if ( this.meta.savePermission ) {
+      // initialize cloud save
+      this.saveCloud.initialize();
+    }
 
     this.loadData();
 
@@ -122,7 +144,11 @@ function LTreering (viewer, basePath, options) {
    */
   LTreering.prototype.loadData = function() {
     this.visualAsset.reload();
-  //  annotation.reload();
+    this.annotationAsset.reload();
+    if ( this.meta.savePermission ) {
+      // load the save information in buttom left corner
+      this.saveCloud.displayDate();
+    }
   };
 
   /**
@@ -142,7 +168,7 @@ function LTreering (viewer, basePath, options) {
  * @param {object} dataObject -
  */
 function MeasurementData (dataObject) {
-  this.saveDate = dataObject.saveDate || {};
+  this.saveDate = dataObject.saveDate || dataObject.SaveDate || {};
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
   this.earlywood = dataObject.earlywood || true;
@@ -402,12 +428,20 @@ function MeasurementData (dataObject) {
         'earlywood': this.earlywood, 'index': this.index, 'points': this.points,
         'annotations': this.annotations};
   };
-  
-//  MeasurementData.prototype.year = function() { return this.year; }
-//  MeasurementData.prototype.earlywood = function() { return this.earlywood; }
-//  MeasurementData.prototype.points = function() { return this.points; }
-//  MeasurementData.prototype.index = function() { return this.index; }
+}
 
+function AnnotationData (annotations) {
+  if (annotations !== undefined) {
+    this.annotations = annotations.annotations || annotations;
+    this.index = annotations.index || 0;
+  } else {
+    this.annotations = {};
+    this.index = 0;
+  }
+  
+  AnnotationData.prototype.deleteAnnotation = function(i) {
+    delete this.annotations[i];
+  }
 }
 
 /**
@@ -469,7 +503,8 @@ function Autoscroll (viewer) {
 /**
  * A function that returns a leaflet icon given a particular color
  * @function
- * @param {LTreering} Lt - a refrence to the leaflet treering object
+ * @param {string} color - a color string
+ * @param {string} LtBasePath - the base path of the asset
  */
 function MarkerIcon(color, LtBasePath) {
 
@@ -637,7 +672,6 @@ function VisualAsset (Lt) {
       draggable = true;
     }
 
-    draggable = true; //// DEBUGGING REMOVE
     var marker;
 
     //check if index is the start point
@@ -767,25 +801,142 @@ function VisualAsset (Lt) {
   };
 }
 
+function AnnotationAsset(Lt) {
+  this.markers = new Array();
+  this.markerLayer = L.layerGroup().addTo(Lt.viewer);
+  
+  AnnotationAsset.prototype.reload = function() {
+    this.markerLayer.clearLayers();
+    this.markers = new Array();
+    Lt.aData.index = 0;
+    if (Lt.aData.annotations != undefined) {
+      var reduced = Object.values(Lt.aData.annotations).filter(e => e != undefined);
+      Lt.aData.annotations = {};
+      reduced.map((e, i) => Lt.aData.annotations[i] = e);
+
+      Object.values(Lt.aData.annotations).map((e, i) => {
+        this.newAnnotation(Lt.aData.annotations, i);
+        Lt.aData.index++;
+      });
+    }
+  };
+  
+  AnnotationAsset.prototype.popupMouseover = function(e) {
+    this.openPopup();
+  };
+  
+  AnnotationAsset.prototype.popupMouseout = function(e) {
+    this.closePopup();
+  };
+  
+  AnnotationAsset.prototype.newAnnotation = function(ants, i) {
+    var ref = ants[i];
+    
+    if (ref.text == '') {
+      Lt.aData.deleteAnnotation(i);
+      return;
+    }
+
+    var circle = L.circle(ref.latLng, {radius: .0001, color: 'red',
+      weight: '6'});
+    circle.bindPopup(ref.text, {closeButton: false});
+    this.markers[i] = circle;
+    this.markers[i].clicked = false;
+
+    $(this.markers[i]).click(e => {
+      if (Lt.editAnnotation.active) {
+        this.editAnnotation(i);
+      } else if (Lt.deleteAnnotation.active) {
+        Lt.deleteAnnotation.action(i);
+      }
+    });
+
+    $(this.markers[i]).mouseover(this.popupMouseover);
+    $(this.markers[i]).mouseout(this.popupMouseout);
+
+    this.markerLayer.addLayer(this.markers[i]);
+  };
+  
+  AnnotationAsset.prototype.editAnnotation = function(i) {
+    let marker = this.markers[i];
+
+    $(marker).off('mouseover');
+    $(marker).off('mouseout');
+
+    marker.setPopupContent('<textarea id="comment_input" name="message"' +
+        'rows="2" cols="15">' + Lt.aData.annotations[i].text + '</textarea>');
+    marker.openPopup();
+    document.getElementById('comment_input').select();
+
+    $(document).keypress(e => {
+      var key = e.which || e.keyCode;
+      if (key === 13) {
+        if ($('#comment_input').val() != undefined) {
+          let string = ($('#comment_input').val()).slice(0);
+
+          if (string != '') {
+            Lt.aData.annotations[i].text = string;
+            marker.setPopupContent(string);
+            $(marker).mouseover(this.popupMouseover);
+            $(marker).mouseout(this.popupMouseout);
+          } else {
+            Lt.deleteAnnotation.action(i);
+          }
+        }
+        Lt.editAnnotation.disable();
+      }
+    });
+  };
+} 
+
 
 /*****************************************************************************/
 
 /**
+ * A wrapper object around leaflet buttons
+ * @constructor
+ * @param {string} icon - a material design icon name
+ * @param {string} toolTip - a tool tip message
+ * @param {function} enable - the function for onClick events
+ * @param {function} disable - this is an option function for stateful buttons
+ */
+function Button(icon, toolTip, enable, disable) {
+  var states = [];
+  states.push({
+    stateName: 'inactive',
+    icon: '<i class="material-icons md-18">'+icon+'</i>',
+    title: toolTip,
+    onClick: enable
+  });
+  if (disable !== null) {
+    states.push({
+      stateName: 'active',
+      icon: '<i class="material-icons md-18">clear</i>',
+      title: 'Cancel',
+      onClick: disable
+    })
+  }
+  return L.easyButton({states: states});
+}
+
+/**
  * A collapsable button bar
  * @constructor
- * @param 
+ * @param {LTreering} Lt - a leaflet treering object
+ * @param {Button[]} btns - a list of Buttons that belong to the button bar
+ * @param {string} icon - a material design icon name
+ * @param {string} toolTip - a tool tip message
  */
-function ButtonBar(Lt, btns, icon, title) {
+function ButtonBar(Lt, btns, icon, toolTip) {
   this.btns = btns;
 
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'collapse',
-        icon: icon,
-        title: title,
+        icon: '<i class="material-icons md-18">'+icon+'</i>',
+        title: toolTip,
         onClick: () => {
-          this.btn.state('expand');
           Lt.disableTools();
           this.expand();
         }
@@ -795,7 +946,6 @@ function ButtonBar(Lt, btns, icon, title) {
         icon: '<i class="material-icons md-18">expand_less</i>',
         title: 'Collapse',
         onClick: () => {
-          this.btn.state('collapse');
           this.collapse();
         }
       }]
@@ -808,6 +958,7 @@ function ButtonBar(Lt, btns, icon, title) {
    * @function expand
    */
   ButtonBar.prototype.expand = function() {
+    this.btn.state('expand');
     this.btns.forEach(e => { e.enable() });
   }
   
@@ -816,11 +967,14 @@ function ButtonBar(Lt, btns, icon, title) {
    * @function collapse
    */
   ButtonBar.prototype.collapse = function() {
+    this.btn.state('collapse');
     this.btns.forEach(e => { e.disable() });
   }
   
   this.collapse();
 }
+
+/*****************************************************************************/
 
 /**
  * A popout of the leaflet viewer
@@ -828,17 +982,10 @@ function ButtonBar(Lt, btns, icon, title) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  this.btn = L.easyButton({
-    states: [{
-      stateName: 'popout',
-      icon: '<i class="material-icons md-18">launch</i>',
-      title: 'Popout Window',
-      onClick: function() {
-        window.open(Lt.meta.popoutUrl, 'popout',
-                    'location=yes,height=600,width=800,scrollbars=yes,status=yes');
-      }
-    }]
-  })
+  this.btn = new Button('launch', 'Open a popout window', () => {
+    window.open(Lt.meta.popoutUrl, 'popout',
+                'location=yes,height=600,width=800,scrollbars=yes,status=yes');
+  });
 }
 
 /**
@@ -848,17 +995,7 @@ function Popout(Lt) {
  */
 function Undo(Lt) {
   this.stack = new Array();
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'undo',
-        icon: '<i class="material-icons md-18">undo</i>',
-        title: 'Undo',
-        onClick: () => {
-          this.pop();
-        }
-      }]
-  });
+  this.btn = new Button('undo', 'Undo', () => { this.pop() });
   this.btn.disable();
   
   /**
@@ -914,17 +1051,7 @@ function Undo(Lt) {
  */
 function Redo(Lt) {
   this.stack = new Array(); 
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'redo',
-        icon: '<i class="material-icons md-18">redo</i>',
-        title: 'Redo',
-        onClick: () => {
-          this.pop();
-        }
-      }]
-  });
+  this.btn = new Button('redo', 'Redo', () => { this.pop()});
   this.btn.disable();
 
   /**
@@ -962,26 +1089,12 @@ function Calibration(Lt) {
   this.popup = L.popup({closeButton: false}).setContent(
               '<input type="number" style="border:none; width:50px;"' +
               'value="10" id="length"></input> mm')
-  this.btn = L.easyButton ({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">build</i>',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }
-    ]
-  });
+  this.btn = new Button(
+    'space_bar', 
+    'Calibrate the ppm using a known measurement on the image', 
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   Calibration.prototype.calculatePPM = function(p1, p2, length) {
     var startPoint = Lt.viewer.project(p1, Lt.viewer.getMaxZoom());
@@ -994,6 +1107,7 @@ function Calibration(Lt) {
       retinaFactor = 2; // this is potentially incorrect for 3x+ devices
     }
     Lt.meta.ppm = pixelsPerMillimeter / retinaFactor;
+    console.log(Lt.meta.ppm);
   }
   
   Calibration.prototype.enable = function() {
@@ -1062,26 +1176,12 @@ function Calibration(Lt) {
  */
 function Dating(Lt) {
   this.active = false;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">access_time</i>',
-        title: 'Set the year of any point and adjust all other points',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'access_time', 
+    'Set the year of any point and adjust all other points',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Open a text container for user to input date
@@ -1162,26 +1262,12 @@ function Dating(Lt) {
 function CreatePoint(Lt) {
   this.active = false;
   this.startPoint = true;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">linear_scale</i>',
-        title: 'Create measurable points',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'End (Esc)',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'linear_scale',
+    'Create measurable points',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Enable creating new points on click events
@@ -1261,16 +1347,8 @@ function CreatePoint(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateZeroGrowth(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'skip-year',
-        icon: '<i class="material-icons md-18">exposure_zero</i>',
-        title: 'Add a zero growth year',
-        onClick: () => {
-          this.add();
-        }
-      }]
+  this.btn = new Button('exposure_zero', 'Add a zero growth year', () => {
+    this.add()
   });
   
   /**
@@ -1306,27 +1384,16 @@ function CreateZeroGrowth(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateBreak(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">broken_image</i>',
-        title: 'Create a break point',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-          Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  })
+  this.btn = new Button(
+    'broken_image',
+    'Create a break point',
+    () => {
+      Lt.disableTools();
+      this.enable();
+      Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
+    },
+    () => { this.disable }
+  );
   
   /**
    * Enable adding a break point from the last point
@@ -1379,26 +1446,12 @@ function CreateBreak(Lt) {
  */
 function DeletePoint(Lt) {
   this.active = false;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">delete</i>',
-        title: 'Delete a point',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'delete',
+    'Delete a point',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Delete a point
@@ -1443,26 +1496,12 @@ function DeletePoint(Lt) {
 function Cut(Lt) {
   this.active = false;
   this.point = -1;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">content_cut</i>',
-        title: 'Cut a portion of the series',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'content_cut',
+    'Cut a portion of the series',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Defined the point to cut from
@@ -1519,26 +1558,12 @@ function Cut(Lt) {
  */
 function InsertPoint(Lt) {
   this.active = false;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">add_circle_outline</i>',
-        title: 'Add a point in the middle of the series',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'add_circle_outline',
+    'Add a point in the middle of the series',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Insert a point on click event
@@ -1591,26 +1616,12 @@ function InsertPoint(Lt) {
  */
 function InsertZeroGrowth(Lt) {
   this.active = false;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">exposure_zero</i>',
-        title: 'Add a zero growth year in the middle of the series',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  })
+  this.btn = new Button(
+    'exposure_zero',
+    'Add a zero growth year in the middle of the series',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Insert a zero growth year after point i
@@ -1664,25 +1675,12 @@ function InsertZeroGrowth(Lt) {
  */
 function InsertBreak(Lt) {
   this.active = false;
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">broken_image</i>',
-        title: 'Add a break in the series',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  })
+  this.btn = new Button(
+    'broken_image',
+    'Add a break in the series',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   /**
    * Insert a break after point i
@@ -1793,26 +1791,12 @@ function InsertBreak(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function ViewData(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'collapse',
-        icon: '<i class="material-icons md-18">view_list</i>',
-        title: 'View and download data',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'expand',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Collapse',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'view_list',
+    'View and download data',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
   this.dialog = L.control.dialog({'size': [340, 400], 'anchor': [5, 50], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
@@ -2138,7 +2122,7 @@ function ViewData(Lt) {
    * @function enable
    */
   ViewData.prototype.enable = function() {
-    this.btn.state('expand');
+    this.btn.state('active');
     var string;
     if (Lt.data.points[0] != undefined) {
       var y = Lt.data.points[1].year;
@@ -2261,7 +2245,7 @@ function ViewData(Lt) {
    */
   ViewData.prototype.disable = function() {
     $(Lt.viewer._container).off('click');
-    this.btn.state('collapse');
+    this.btn.state('inactive');
     $('#confirm-delete').off('click');
     $('#cancel-delete').off('click');
     $('#download-button').off('click');
@@ -2272,149 +2256,69 @@ function ViewData(Lt) {
 }
 
 /**
- * Add annotations
+ * Create annotations
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
  */
-function Annotation(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'inactive',
-        icon: '<i class="material-icons md-18">comment</i>',
-        title: 'Make an annotation',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'active',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Cancel',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
-  
-  this.annotations = Lt.data.annotations;
-  this.index = 0;
-  this.markers = new Array();
-  this.layer = L.layerGroup().addTo(Lt.viewer);
+function CreateAnnotation(Lt) {
   this.active = false;
-  this.markerClicked = false;
   this.input = L.circle([0, 0], {radius: .0001, color: 'red', weight: '6'})
       .bindPopup('<textarea class="comment_input" name="message" rows="2"' +
-      'cols="15"></textarea>', {closeButton: false}),
+      'cols="15"></textarea>', {closeButton: false});
+  this.btn = new Button(
+    'comment',
+    'Create annotations',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
   
-  Annotation.prototype.reload = function() {
-    this.layer.clearLayers();
-    this.markers = new Array();
-    this.index = 0;
-    if (this.annotations != undefined) {
-      var reduced = Object.values(this.annotations).filter(e => e != undefined);
-      this.annotations = {};
-      reduced.map((e, i) => this.annotations[i] = e);
-
-      Object.values(this.annotations).map((e, i) => {
-        this.newAnnotation(i); this.index++
-      });
-    }
-  };
-  
-  Annotation.prototype.popupMouseover = function(e) {
-    this.openPopup();
-  };
-  
-  Annotation.prototype.popupMouseout = function(e) {
-    this.closePopup();
-  };
-  
-  Annotation.prototype.newAnnotation = function(i) {
-    var ref = this.annotations[i];
-    var circle = L.circle(ref.latLng, {radius: .0001, color: 'red',
-      weight: '6'});
-    circle.bindPopup(ref.text, {closeButton: false});
-    this.markers[i] = circle;
-
-    $(this.markers[i]).click(e => {
-      this.markers[i].closePopup();
-    });
-
-    $(this.markers[i]).mouseover(this.popupMouseover);
-    $(this.markers[i]).mouseout(this.popupMouseout);
-
-    if (window.name == 'popout') {
-      $(this.markers[i]).dblclick(() => {
-        if (!this.active) {
-          $(Lt.viewer._container).click(e => {
-            this.markers[i].setPopupContent(ref.text);
-            $(this.markers[i]).mouseover(this.popupMouseover);
-            $(this.markers[i]).mouseout(this.popupMouseout);
-            this.disable();
-          });
-          this.editAnnotation(i);
-        } else {
-          this.markerClicked = true;
-        }
-      });
-    }
-
-    this.layer.addLayer(this.markers[i]);
-
-    if (ref.text == '') {
-      this.deleteAnnotation(i);
-    }
-  };
-    
-  Annotation.prototype.action = function(i, latLng) {
-    this.input.setLatLng(latLng);
-    this.input.addTo(Lt.viewer);
-    this.input.openPopup();
-
-    document.getElementsByClassName('comment_input')[0].select();
-
-    $(document).keypress(e => {
-      var key = e.which || e.keyCode;
-      if (key === 13) {
-        var string = ($('.comment_input').val()).slice(0);
-
-        this.input.remove();
-
-        if (string != '') {
-          this.annotations[i] = {'latLng': latLng, 'text': string};
-          this.newAnnotation(i);
-          this.index++;
-          this.markers[i].openPopup();
-        }
-
-        $(Lt.viewer._container).off('click');
-        $(document).off('keypress');
-      }
-    });
-  };
-  
-  Annotation.prototype.enable = function() {
+  /**
+   * Enable creating annotations on click
+   * @function enable
+   */
+  CreateAnnotation.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
     document.getElementById('map').style.cursor = 'pointer';
 
     Lt.viewer.doubleClickZoom.disable();
-    $(Lt.viewer._container).dblclick(e => {
-      if (!this.markerClicked) {
-        $(Lt.viewer._container).click(e => {
+    $(Lt.viewer._container).click(e => {
+      $(Lt.viewer._container).click(e => {
+        this.disable();
+        this.enable();
+      });
+      var latLng = Lt.viewer.mouseEventToLatLng(e);
+      this.input.setLatLng(latLng);
+      this.input.addTo(Lt.viewer);
+      this.input.openPopup();
+
+      document.getElementsByClassName('comment_input')[0].select();
+      
+      $(document).keypress(e => {
+        var key = e.which || e.keyCode;
+        if (key === 13) {
+          var string = ($('.comment_input').val()).slice(0);
+
+          this.input.remove();
+
+          if (string != '') {
+            Lt.aData.annotations[Lt.aData.index] = {'latLng': latLng, 'text': string};
+            Lt.annotationAsset.newAnnotation(Lt.aData.annotations, Lt.aData.index);
+            Lt.aData.index++;
+          }
+
           this.disable();
           this.enable();
-        });
-        var latLng = Lt.viewer.mouseEventToLatLng(e);
-        this.action(this.index, latLng);
-      }
-      this.markerClicked = false;
+        }
+      });
     });
   };
   
-  Annotation.prototype.disable = function() {
+  /**
+   * Disable creating annotations on click
+   * @function enable
+   */
+  CreateAnnotation.prototype.disable = function() {
     this.btn.state('inactive');
     Lt.viewer.doubleClickZoom.enable();
     $(Lt.viewer._container).off('dblclick');
@@ -2425,42 +2329,91 @@ function Annotation(Lt) {
     this.active = false;
   };
   
-  Annotation.prototype.editAnnotation = function(i) {
-    var marker = this.markers[i];
+}
 
-    $(marker).off('mouseover');
-    $(marker).off('mouseout');
+/**
+ * Delete annotations
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function DeleteAnnotation(Lt) {
+  this.btn = new Button(
+    'delete',
+    'Delete annotations',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+  this.active = false;
+  
+    /**
+   * Delete a point
+   * @function action
+   * @param i int - delete the annotation at index i
+   */
+  DeleteAnnotation.prototype.action = function(i) {
+    Lt.undo.push();
+    
+    Lt.aData.deleteAnnotation(i);
 
-    marker.setPopupContent('<textarea id="comment_input" name="message"' +
-        'rows="2" cols="15">' + this.annotations[i].text + '</textarea>');
-    marker.openPopup();
-    document.getElementById('comment_input').select();
-
-    $(document).keypress(e => {
-      var key = e.which || e.keyCode;
-      if (key === 13) {
-        if ($('#comment_input').val() != undefined) {
-          var string = ($('#comment_input').val()).slice(0);
-
-          if (string != '') {
-            this.annotations[i].text = string;
-            marker.setPopupContent(string);
-            $(marker).mouseover(this.popupMouseover);
-            $(marker).mouseout(this.popupMouseout);
-          } else {
-            this.deleteAnnotation(i);
-          }
-        }
-        this.disable();
-      }
-    });
+    Lt.annotationAsset.reload();
   };
   
-  Annotation.prototype.deleteAnnotation = function(i) {
-    this.layer.removeLayer(this.markers[i]);
-    delete this.annotations[i];
-    this.reload();
-  };   
+  /**
+   * Enable deleting annotations on click
+   * @function enable
+   */
+  DeleteAnnotation.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+  };
+  
+  /**
+   * Disable deleting annotations on click
+   * @function disable
+   */
+  DeleteAnnotation.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+  };
+}
+
+/**
+ * Edit annotations
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function EditAnnotation(Lt) {
+  this.btn = new Button(
+    'edit',
+    'Edit annotations',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+  this.active = false;
+  
+  /**
+   * Enable editing annotations on click
+   * @function enable
+   */
+  EditAnnotation.prototype.enable = function() {
+    this.btn.state('active');
+    this.active = true;
+    document.getElementById('map').style.cursor = 'pointer';
+  };
+  
+  /**
+   * Disable editing annotations on click
+   * @function disable
+   */
+  EditAnnotation.prototype.disable = function() {
+    $(Lt.viewer._container).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    document.getElementById('map').style.cursor = 'default';
+  };
 }
 
 /**
@@ -2469,26 +2422,12 @@ function Annotation(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function ImageAdjustment(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'collapse',
-        icon: '<i class="material-icons md-18">brightness_6</i>',
-        title: 'Image Adjustments',
-        onClick: () => {
-          Lt.disableTools();
-          this.enable();
-        }
-      },
-      {
-        stateName: 'expand',
-        icon: '<i class="material-icons md-18">clear</i>',
-        title: 'Collapse',
-        onClick: () => {
-          this.disable();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'brightness_6',
+    'Adjust the image exposure, color, and contrast',
+    () => { Lt.disableTools; this.enable() },
+    () => { this.disable() }
+  );
 
   this.dialog = L.control.dialog({
     'size': [340, 220],
@@ -2532,7 +2471,7 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
-    this.btn.state('expand');
+    this.btn.state('active');
     $(".imageSlider").change(() => {
       this.updateFilters();
     });
@@ -2545,7 +2484,7 @@ function ImageAdjustment(Lt) {
   ImageAdjustment.prototype.disable = function() {
     this.dialog.unlock();
     this.dialog.close();
-    this.btn.state('collapse');
+    this.btn.state('inactive');
   };
   
 }
@@ -2556,17 +2495,11 @@ function ImageAdjustment(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function SaveLocal(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'save',
-        icon: '<i class="material-icons md-18">save</i>',
-        title: 'Save a local copy of measurements and annotation',
-        onClick: () => {
-          this.action();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'save',
+    'Save a local copy of measurements and annotations',
+    () => { this.action() }
+  );
   
   /**
    * Save a local copy of the measurement data
@@ -2575,8 +2508,8 @@ function SaveLocal(Lt) {
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
-      'earlywood': Lt.data.earlywood, 'index': Lt.data.index, 'points': Lt.data.points,
-      'annotations': Lt.data.annotations};
+      'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
+      'points': Lt.data.points, 'annotations': Lt.aData.annotations};
     var file = new File([JSON.stringify(dataJSON)],
         (Lt.meta.assetName + '.json'), {type: 'text/plain;charset=utf-8'});
     saveAs(file);
@@ -2589,17 +2522,11 @@ function SaveLocal(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function SaveCloud(Lt) {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'saveCloud',
-        icon: '<i class="material-icons md-18">cloud_upload</i>',
-        title: 'Save to cloud.',
-        onClick: () => {
-          this.action();
-        }
-      }]
-  });
+  this.btn = new Button(
+    'cloud_upload',
+    'Save to elevator cloud',
+    () => { this.action() }
+  );
 
   this.date = new Date(),
     
@@ -2623,6 +2550,7 @@ function SaveCloud(Lt) {
    */
   SaveCloud.prototype.displayDate = function() {
     var date = Lt.data.saveDate;
+    console.log(date);
     if (date.day != undefined && date.hour != undefined) {
       var am_pm = 'am';
       if (date.hour >= 12) {
@@ -2640,6 +2568,10 @@ function SaveCloud(Lt) {
           'Saved to cloud at ' + date.hour + ':' + minute_string +
           am_pm + ' on ' + date.month + '/' + date.day + '/' +
           date.year;
+    } else if (date.day != undefined) {
+      document.getElementById('leaflet-save-time-tag').innerHTML =
+          'Saved to cloud on ' + date.month + '/' + date.day + '/' +
+          date.year;
     } else {
       document.getElementById('leaflet-save-time-tag').innerHTML =
           'No data saved to cloud';
@@ -2654,12 +2586,13 @@ function SaveCloud(Lt) {
   SaveCloud.prototype.action = function() {
     if (Lt.meta.savePermission && Lt.meta.saveURL != "") {
       Lt.data.clean();
-      var dataJSON = Lt.data.data();
+      var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
+        'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
+        'points': Lt.data.points, 'annotations': Lt.aData.annotations};
       $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
           .done((msg) => {
             this.updateDate();
             this.displayDate();
-            console.log('saved');
           })
           .fail((xhr, status, error) => {
             alert('Error: failed to save changes');
@@ -2690,18 +2623,12 @@ function SaveCloud(Lt) {
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
  */
-function LoadLocal() {
-  this.btn = L.easyButton({
-    states: [
-      {
-        stateName: 'load',
-        icon: '<i class="material-icons md-18">file_upload</i>',
-        title: 'Load a local file with measurements and annotations',
-        onClick: () => {
-          this.input();
-        }
-      }]
-  });
+function LoadLocal(Lt) {
+  this.btn = new Button(
+    'file_upload',
+    'Load a local file with measurements and annotations',
+    () => { this.input() }
+  );
   
   /**
    * Create an input div on the ui and click it
@@ -2712,7 +2639,7 @@ function LoadLocal() {
     input.type = 'file';
     input.id = 'file';
     input.style = 'display: none';
-    input.addEventListener('change', function() {this.action(input)});
+    input.addEventListener('change', () => {this.action(input)});
     input.click();
   };
 
@@ -2730,10 +2657,11 @@ function LoadLocal() {
     var fr = new FileReader();
 
     fr.onload = function(e) {
-      console.log(e);
-      newDataJSON = JSON.parse(e.target.result);
+      let newDataJSON = JSON.parse(e.target.result);
 
-      Lt.loadData(newDataJSON);
+      Lt.data = new MeasurementData(newDataJSON);
+      Lt.aData = new AnnotationData(newDataJSON.annotations);
+      Lt.loadData();
     };
 
     fr.readAsText(files.item(0));
