@@ -76,11 +76,10 @@ function LTreering (viewer, basePath, options) {
   this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurement point');
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit and delete data points from the series');
-  this.iotools = new ButtonBar(this, ioBtns, 'folder_open', 'View and download data');
+  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'View and download data');
   this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.calibration.btn], 'settings', 'Change image and calibration settings')
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment];
-
 
   /**
    * Load the interface of the treering viewer
@@ -103,7 +102,7 @@ function LTreering (viewer, basePath, options) {
       this.dating.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
-      this.iotools.bar.addTo(this.viewer);
+      this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
     } else {
@@ -111,7 +110,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
       this.imageAdjustment.btn.enable();
-      this.iotools.bar.addTo(this.viewer);
+      this.ioTools.bar.addTo(this.viewer);
     }
 
     //L.control.layers(baseLayer, overlay).addTo(this.viewer);
@@ -120,6 +119,7 @@ function LTreering (viewer, basePath, options) {
     this.viewer.on('contextmenu', () => {
       if (!this.createPoint.active && this.data.points[0] !== undefined &&
           this.createTools.btn._currentState.stateName === 'expand') {
+        this.disableTools();
         this.createPoint.startPoint = false;
         this.createPoint.active = true;
         this.createPoint.enable();
@@ -157,6 +157,14 @@ function LTreering (viewer, basePath, options) {
    */
   LTreering.prototype.disableTools = function() {
     this.tools.forEach(e => { e.disable() });
+  };
+  
+  LTreering.prototype.collapseTools = function() {
+    this.annotationTools.collapse();
+    this.createTools.collapse();
+    this.editTools.collapse();
+    this.ioTools.collapse();
+    this.settings.collapse();
   };
 }
 
@@ -938,6 +946,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
         title: toolTip,
         onClick: () => {
           Lt.disableTools();
+          Lt.collapseTools();
           this.expand();
         }
       },
@@ -1179,7 +1188,7 @@ function Dating(Lt) {
   this.btn = new Button(
     'access_time', 
     'Set the year of any point and adjust all other points',
-    () => { Lt.disableTools(); this.enable() },
+    () => { Lt.disableTools(); Lt.collapseTools(); this.enable() },
     () => { this.disable() }
   );
   
@@ -1798,7 +1807,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
   
-  this.dialog = L.control.dialog({'size': [340, 400], 'anchor': [5, 50], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [350, 400], 'anchor': [5, 50], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
   
@@ -2425,7 +2434,7 @@ function ImageAdjustment(Lt) {
   this.btn = new Button(
     'brightness_6',
     'Adjust the image exposure, color, and contrast',
-    () => { Lt.disableTools; this.enable() },
+    () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
 
