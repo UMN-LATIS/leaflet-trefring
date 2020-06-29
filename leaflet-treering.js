@@ -1286,11 +1286,23 @@ function CreatePoint(Lt) {
   this.startPoint = true;
   this.btn = new Button(
     'linear_scale',
-    'Create measurable points',
+    'Create measurable points (Control-m)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
   
+  L.DomEvent.on(window, 'keydown', (e) => {
+     if (e.keyCode == 77 && e.getModifierState("Control")) {
+       if (!this.active) {
+         Lt.disableTools();
+         this.enable();
+       } else {
+         this.disable();
+       }
+     }
+  }, this);
+
+
   /**
    * Enable creating new points on click events
    * @function enable
@@ -2289,11 +2301,23 @@ function CreateAnnotation(Lt) {
       'cols="15"></textarea>', {closeButton: false});
   this.btn = new Button(
     'comment',
-    'Create annotations',
+    'Create annotations (Control-a)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
-  
+
+  L.DomEvent.on(window, 'keydown', (e) => {
+    if (e.keyCode == 65 && e.getModifierState("Control")) {
+      if(!this.active) {
+        Lt.disableTools();
+        this.enable();
+      }
+      else {
+        this.disable();
+      }
+    }
+  }, this);
+
   /**
    * Enable creating annotations on click
    * @function enable
@@ -2452,7 +2476,7 @@ function ImageAdjustment(Lt) {
   );
 
   this.dialog = L.control.dialog({
-    'size': [340, 220],
+    'size': [340, 240],
     'anchor': [50, 5],
     'initOpen': false
   }).setContent(
@@ -2701,9 +2725,10 @@ function LoadLocal(Lt) {
 
 function Panhandler(La) {
   this.panHandler = L.Handler.extend({
-    panAmount: 25,
+    panAmount: 120,
     panDirection: 0,
     isPanning: false,
+    slowMotion: false,
 
     addHooks: function () {
       L.DomEvent.on(window, 'keydown', this._startPanning, this);
@@ -2728,6 +2753,13 @@ function Panhandler(La) {
         this.panDirection = null;
       }
 
+      if (e.getModifierState("Shift")) {
+        this.slowMotion = true;
+      }
+      else {
+        this.slowMotion = false;
+      }
+
       if (this.panDirection) {
         e.preventDefault();
       }
@@ -2748,18 +2780,24 @@ function Panhandler(La) {
     _doPan: function () {
 
       var panArray = [];
+
+      var adjustedPanAmount = this.panAmount;
+      if(this.slowMotion) {
+        adjustedPanAmount = 30;
+      }
+
       switch (this.panDirection) {
         case "up":
-          panArray = [0, -1 * this.panAmount];
+          panArray = [0, -1 * adjustedPanAmount];
           break;
         case "down":
-          panArray = [0, this.panAmount];
+          panArray = [0, adjustedPanAmount];
           break;
         case "left":
-          panArray = [-1 * this.panAmount, 0];
+          panArray = [-1 * adjustedPanAmount, 0];
           break;
         case "right":
-          panArray = [this.panAmount, 0];
+          panArray = [adjustedPanAmount, 0];
           break;
       }
 
