@@ -2022,6 +2022,13 @@ function ViewData(Lt) {
             y++;
           }
         });
+
+        // if we ended at the end of a decade, we need to add a new line
+        if (y % 10 == 0) {
+          sum_string = sum_string.concat('\n' +
+          toEightCharString(Lt.meta.assetName) +
+          toFourCharString(y));
+        }
         sum_string = sum_string.concat(' -9999');
 
         y = Lt.data.points[1].year;
@@ -2093,6 +2100,15 @@ function ViewData(Lt) {
             }
           }
         });
+
+        if (y % 10 == 0) {
+          ew_string = ew_string.concat('\n' +
+            toEightCharString(Lt.meta.assetName) +
+            toFourCharString(y));
+          lw_string = lw_string.concat('\n' +
+            toEightCharString(Lt.meta.assetName) +
+            toFourCharString(y));
+        }
         ew_string = ew_string.concat(' -9999');
         lw_string = lw_string.concat(' -9999');
 
@@ -2148,6 +2164,12 @@ function ViewData(Lt) {
             last_latLng = e.latLng;
           }
         });
+
+        if (y % 10 == 0) {
+          sum_string = sum_string.concat('\n' +
+            toEightCharString(Lt.meta.assetName) +
+            toFourCharString(y));
+        }
         sum_string = sum_string.concat(' -9999');
 
         var zip = new JSZip();
@@ -2620,6 +2642,7 @@ function SaveCloud(Lt) {
    * @function updateDate
    */
   SaveCloud.prototype.updateDate = function() {
+    this.date = new Date();
     var day = this.date.getDate();
     var month = this.date.getMonth() + 1;
     var year = this.date.getFullYear();
