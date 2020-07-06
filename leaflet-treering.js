@@ -1537,7 +1537,7 @@ function Cut(Lt) {
   this.point = -1;
   this.btn = new Button(
     'content_cut',
-    'Cut a portion of the series',
+    'Delete from selected point to beginning or end of series',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
