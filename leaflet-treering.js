@@ -78,7 +78,7 @@ function LTreering (viewer, basePath, options) {
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurement point');
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit and delete data points from the series');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'View and download data');
-  if (window.name === 'popout')
+  if (window.name.includes('popout'))
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.calibration.btn], 'settings', 'Change image and calibration settings');
   else
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn], 'settings', 'Change image settings');
@@ -111,7 +111,7 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     // if popout is opened display measuring tools
-    if (window.name === 'popout') {
+    if (window.name.includes('popout')) {
       this.viewData.btn.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
       this.dating.btn.addTo(this.viewer);
@@ -690,7 +690,7 @@ function VisualAsset (Lt) {
     var leafLatLng = L.latLng(latLng);
 
     var draggable = false;
-    if (window.name === 'popout') {
+    if (window.name.includes('popout')) {
       draggable = true;
     }
 
@@ -1005,7 +1005,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
  */
 function Popout(Lt) {
   this.btn = new Button('launch', 'Open a popout window', () => {
-    window.open(Lt.meta.popoutUrl, 'popout',
+    window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
 }
