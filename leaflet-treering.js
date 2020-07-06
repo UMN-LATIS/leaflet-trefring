@@ -1289,7 +1289,7 @@ function Dating(Lt) {
 }
 
 /**
- * Create measurement points
+ * \eate measurement points
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
  */
@@ -1990,7 +1990,7 @@ function ViewData(Lt) {
               break_point = true;
           } else {
             if (e.year % 10 == 0) {
-              sum_string = sum_string.concat('\r\n' +
+              sum_string = sum_string.concat('\n' +
                   toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
@@ -1998,7 +1998,7 @@ function ViewData(Lt) {
               sum_string = sum_string.concat('    -1');
               y++;
               if (y % 10 == 0) {
-                sum_string = sum_string.concat('\r\n' +
+                sum_string = sum_string.concat('\n' +
                     toFourCharString(e.year));
               }
             }
@@ -2046,11 +2046,11 @@ function ViewData(Lt) {
           } else {
             if (e.year % 10 == 0) {
               if (e.earlywood) {
-                ew_string = ew_string.concat('\r\n' +
+                ew_string = ew_string.concat('\n' +
                     toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               } else {
-                lw_string = lw_string.concat('\r\n' +
+                lw_string = lw_string.concat('\n' +
                     toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               }
@@ -2060,10 +2060,10 @@ function ViewData(Lt) {
               lw_string = lw_string.concat('    -1');
               y++;
               if (y % 10 == 0) {
-                ew_string = ew_string.concat('\r\n' +
+                ew_string = ew_string.concat('\n' +
                     toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
-                lw_string = lw_string.concat('\r\n' +
+                lw_string = lw_string.concat('\n' +
                     toEightCharString(Lt.meta.assetName) +
                     toFourCharString(e.year));
               }
@@ -2118,7 +2118,7 @@ function ViewData(Lt) {
         sum_points.map((e, i, a) => {
           if (!e.start) {
             if (e.year % 10 == 0) {
-              sum_string = sum_string.concat('\r\n' +
+              sum_string = sum_string.concat('\n' +
                   toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
@@ -2126,7 +2126,7 @@ function ViewData(Lt) {
               sum_string = sum_string.concat('    -1');
               y++;
               if (y % 10 == 0) {
-                sum_string = sum_string.concat('\r\n' +
+                sum_string = sum_string.concat('\n' +
                     toFourCharString(e.year));
               }
             }
