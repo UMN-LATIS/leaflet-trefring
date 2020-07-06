@@ -1990,7 +1990,10 @@ function ViewData(Lt) {
               break_point = true;
           } else {
             if (e.year % 10 == 0) {
-              sum_string = sum_string.concat('\n' +
+              if(sum_string.length > 0) {
+                sum_string = sum_string.concat('\n');
+              }
+              sum_string = sum_string.concat(
                   toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
@@ -2134,7 +2137,10 @@ function ViewData(Lt) {
         sum_points.map((e, i, a) => {
           if (!e.start) {
             if (e.year % 10 == 0) {
-              sum_string = sum_string.concat('\n' +
+              if(sum_string.length > 0) {
+                sum_string = sum_string.concat('\n');
+              }
+              sum_string = sum_string.concat(
                   toEightCharString(Lt.meta.assetName) +
                   toFourCharString(e.year));
             }
