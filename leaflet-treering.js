@@ -2653,12 +2653,12 @@ function SaveCloud(Lt) {
   SaveCloud.prototype.action = function() {
     if (Lt.meta.savePermission && Lt.meta.saveURL != "") {
       Lt.data.clean();
+      this.updateDate();
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
       $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
           .done((msg) => {
-            this.updateDate();
             this.displayDate();
           })
           .fail((xhr, status, error) => {
