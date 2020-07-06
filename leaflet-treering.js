@@ -28,12 +28,17 @@ function LTreering (viewer, basePath, options) {
     'hasLatewood': options.hasLatewood,
   }
 
-  if (options.ppm === 0) {
+  this.data = new MeasurementData(options.initialData);
+  this.aData = new AnnotationData(options.initialData.annotations);
+  if (options.initialData.ppm) {
+    this.meta.ppm = options.initialData.ppm;
+  }
+
+  if (options.ppm === 0 && !options.initialData.ppm) {
     alert('Please set up PPM in asset metadata. PPM will default to 468.');
   }
 
-  this.data = new MeasurementData(options.initialData);
-  this.aData = new AnnotationData(options.initialData.annotations);
+
   this.autoscroll = new Autoscroll(this.viewer);
   this.mouseLine = new MouseLine(this);
   this.visualAsset = new VisualAsset(this);
@@ -72,6 +77,7 @@ function LTreering (viewer, basePath, options) {
     this.saveCloud = new SaveCloud(this);
     ioBtns.push(this.saveCloud.btn);
   }
+
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
@@ -499,7 +505,7 @@ function Autoscroll (viewer) {
         viewer.panBy([200, 0]);
       }
       //upper bound of the map
-      if (mousePos.x > 300 && mousePos.x + 60 < mapSize.x && mousePos.y < 40 && oldMousePos.y > mousePos.y) {
+      if (mousePos.x > 390 && mousePos.x + 60 < mapSize.x && mousePos.y < 40 && oldMousePos.y > mousePos.y) {
         viewer.panBy([0, -70]);
       }
       //lower bound of the map
@@ -1134,6 +1140,7 @@ function Calibration(Lt) {
     //   retinaFactor = 2; // this is potentially incorrect for 3x+ devices
     // }
     Lt.meta.ppm = pixelsPerMillimeter / retinaFactor;
+    Lt.meta.ppmCalibration = true;
     console.log(Lt.meta.ppm);
   }
   
@@ -2582,6 +2589,12 @@ function SaveLocal(Lt) {
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
       'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
       'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+    
+    // don't serialize our default value
+    if(Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
+      dataJSON.ppm = Lt.meta.ppm;
+    }
+
     var file = new File([JSON.stringify(dataJSON)],
         (Lt.meta.assetName + '.json'), {type: 'text/plain;charset=utf-8'});
     saveAs(file);
@@ -2662,6 +2675,10 @@ function SaveCloud(Lt) {
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+      // don't serialize our default value
+      if (Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
+        dataJSON.ppm = Lt.meta.ppm;
+      }
       $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
           .done((msg) => {
             this.displayDate();
@@ -2733,6 +2750,12 @@ function LoadLocal(Lt) {
 
       Lt.data = new MeasurementData(newDataJSON);
       Lt.aData = new AnnotationData(newDataJSON.annotations);
+      
+      // if the JSON has PPM data, use that instead of loaded data.
+      if(newDataJSON.ppm) {
+        Lt.meta.ppm = newDataJSON.ppm;
+      }
+      
       Lt.loadData();
     };
 

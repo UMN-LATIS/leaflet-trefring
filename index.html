@@ -104,6 +104,53 @@
     });
 
     //map, basePath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
-    var treering = new LTreering(map, "", {'savePermission': true, 'saveURL': '/test', 'ppm': layer.options.pixelsPerMillimeter, 'popoutUrl': "index.html", 'assetName': "ABC00X", 'hasLatewood': true, 'initialData': {'saveDate': {'day': 3, 'month': 10, 'year': 2017, 'hour': 13, 'minute': 7}}});
+    var treering = new LTreering(map, "", {'savePermission': true, 'saveURL': '/test', 'ppm':
+    23, 'popoutUrl': "index.html", 'assetName': "ABC00X", 'hasLatewood': true,
+    'initialData': {
+    "saveDate": {
+    "day": 6,
+    "month": 7,
+    "year": 2020,
+    "hour": 13,
+    "minute": 4
+    },
+    "year": 1,
+    "earlywood": true,
+    "index": 3,
+    "points": {
+    "0": {
+    "start": true,
+    "skip": false,
+    "break": false,
+    "latLng": {
+    "lat": -0.006099990136140183,
+    "lng": 0.18784969624162842
+    }
+    },
+    "1": {
+    "start": false,
+    "skip": false,
+    "break": false,
+    "year": 0,
+    "earlywood": true,
+    "latLng": {
+    "lat": -0.005749990702099353,
+    "lng": 0.19459968532670158
+    }
+    },
+    "2": {
+    "start": false,
+    "skip": false,
+    "break": false,
+    "year": 0,
+    "earlywood": false,
+    "latLng": {
+    "lat": -0.005799990621248042,
+    "lng": 0.2058996670543055
+    }
+    }
+    },
+    "annotations": {}
+    }});
     treering.loadInterface();
 </script>
