@@ -482,6 +482,11 @@ function Autoscroll (viewer) {
     var mousePos = 0;                 // An initial mouse position
 
     viewer.on('mousemove', (e) => {
+      var modifierState = event.getModifierState("Shift");
+      // Don't autopan if shift is held
+      if(modifierState) {
+        return;
+      }
       var oldMousePos = mousePos;     // Save the old mouse position
       mousePos = e.containerPoint;    // Container point of the mouse
 
