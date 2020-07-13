@@ -2129,8 +2129,8 @@ function ViewData(Lt) {
             toEightCharString(Lt.meta.assetName) +
             toFourCharString(y));
         }
-        ew_string = ew_string.concat(' -9999');
-        lw_string = lw_string.concat(' -9999');
+        ew_string = ew_string.concat(' -1000');
+        lw_string = lw_string.concat(' -1000');
 
         console.log(sum_string);
         console.log(ew_string);
