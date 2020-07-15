@@ -554,13 +554,13 @@ function Autoscroll (viewer) {
 function MarkerIcon(color, LtBasePath) {
 
   var colors = {
-    'light_blue': { 'path': Lt.meta.imagePath + 'images/light_blue_tick_icon.png',
+    'light_blue': { 'path': Lt.meta.imagePath + '/images/light_blue_tick_icon.png',
                     'size': [32, 48] },
-    'dark_blue' : { 'path': Lt.meta.imagePath + 'images/dark_blue_tick_icon.png',
+    'dark_blue' : { 'path': Lt.meta.imagePath + '/images/dark_blue_tick_icon.png',
                     'size': [32, 48] },
-    'white'     : { 'path': Lt.meta.imagePath + 'images/white_tick_icon.png',
+    'white'     : { 'path': Lt.meta.imagePath + '/images/white_tick_icon.png',
                     'size': [32, 48] },
-    'red'       : { 'path': Lt.meta.imagePath + 'images/red_dot_icon.png',
+    'red'       : { 'path': Lt.meta.imagePath + '/images/red_dot_icon.png',
                     'size': [12, 12] }
   };
 
