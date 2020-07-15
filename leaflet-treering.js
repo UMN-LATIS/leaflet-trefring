@@ -22,7 +22,6 @@ function LTreering (viewer, basePath, options) {
   this.meta = {
     'ppm': options.ppm || 468,
     'saveURL': options.saveURL || '',
-    'imagePath': options.imagePath || '',
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
@@ -38,7 +37,6 @@ function LTreering (viewer, basePath, options) {
   if (options.ppm === 0 && !options.initialData.ppm) {
     alert('Please set up PPM in asset metadata. PPM will default to 468.');
   }
-
 
   this.autoscroll = new Autoscroll(this.viewer);
   this.mouseLine = new MouseLine(this);
@@ -551,16 +549,16 @@ function Autoscroll (viewer) {
  * @param {string} color - a color string
  * @param {string} LtBasePath - the base path of the asset
  */
-function MarkerIcon(color, LtBasePath) {
+function MarkerIcon(color, imagePath) {
 
   var colors = {
-    'light_blue': { 'path': Lt.meta.imagePath + 'images/light_blue_tick_icon.png',
+    'light_blue': { 'path': imagePath + 'images/light_blue_tick_icon.png',
                     'size': [32, 48] },
-    'dark_blue' : { 'path': Lt.meta.imagePath + 'images/dark_blue_tick_icon.png',
+    'dark_blue' : { 'path': imagePath + 'images/dark_blue_tick_icon.png',
                     'size': [32, 48] },
-    'white'     : { 'path': Lt.meta.imagePath + 'images/white_tick_icon.png',
+    'white'     : { 'path': imagePath + 'images/white_tick_icon.png',
                     'size': [32, 48] },
-    'red'       : { 'path': Lt.meta.imagePath + 'images/red_dot_icon.png',
+    'red'       : { 'path': imagePath + 'images/red_dot_icon.png',
                     'size': [12, 12] }
   };
 
