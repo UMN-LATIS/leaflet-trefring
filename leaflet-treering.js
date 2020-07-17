@@ -551,16 +551,16 @@ function Autoscroll (viewer) {
  * @param {string} color - a color string
  * @param {string} LtBasePath - the base path of the asset
  */
-function MarkerIcon(color, LtBasePath) {
+function MarkerIcon(color, imagePath) {
 
   var colors = {
-    'light_blue': { 'path': Lt.meta.imagePath + 'images/light_blue_tick_icon.png',
+    'light_blue': { 'path': imagePath + 'images/light_blue_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'dark_blue' : { 'path': Lt.meta.imagePath + 'images/dark_blue_tick_icon.png',
+    'dark_blue' : { 'path': imagePath + 'images/dark_blue_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'white'     : { 'path': Lt.meta.imagePath + 'images/white_tick_icon.png',
+    'white'     : { 'path': imagePath + 'images/white_tick_icon.png',
                     'size': [32, 48] },
-    'red'       : { 'path': Lt.meta.imagePath + 'images/red_dot_icon.png',
+    'red'       : { 'path': imagePath + 'images/red_dot_icon.png',
                     'size': [12, 12] }
   };
 
@@ -734,7 +734,7 @@ function VisualAsset (Lt) {
         title: 'Break Point',
         riseOnHover: true
       });
-    } else if (Lt.meta.hasLatewood) { //check if point is earlywood
+    } else if (Lt.meta.hasLatewood || Lt.data.earlywood) { //check if point is earlywood
       if (pts[i].earlywood) {
         marker = L.marker(leafLatLng, {
           icon: new MarkerIcon('light_blue', Lt.basePath),
@@ -761,6 +761,7 @@ function VisualAsset (Lt) {
 
     this.markers[i] = marker;   //add created marker to marker_list
 
+    //annotation line color changes: red = #ff0000
     //tell marker what to do when being dragged
     this.markers[i].on('drag', (e) => {
       if (!pts[i].start) {
