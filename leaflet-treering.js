@@ -22,7 +22,6 @@ function LTreering (viewer, basePath, options) {
   this.meta = {
     'ppm': options.ppm || 468,
     'saveURL': options.saveURL || '',
-    'imagePath': options.imagePath || '',
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
@@ -38,7 +37,6 @@ function LTreering (viewer, basePath, options) {
   if (options.ppm === 0 && !options.initialData.ppm) {
     alert('Please set up PPM in asset metadata. PPM will default to 468.');
   }
-
 
   this.autoscroll = new Autoscroll(this.viewer);
   this.mouseLine = new MouseLine(this);
