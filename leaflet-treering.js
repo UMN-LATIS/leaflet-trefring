@@ -127,16 +127,19 @@ function LTreering (viewer, basePath, options) {
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
+      //overlay 'points' option enabled by default in popout
+      L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
     } else {
       this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
+      L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+      //defaults overlay 'points' option to disabled
+      map.removeLayer(this.visualAsset.markerLayer);
     }
 
-    L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
-
-        // right and left click controls
+    // right and left click controls
     this.viewer.on('contextmenu', () => {
       if (!this.createPoint.active && this.data.points[0] !== undefined &&
           this.createTools.btn._currentState.stateName === 'expand') {
