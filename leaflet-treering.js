@@ -116,8 +116,6 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
-    //disabled 'annotations' by default
-    map.removeLayer(this.annotationAsset.markerLayer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -1651,7 +1649,8 @@ function InsertPoint(Lt) {
         Lt.visualAsset.reload();
       }
 
-      this.disable();
+      /* Disables after one click
+      this.disable(); */
     });
   };
 
