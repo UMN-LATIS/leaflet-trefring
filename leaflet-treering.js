@@ -116,6 +116,8 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+    //disabled 'annotations' by default
+    map.removeLayer(this.annotationAsset.markerLayer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -127,16 +129,13 @@ function LTreering (viewer, basePath, options) {
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
-      //removes 'annotations' layer
-      map.removeLayer(this.annotationAsset.markerLayer);
     } else {
       this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
-      //defaults overlay 'points' & 'annotations' option to disabled
+      //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
-      map.removeLayer(this.annotationAsset.markerLayer);
     }
 
     // right and left click controls
