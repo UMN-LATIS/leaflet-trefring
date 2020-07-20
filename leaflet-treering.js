@@ -127,13 +127,16 @@ function LTreering (viewer, basePath, options) {
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
+      //removes 'annotations' layer
+      map.removeLayer(this.annotationAsset.markerLayer);
     } else {
       this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
-      //defaults overlay 'points' option to disabled
+      //defaults overlay 'points' & 'annotations' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
+      map.removeLayer(this.annotationAsset.markerLayer);
     }
 
     // right and left click controls
@@ -647,6 +650,7 @@ function MouseLine (Lt) {
             (mousePoint.y - point.y) * Math.cos(Math.PI / 2 * 3);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
+        //color for h-bar
         var color;
         if (Lt.data.earlywood || !Lt.meta.hasLatewood) {
           color = '#00BCD4';
@@ -835,6 +839,12 @@ function VisualAsset (Lt) {
       } else {
         var color = '#00838f';
       }
+
+      //mark decades with red line
+      if ((pts[i].earlywood && pts[i].year % 10 == 0) || (!pts[i].earlywood && pts[i].year % 10 == 0)) {
+        var color = '#ff0000';
+      }
+
       this.lines[i] =
           L.polyline([pts[i - 1].latLng, leafLatLng],
           {color: color, opacity: '.75', weight: '3'});
