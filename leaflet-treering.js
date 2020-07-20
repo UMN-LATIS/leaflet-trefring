@@ -116,6 +116,8 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+    //disabled 'annotations' by default
+    map.removeLayer(this.annotationAsset.markerLayer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -647,6 +649,7 @@ function MouseLine (Lt) {
             (mousePoint.y - point.y) * Math.cos(Math.PI / 2 * 3);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
+        //color for h-bar
         var color;
         if (Lt.data.earlywood || !Lt.meta.hasLatewood) {
           color = '#00BCD4';
@@ -835,6 +838,12 @@ function VisualAsset (Lt) {
       } else {
         var color = '#00838f';
       }
+
+      //mark decades with red line
+      if (pts[i].year % 10 == 0) {
+        var color = '#ff0000';
+      }
+
       this.lines[i] =
           L.polyline([pts[i - 1].latLng, leafLatLng],
           {color: color, opacity: '.75', weight: '3'});
