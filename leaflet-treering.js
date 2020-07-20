@@ -860,6 +860,11 @@ function AnnotationAsset(Lt) {
   this.markers = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
+  var draggable = false;
+  if (window.name.includes('popout')) {
+    draggable = true;
+  }
+
   AnnotationAsset.prototype.reload = function() {
     this.markerLayer.clearLayers();
     this.markers = new Array();
@@ -892,10 +897,14 @@ function AnnotationAsset(Lt) {
       return;
     }
 
-    var circle = L.circle(ref.latLng, {radius: .0001, color: 'red',
-      weight: '6'});
-    circle.bindPopup(ref.text, {closeButton: false});
-    this.markers[i] = circle;
+    var annotation = L.marker(ref.latLng, {
+      icon: new MarkerIcon('red', Lt.basePath),
+      draggable: draggable,
+      riseOnHover: true
+    });
+
+    annotation.bindPopup(ref.text, {closeButton: false});
+    this.markers[i] = annotation;
     this.markers[i].clicked = false;
 
     $(this.markers[i]).click(e => {
