@@ -840,7 +840,7 @@ function VisualAsset (Lt) {
       }
 
       //mark decades with red line
-      if ((pts[i].earlywood && pts[i].year % 10 == 0) || (!pts[i].earlywood && pts[i].year % 10 == 0)) {
+      if (pts[i].year % 10 == 0) {
         var color = '#ff0000';
       }
 
