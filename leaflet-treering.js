@@ -1649,8 +1649,9 @@ function InsertPoint(Lt) {
         Lt.visualAsset.reload();
       }
 
-      /* Disables after one click
-      this.disable(); */
+      //Uncommenting line below will disable tool after one use
+      //Currently it will stay enabled until user manually disables tool
+      //this.disable();
     });
   };
 
