@@ -116,8 +116,6 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
-    //disabled 'annotations' by default
-    map.removeLayer(this.annotationAsset.markerLayer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -1651,7 +1649,9 @@ function InsertPoint(Lt) {
         Lt.visualAsset.reload();
       }
 
-      this.disable();
+      //Uncommenting line below will disable tool after one use
+      //Currently it will stay enabled until user manually disables tool
+      //this.disable();
     });
   };
 
