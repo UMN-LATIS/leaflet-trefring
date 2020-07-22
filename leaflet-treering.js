@@ -34,6 +34,7 @@ function LTreering (viewer, basePath, options) {
     this.meta.ppm = options.initialData.ppm;
   }
 
+  //add window.name.includes('popout') to have error only appear in measurement mode
   if (options.ppm === 0 && !options.initialData.ppm) {
     alert('Please set up PPM in asset metadata. PPM will default to 468.');
   }
@@ -116,6 +117,7 @@ function LTreering (viewer, basePath, options) {
     $('#map').css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+    map.removeLayer(this.annotationAsset.markerLayer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -558,10 +560,16 @@ function MarkerIcon(color, imagePath) {
                     'size': [32, 48] },
     'dark_blue' : { 'path': imagePath + 'images/dark_blue_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'white'     : { 'path': imagePath + 'images/white_tick_icon.png',
+    'white_s'   : { 'path': imagePath + 'images/white_tick_icon.png',
+                    'size': [32, 48] },
+    'white_b'   : { 'path': imagePath + 'images/white_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
     'red'       : { 'path': imagePath + 'images/red_dot_icon.png',
-                    'size': [12, 12] }
+                    'size': [12, 12] },
+    'light_red'  : { 'path': imagePath + 'images/cb_light_red_tick_icon.png',
+                    'size': [32, 48] },
+    'pale_red' : { 'path': imagePath + 'images/cb_pale_red_tick_icon.png',
+                    'size': [32, 48] },
   };
 
   return L.icon({
@@ -723,33 +731,51 @@ function VisualAsset (Lt) {
     //check if index is the start point
     if (pts[i].start) {
       marker = L.marker(leafLatLng, {
-        icon: new MarkerIcon('white', Lt.basePath),
+        icon: new MarkerIcon('white_s', Lt.basePath),
         draggable: draggable,
         title: 'Start Point',
         riseOnHover: true
       });
     } else if (pts[i].break) { //check if point is a break
       marker = L.marker(leafLatLng, {
-        icon: new MarkerIcon('white', Lt.basePath),
+        icon: new MarkerIcon('white_b', Lt.basePath),
         draggable: draggable,
         title: 'Break Point',
         riseOnHover: true
       });
     } else if (Lt.meta.hasLatewood || Lt.data.earlywood) { //check if point is earlywood
       if (pts[i].earlywood) {
-        marker = L.marker(leafLatLng, {
-          icon: new MarkerIcon('light_blue', Lt.basePath),
-          draggable: draggable,
-          title: 'Year ' + pts[i].year + ', earlywood',
-          riseOnHover: true
-        });
+        if (pts[i].year % 10 == 0) {
+          marker = L.marker(leafLatLng, {
+            icon: new MarkerIcon('pale_red', Lt.basePath),
+            draggable: draggable,
+            title: 'Year ' + pts[i].year + ', latewood',
+            riseOnHover: true
+          });
+        } else {
+            marker = L.marker(leafLatLng, {
+              icon: new MarkerIcon('light_blue', Lt.basePath),
+              draggable: draggable,
+              title: 'Year ' + pts[i].year + ', latewood',
+              riseOnHover: true
+            });
+        }
       } else { //otherwise it's latewood
-        marker = L.marker(leafLatLng, {
-          icon: new MarkerIcon('dark_blue', Lt.basePath),
-          draggable: draggable,
-          title: 'Year ' + pts[i].year + ', latewood',
-          riseOnHover: true
-        });
+          if (pts[i].year % 10 == 0) {
+            marker = L.marker(leafLatLng, {
+              icon: new MarkerIcon('light_red', Lt.basePath),
+              draggable: draggable,
+              title: 'Year ' + pts[i].year + ', latewood',
+              riseOnHover: true
+            });
+          } else {
+              marker = L.marker(leafLatLng, {
+                icon: new MarkerIcon('dark_blue', Lt.basePath),
+                draggable: draggable,
+                title: 'Year ' + pts[i].year + ', latewood',
+                riseOnHover: true
+              });
+          }
       }
     } else {
       marker = L.marker(leafLatLng, {
@@ -838,8 +864,10 @@ function VisualAsset (Lt) {
       }
 
       //mark decades with red line
-      if (pts[i].year % 10 == 0) {
-        var color = '#ff0000';
+      if ((pts[i].earlywood || !Lt.meta.hasLatewood) && pts[i].year % 10 == 0) {
+        var color = '#FC9272';
+      } else if ((!pts[i].earlywood || Lt.meta.hasLatewood) && pts[i].year % 10 == 0) {
+        var color = '#EF3B2C';
       }
 
       this.lines[i] =
