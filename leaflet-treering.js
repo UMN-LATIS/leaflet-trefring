@@ -789,7 +789,6 @@ function VisualAsset (Lt) {
 
     this.markers[i] = marker;   //add created marker to marker_list
 
-    //annotation line color changes: red = #ff0000
     //tell marker what to do when being dragged
     this.markers[i].on('drag', (e) => {
       if (!pts[i].start) {
@@ -919,11 +918,24 @@ function AnnotationAsset(Lt) {
       return;
     }
 
-    var circle = L.circle(ref.latLng, {radius: .0001, color: 'red',
-      weight: '6'});
+    var draggable = false;
+    if (window.name.includes('popout')) {
+      draggable = true;
+    }
+
+    var circle = L.marker(ref.latLng, {
+      icon: new MarkerIcon('red', Lt.basePath),
+      draggable: draggable,
+      riseOnHover: true
+    });
+
     circle.bindPopup(ref.text, {closeButton: false});
     this.markers[i] = circle;
     this.markers[i].clicked = false;
+
+    this.markers[i].on('dragend', (e) => {
+      ants[i].latLng = e.target._latlng;
+    });
 
     $(this.markers[i]).click(e => {
       if (Lt.editAnnotation.active) {
