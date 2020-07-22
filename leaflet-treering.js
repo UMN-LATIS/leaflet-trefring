@@ -34,9 +34,10 @@ function LTreering (viewer, basePath, options) {
     this.meta.ppm = options.initialData.ppm;
   }
 
-  //add window.name.includes('popout') to have error only appear in measurement mode
-  if (options.ppm === 0 && !options.initialData.ppm) {
-    alert('Please set up PPM in asset metadata. PPM will default to 468.');
+  //error alerts in 'measuring' mode aka popout window
+  //will not alert in 'browsing' mode aka DE browser window
+  if (window.name.includes('popout') && options.ppm === 0 && !options.initialData.ppm) {
+    alert('Calibration needed: set ppm in asset metadata or use calibration tool.');
   }
 
   this.autoscroll = new Autoscroll(this.viewer);
@@ -81,9 +82,9 @@ function LTreering (viewer, basePath, options) {
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
-  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurement point');
-  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit and delete data points from the series');
-  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'View and download data');
+  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
+  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit measurements');
+  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.calibration.btn], 'settings', 'Change image and calibration settings');
   else
@@ -1063,7 +1064,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  this.btn = new Button('launch', 'Open a popout window', () => {
+  this.btn = new Button('launch', 'Popout to annotate & measure', () => {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
@@ -1889,7 +1890,7 @@ function InsertBreak(Lt) {
 function ViewData(Lt) {
   this.btn = new Button(
     'view_list',
-    'View and download data',
+    'Calibrated measurement data',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2669,7 +2670,7 @@ function ImageAdjustment(Lt) {
 function SaveLocal(Lt) {
   this.btn = new Button(
     'save',
-    'Save a local copy of measurements and annotations',
+    'Save a local copy',
     () => { this.action() }
   );
 
@@ -2809,7 +2810,7 @@ function SaveCloud(Lt) {
 function LoadLocal(Lt) {
   this.btn = new Button(
     'file_upload',
-    'Load a local file with measurements and annotations',
+    'Load a local copy',
     () => { this.input() }
   );
 
