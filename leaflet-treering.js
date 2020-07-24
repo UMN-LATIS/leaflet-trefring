@@ -348,16 +348,16 @@ function MeasurementData (dataObject) {
    * @function insertPoint
    */
   MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
-    let i = 0;
     var disList = [];
 
-      while (i <= dataObject.index) {
-        if (this.points[i] != null) {
-          var distance = Math.sqrt(((latLng.lng - this.points[i].latLng.lng)**2) + ((latLng.lat - this.points[i].latLng.lat)**2));
-          disList.push(distance);
-          i++
-        };
-      }
+      for (i = 0; i < this.points.length; i++) {
+        var distance = Number.MAX_SAFE_INTEGER;
+        if(this.points[i] && this.points[i].latLng) {
+           var currentPoint = this.points[i].latLng;
+           distance = Math.sqrt(Math.pow((latLng.lng - currentPoint.lng), 2) + Math.pow((latLng.lat - currentPoint.lat), 2));
+        }
+        disList.push(distance);
+      };
 
     var minDistance = Math.min(...disList);
     i = disList.indexOf(minDistance)
