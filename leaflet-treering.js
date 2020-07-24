@@ -687,13 +687,12 @@ function MouseLine (Lt) {
   * @param {Marker title} title
   */
 function getMarker(iconLatLng, color, iconImagePath, iconDrag, title) {
-  marker = L.marker(iconLatLng, {
-    icon: new MarkerIcon(color, iconImagePath),
-    draggable: iconDrag,
-    title: title,
-    riseOnHover: true
-  });
-return marker;
+  return L.marker(iconLatLng, {
+        icon: new MarkerIcon(color, iconImagePath),
+        draggable: iconDrag,
+        title: title,
+        riseOnHover: true
+      })
   };
 
 /**
@@ -745,29 +744,31 @@ function VisualAsset (Lt) {
       draggable = true;
     }
 
+    var marker;
+
     if (pts[i].start) { //check if index is the start point
-      getMarker(leafLatLng, 'white_s', Lt.basePath, draggable, 'Start');
+      marker = getMarker(leafLatLng, 'white_s', Lt.basePath, draggable, 'Start');
     } else if (pts[i].break) { //check if point is a break
-      getMarker(leafLatLng, Lt.basePath, 'white_b', draggable, 'Break');
+      marker = getMarker(leafLatLng, Lt.basePath, 'white_b', draggable, 'Break');
     } else if (Lt.meta.hasLatewood) { //check if point hasLatewood
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
-            getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
           } else {
-            getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
           }
         } else { //otherwise it's latewood
             if (pts[i].year % 10 == 0) {
-              getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
             } else {
-              getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
             }
         }
     } else {
       if (pts[i].year % 10 == 0) {
-        getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year)
+        marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year)
       } else {
-        getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year)
+        marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year)
       }
     };
 
