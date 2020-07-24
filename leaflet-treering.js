@@ -348,14 +348,23 @@ function MeasurementData (dataObject) {
    * @function insertPoint
    */
   MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
-    var i = 0;
-    while (this.points[i] != undefined &&
-        this.points[i].latLng.lng < latLng.lng) {
-      i++;
-    }
+    let i = 0;
+    var disList = [];
+
+      while (i <= dataObject.index) {
+        if (this.points[i] != null) {
+          var distance = Math.sqrt(((latLng.lng - this.points[i].latLng.lng)**2) + ((latLng.lat - this.points[i].latLng.lat)**2));
+          disList.push(distance);
+          i++
+        };
+      }
+
+    var minDistance = Math.min(...disList);
+    i = disList.indexOf(minDistance)
+    console.log(minDistance, i)
+
     if (this.points[i] == null) {
-      alert('New point must be within existing points.' +
-          'Use the create toolbar to add new points to the series.');
+      alert('New point must be within existing points. Use the create toolbar to add new points to the series.');
       return;
     }
 
