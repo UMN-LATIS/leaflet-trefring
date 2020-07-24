@@ -678,6 +678,24 @@ function MouseLine (Lt) {
 }
 
 /**
+  * Method to reduce MarkerIcon usage
+  * @function getMarker
+  * @param {Leaflet latlng} iconLatLng
+  * @param {Marker icon} color
+  * @param {Icon imagepath} iconImagePath
+  * @param {Drag ability} iconDrag
+  * @param {Marker title} title
+  */
+function getMarker(iconLatLng, color, iconImagePath, iconDrag, title) {
+  return L.marker(iconLatLng, {
+        icon: new MarkerIcon(color, iconImagePath),
+        draggable: iconDrag,
+        title: title,
+        riseOnHover: true
+      })
+  };
+
+/**
  * Visual assets on the map such as markers and lines
  * @constructor
  * @param {LTreering} Lt - a refrence to the leaflet treering object
@@ -729,68 +747,28 @@ function VisualAsset (Lt) {
     var marker;
 
     if (pts[i].start) { //check if index is the start point
-      marker = L.marker(leafLatLng, {
-        icon: new MarkerIcon('white_s', Lt.basePath),
-        draggable: draggable,
-        title: 'Start Point',
-        riseOnHover: true
-      });
+      marker = getMarker(leafLatLng, 'white_s', Lt.basePath, draggable, 'Start');
     } else if (pts[i].break) { //check if point is a break
-      marker = L.marker(leafLatLng, {
-        icon: new MarkerIcon('white_b', Lt.basePath),
-        draggable: draggable,
-        title: 'Break Point',
-        riseOnHover: true
-      });
+      marker = getMarker(leafLatLng, Lt.basePath, 'white_b', draggable, 'Break');
     } else if (Lt.meta.hasLatewood) { //check if point hasLatewood
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
-            marker = L.marker(leafLatLng, {
-              icon: new MarkerIcon('pale_red', Lt.basePath),
-              draggable: draggable,
-              title: 'Year ' + pts[i].year + ', earlywood',
-              riseOnHover: true
-            });
+            marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
           } else {
-              marker = L.marker(leafLatLng, {
-                icon: new MarkerIcon('light_blue', Lt.basePath),
-                draggable: draggable,
-                title: 'Year ' + pts[i].year + ', earlywood',
-                riseOnHover: true
-              });
+            marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
           }
         } else { //otherwise it's latewood
             if (pts[i].year % 10 == 0) {
-              marker = L.marker(leafLatLng, {
-                icon: new MarkerIcon('light_red', Lt.basePath),
-                draggable: draggable,
-                title: 'Year ' + pts[i].year + ', latewood',
-                riseOnHover: true
-              });
+              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
             } else {
-                marker = L.marker(leafLatLng, {
-                  icon: new MarkerIcon('dark_blue', Lt.basePath),
-                  draggable: draggable,
-                  title: 'Year ' + pts[i].year + ', latewood',
-                  riseOnHover: true
-                });
+              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
             }
         }
     } else {
       if (pts[i].year % 10 == 0) {
-        marker = L.marker(leafLatLng, {
-          icon: new MarkerIcon('light_red', Lt.basePath),
-          draggable: draggable,
-          title: 'Year ' + pts[i].year,
-          riseOnHover: true
-        })
+        marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year)
       } else {
-        marker = L.marker(leafLatLng, {
-          icon: new MarkerIcon('light_blue', Lt.basePath),
-          draggable: draggable,
-          title: 'Year ' + pts[i].year,
-          riseOnHover: true
-        })
+        marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year)
       }
     };
 
