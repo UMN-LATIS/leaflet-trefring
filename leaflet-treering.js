@@ -350,26 +350,70 @@ function MeasurementData (dataObject) {
   MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
     var disList = [];
 
-      for (i = 0; i < this.points.length; i++) {
-        var distance = Number.MAX_SAFE_INTEGER;
-        if(this.points[i] && this.points[i].latLng) {
-           var currentPoint = this.points[i].latLng;
-           distance = Math.sqrt(Math.pow((latLng.lng - currentPoint.lng), 2) + Math.pow((latLng.lat - currentPoint.lat), 2));
-        }
-        disList.push(distance);
-      };
+    // finds point with smallest abs. distance
+    for (i = 0; i < this.points.length; i++) {
+      var distance = Number.MAX_SAFE_INTEGER;
+      if (this.points[i] && this.points[i].latLng) {
+         var currentPoint = this.points[i].latLng;
+         distance = Math.sqrt(Math.pow((latLng.lng - currentPoint.lng), 2) + Math.pow((latLng.lat - currentPoint.lat), 2));
+      }
+      disList.push(distance);
+    };
 
     var minDistance = Math.min(...disList);
     i = disList.indexOf(minDistance)
-    console.log(minDistance, i)
 
     if (this.points[i] == null) {
       alert('New point must be within existing points. Use the create toolbar to add new points to the series.');
       return;
     }
 
+    // define 3 points: i, i - 1, i + 1
+    var iPoint = this.points[i].latLng;
+
+    if (this.points[i - 1].start) {
+      var iMinus = this.points[i].latLng;
+    } else {
+      var iMinus = this.points[i - 1].latLng;
+    };
+
+    if (this.points[i + 1]) { //
+      var iPlus = this.points[i + 1].latLng;
+    } else {
+      var iPlus = L.latLng(0.15, 0.6);
+    };
+
+    // distance: point[i] to point[i + 1]
+    var disIPlus = Math.sqrt(Math.pow((iPlus.lng - iPoint.lng), 2) +
+                             Math.pow((iPlus.lat - iPoint.lat), 2));
+    // distance: point[i} to point[i - 1]
+    var disIMinus = Math.sqrt(Math.pow((iMinus.lng - iPoint.lng), 2) +
+                              Math.pow((iMinus.lat - iPoint.lat), 2));
+    // distance: point[i] to inserted point
+    var disIInsert = Math.sqrt(Math.pow((latLng.lng - iPoint.lng), 2) +
+                               Math.pow((latLng.lat - iPoint.lat), 2));
+    // distance: point[i + 1] to inserted point
+    var disPlusInsert = Math.sqrt(Math.pow((iPlus.lng - latLng.lng), 2) +
+                                  Math.pow((iPlus.lat - latLng.lat), 2));
+    // distance: point[i - 1] to inserted point
+    var disMinusInsert = Math.sqrt(Math.pow((iMinus.lng - latLng.lng), 2) +
+                                   Math.pow((iMinus.lat - latLng.lat), 2));
+
+    // law of cosines to find inner angle
+    var numeratorPlus = (disPlusInsert ** 2) - ((disIInsert ** 2) + (disIPlus ** 2));
+    var denominatorPlus = -2 * disIInsert * disIPlus;
+    var numeratorMinus = (disMinusInsert ** 2) - ((disIInsert ** 2) + (disIMinus ** 2));
+    var denominatorMinus = -2 * disIInsert * disIMinus;
+    var anglePlus = Math.acos(numeratorPlus/denominatorPlus);
+    var angleMinus = Math.acos(numeratorMinus/denominatorMinus);
+
+    // smaller angle determines connecting lines
+    if (anglePlus < angleMinus) {
+      i++;
+    };
+
     var new_points = this.points;
-    var second_points = Object.values(this.points).splice(i, this.index - 1);
+    var second_points = Object.values(new_points).splice(i, this.index - 1);
     var k = i;
     var year_adjusted = this.points[i].year;
     var earlywood_adjusted = true;
@@ -379,6 +423,9 @@ function MeasurementData (dataObject) {
       earlywood_adjusted = false;
     } else if (this.points[i - 1].start) {
       year_adjusted = this.points[i + 1].year;
+        if (this.points[i - 2].earlywood && hasLatewood) {
+          earlywood_adjusted = false;
+        };
     } else {
       year_adjusted = this.points[i - 1].year + 1;
     }
@@ -392,14 +439,16 @@ function MeasurementData (dataObject) {
     k++;
 
     second_points.map(e => {
+      if(!e) {
+       return;
+      }
       if (!e.start && !e.break) {
         if (hasLatewood) {
           e.earlywood = !e.earlywood;
           if (e.earlywood) {
             e.year++;
           }
-        }
-        else {
+        } else {
           e.year++;
         }
       }
@@ -1711,6 +1760,13 @@ function InsertPoint(Lt) {
    * @function disable
    */
   InsertPoint.prototype.disable = function() {
+    $(document).keyup(e => {
+          var key = e.which || e.keyCode;
+          if (key === 27) { // 27 = esc
+            this.disable();
+          }
+        });
+
     $(Lt.viewer._container).off('click');
     this.btn.state('inactive');
     this.active = false;
