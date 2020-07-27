@@ -350,13 +350,23 @@ function MeasurementData (dataObject) {
   MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
     var disList = [];
 
+    /**
+    * calculate the distance between 2 points
+    * @function distanceCalc
+    * @param {first point.latLng} pointA
+    * @param {second point.latLng} pointB
+    */
+    function distanceCalc (pointA, pointB) {
+      return Math.sqrt(Math.pow((pointB.lng - pointA.lng), 2) +
+                       Math.pow((pointB.lat - pointA.lat), 2));
+    };
+
     // finds point with smallest abs. distance
     for (i = 0; i < this.points.length; i++) {
       var distance = Number.MAX_SAFE_INTEGER;
       if (this.points[i] && this.points[i].latLng) {
          var currentPoint = this.points[i].latLng;
-         distance = Math.sqrt(Math.pow((latLng.lng - currentPoint.lng), 2) + Math.pow((latLng.lat - currentPoint.lat), 2));
-      }
+         distance = distanceCalc(currentPoint, latLng);
       disList.push(distance);
     };
 
@@ -384,20 +394,15 @@ function MeasurementData (dataObject) {
     };
 
     // distance: point[i] to point[i + 1]
-    var disIPlus = Math.sqrt(Math.pow((iPlus.lng - iPoint.lng), 2) +
-                             Math.pow((iPlus.lat - iPoint.lat), 2));
+    var disIPlus = distanceCalc(iPoint, iPlus);
     // distance: point[i} to point[i - 1]
-    var disIMinus = Math.sqrt(Math.pow((iMinus.lng - iPoint.lng), 2) +
-                              Math.pow((iMinus.lat - iPoint.lat), 2));
+    var disIMinus = distanceCalc(iPoint, iMinus);
     // distance: point[i] to inserted point
-    var disIInsert = Math.sqrt(Math.pow((latLng.lng - iPoint.lng), 2) +
-                               Math.pow((latLng.lat - iPoint.lat), 2));
+    var disIInsert = distanceCalc(iPoint, latLng);
     // distance: point[i + 1] to inserted point
-    var disPlusInsert = Math.sqrt(Math.pow((iPlus.lng - latLng.lng), 2) +
-                                  Math.pow((iPlus.lat - latLng.lat), 2));
+    var disPlusInsert = distanceCalc(iPlus, latLng);
     // distance: point[i - 1] to inserted point
-    var disMinusInsert = Math.sqrt(Math.pow((iMinus.lng - latLng.lng), 2) +
-                                   Math.pow((iMinus.lat - latLng.lat), 2));
+    var disMinusInsert = distanceCalc(iMinus, latLng);
 
     // law of cosines to find inner angle
     var numeratorPlus = (disPlusInsert ** 2) - ((disIInsert ** 2) + (disIPlus ** 2));
