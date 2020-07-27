@@ -368,6 +368,7 @@ function MeasurementData (dataObject) {
          var currentPoint = this.points[i].latLng;
          distance = distanceCalc(currentPoint, latLng);
       disList.push(distance);
+      }
     };
 
     var minDistance = Math.min(...disList);
