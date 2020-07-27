@@ -380,18 +380,19 @@ function MeasurementData (dataObject) {
     }
 
     // define 3 points: i, i - 1, i + 1
+
     var iPoint = this.points[i].latLng;
 
-    if (this.points[i - 1].start) {
-      var iMinus = this.points[i].latLng;
-    } else {
+    if (this.points[i - 1]) {
       var iMinus = this.points[i - 1].latLng;
+    } else {
+      var iMinus = L.latLng(1, 1);
     };
 
     if (this.points[i + 1]) { //
       var iPlus = this.points[i + 1].latLng;
     } else {
-      var iPlus = L.latLng(0.15, 0.6);
+      var iPlus = this.points[i].latLng;
     };
 
     // distance: point[i] to point[i + 1]
@@ -424,17 +425,22 @@ function MeasurementData (dataObject) {
     var year_adjusted = this.points[i].year;
     var earlywood_adjusted = true;
 
-    if (this.points[i - 1].earlywood && hasLatewood) {
-      year_adjusted = this.points[i - 1].year;
-      earlywood_adjusted = false;
-    } else if (this.points[i - 1].start) {
-      year_adjusted = this.points[i + 1].year;
-        if (this.points[i - 2].earlywood && hasLatewood) {
-          earlywood_adjusted = false;
-        };
+    if (this.points[i - 1]) {
+      if (this.points[i - 1].earlywood && hasLatewood) {
+        year_adjusted = this.points[i - 1].year;
+        earlywood_adjusted = false;
+      } else if (this.points[i - 1].start) {
+        year_adjusted = this.points[i + 1].year;
+          if (this.points[i - 2] && this.points[i - 2].earlywood && hasLatewood) {
+            earlywood_adjusted = false;
+          };
+      } else {
+        year_adjusted = this.points[i - 1].year + 1;
+      };
     } else {
-      year_adjusted = this.points[i - 1].year + 1;
-    }
+      year_adjusted = this.points[i + 1].year;
+    };
+
     new_points[k] = {'start': false, 'skip': false, 'break': false,
       'year': year_adjusted, 'earlywood': earlywood_adjusted,
       'latLng': latLng};
