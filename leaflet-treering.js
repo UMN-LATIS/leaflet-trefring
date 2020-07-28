@@ -214,7 +214,7 @@ function MeasurementData (dataObject) {
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
   this.earlywood = dataObject.earlywood || true;
-  this.points = dataObject.points || {};
+  this.points = dataObject.points || [];
   this.annotations = dataObject.annotations || {};
 
  /**
@@ -362,8 +362,7 @@ function MeasurementData (dataObject) {
     };
 
     // finds point with smallest abs. distance
-    var len = Object.values(this.points).length
-    for (i = 0; i <= len; i++) {
+    for (i = 0; i <= this.points.length; i++) {
       var distance = Number.MAX_SAFE_INTEGER;
       if (this.points[i] && this.points[i].latLng) {
          var currentPoint = this.points[i].latLng;
@@ -389,10 +388,10 @@ function MeasurementData (dataObject) {
       var iMinus = L.latLng(-(iPoint.lat), -(iPoint.lng));
     };
 
-    if (this.points[i + 1]) { //
+    if (this.points[i + 1]) {
       var iPlus = this.points[i + 1].latLng;
     } else {
-      var iPlus = this.points[i].latLng;
+      var iPlus = L.latLng((iPoint.lat + 10), (iPoint.lng + 10)); //figuring this out
     };
 
     // distance: point[i] to point[i + 1]
@@ -420,25 +419,21 @@ function MeasurementData (dataObject) {
     };
 
     var new_points = this.points;
-    var second_points = Object.values(this.points).splice(i, this.index - 1);
+    var second_points = this.points.splice(i, this.index - 1);
     var k = i;
-    var year_adjusted = this.points[i].year;
+    var year_adjusted;
     var earlywood_adjusted = true;
 
-    if (this.points[i - 1]) {
-      if (this.points[i - 1].earlywood && hasLatewood) {
-        year_adjusted = this.points[i - 1].year;
-        earlywood_adjusted = false;
-      } else if (this.points[i - 1].start) {
-        year_adjusted = this.points[i + 1].year;
-          if (this.points[i - 2] && this.points[i - 2].earlywood && hasLatewood) {
-            earlywood_adjusted = false;
-          };
-      } else {
-        year_adjusted = this.points[i - 1].year + 1;
-      };
-    } else {
+    if (this.points[i - 1].earlywood && hasLatewood) {
+      year_adjusted = this.points[i - 1].year;
+      earlywood_adjusted = false;
+    } else if (this.points[i - 1].start) {
       year_adjusted = this.points[i + 1].year;
+        if (this.points[i - 2] && this.points[i - 2].earlywood && hasLatewood) {
+          earlywood_adjusted = false;
+        };
+    } else {
+      year_adjusted = this.points[i - 1].year + 1;
     };
 
     new_points[k] = {'start': false, 'skip': false, 'break': false,
