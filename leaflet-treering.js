@@ -362,7 +362,8 @@ function MeasurementData (dataObject) {
     };
 
     // finds point with smallest abs. distance
-    for (i = 0; i < this.points.length; i++) {
+    var len = Object.values(this.points).length
+    for (i = 0; i <= len; i++) {
       var distance = Number.MAX_SAFE_INTEGER;
       if (this.points[i] && this.points[i].latLng) {
          var currentPoint = this.points[i].latLng;
@@ -380,13 +381,12 @@ function MeasurementData (dataObject) {
     }
 
     // define 3 points: i, i - 1, i + 1
-
     var iPoint = this.points[i].latLng;
 
     if (this.points[i - 1]) {
       var iMinus = this.points[i - 1].latLng;
     } else {
-      var iMinus = L.latLng(1, 1);
+      var iMinus = L.latLng(-(iPoint.lat), -(iPoint.lng));
     };
 
     if (this.points[i + 1]) { //
@@ -420,7 +420,7 @@ function MeasurementData (dataObject) {
     };
 
     var new_points = this.points;
-    var second_points = Object.values(new_points).splice(i, this.index - 1);
+    var second_points = Object.values(this.points).splice(i, this.index - 1);
     var k = i;
     var year_adjusted = this.points[i].year;
     var earlywood_adjusted = true;
