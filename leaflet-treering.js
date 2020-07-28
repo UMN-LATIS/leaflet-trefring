@@ -451,46 +451,47 @@ function MeasurementData (dataObject) {
       alert('Please insert new point closer to connecting line.')
     };
 
-    if (Number.isInteger(year_adjusted)) {
-      new_points[k] = {'start': false, 'skip': false, 'break': false,
-        'year': year_adjusted, 'earlywood': earlywood_adjusted,
-        'latLng': latLng};
-
-        var tempK = k;
-
-        //visualAsset.newLatLng(new_points, k, latLng);
-        k++;
-
-        second_points.map(e => {
-          if(!e) {
-           return;
-          }
-          if (!e.start && !e.break) {
-            if (hasLatewood) {
-              e.earlywood = !e.earlywood;
-              if (e.earlywood) {
-                e.year++;
-              }
-            } else {
-              e.year++;
-            }
-          }
-          new_points[k] = e;
-          k++;
-        });
-
-        this.points = new_points;
-        this.index = k;
-        if (hasLatewood) {
-          this.earlywood = !this.earlywood;
-        };
-        if (!this.points[this.index - 1].earlywood || !hasLatewood) {
-          this.year++;
-        };
-
-        return tempK;
-      };
+    if (year_adjusted === undefined) {
+      return;
     };
+
+    new_points[k] = {'start': false, 'skip': false, 'break': false,
+      'year': year_adjusted, 'earlywood': earlywood_adjusted,
+      'latLng': latLng};
+
+    var tempK = k;
+
+    k++;
+
+    second_points.map(e => {
+      if(!e) {
+       return;
+      }
+      if (!e.start && !e.break) {
+        if (hasLatewood) {
+          e.earlywood = !e.earlywood;
+          if (e.earlywood) {
+            e.year++;
+          }
+        } else {
+          e.year++;
+        }
+      }
+      new_points[k] = e;
+      k++;
+    });
+
+    this.points = new_points;
+    this.index = k;
+    if (hasLatewood) {
+      this.earlywood = !this.earlywood;
+    };
+    if (!this.points[this.index - 1].earlywood || !hasLatewood) {
+      this.year++;
+    };
+
+    return tempK;
+  };
 
   /**
    * insert a zero growth year in the middle of the measurement data
