@@ -1389,7 +1389,7 @@ function Dating(Lt) {
             var shift = new_year - Lt.data.points[i].year;
 
             Object.values(Lt.data.points).map((e, i) => {
-              if (Lt.data.points[i].year != undefined) {
+              if (Lt.data.points[i] && Lt.data.points[i].year != undefined) {
                 Lt.data.points[i].year += shift;
               }
             });
