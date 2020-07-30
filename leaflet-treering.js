@@ -322,7 +322,7 @@ function MeasurementData (dataObject) {
    */
   MeasurementData.prototype.cut = function(i, j) {
     if (i > j) {
-      var trimmed_points = Object.values(this.points).splice(i, this.index - 1);
+      var trimmed_points = this.points.slice().splice(i, this.index - 1);
       var k = 0;
       this.points = {};
       trimmed_points.map(e => {
@@ -336,7 +336,7 @@ function MeasurementData (dataObject) {
       });
       this.index = k;
     } else if (i < j) {
-      this.points = Object.values(this.points).splice(0, i);
+      this.points = this.points.slice().splice(0, i);
       this.index = i;
     } else {
       alert('You cannot select the same point');
