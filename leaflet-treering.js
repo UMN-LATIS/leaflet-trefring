@@ -250,7 +250,7 @@ function MeasurementData (dataObject) {
     if (this.points[i].start) {
       if (this.points[i - 1] != undefined && this.points[i - 1].break) {
         i--;
-        second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+        second_points = this.points.slice().splice(i + 2, this.index - 1);
         shift = this.points[i + 2].year - this.points[i - 1].year - 1;
         second_points.map(e => {
           e.year -= shift;
@@ -262,7 +262,7 @@ function MeasurementData (dataObject) {
         delete this.points[this.index];
         delete this.points[this.index + 1];
       } else {
-        second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+        second_points = this.points.slice().splice(i + 1, this.index - 1);
         second_points.map(e => {
           if (!i) {
             this.points[i] = {'start': true, 'skip': false, 'break': false,
@@ -276,7 +276,7 @@ function MeasurementData (dataObject) {
         delete this.points[this.index];
       }
     } else if (this.points[i].break) {
-      second_points = Object.values(this.points).splice(i + 2, this.index - 1);
+      second_points = this.points.slice().splice(i + 2, this.index - 1);
       shift = this.points[i + 2].year - this.points[i - 1].year - 1;
       second_points.map(e => {
         e.year -= shift;
@@ -290,9 +290,9 @@ function MeasurementData (dataObject) {
     } else {
       var new_points = this.points;
       var k = i;
-      second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+      second_points = this.points.slice().splice(i + 1, this.index - 1);
       second_points.map(e => {
-        if (!e.start && !e.break) {
+        if (e && !e.start && !e.break) {
           if (hasLatewood) {
             e.earlywood = !e.earlywood;
             if (!e.earlywood) {
