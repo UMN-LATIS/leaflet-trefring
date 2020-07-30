@@ -696,6 +696,11 @@ function MouseLine (Lt) {
    */
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
+
+    function newCoordCalc (pointA, coefficientB, pointB, pointC, coefficientTrig) {
+      return pointA + ((coefficientB * (pointB - pointC)) * Math.sin(coefficientTrig * Math.PI / 2));
+    };
+
     $(Lt.viewer._container).mousemove(e => {
       if (this.active) {
         this.layer.clearLayers();
@@ -703,39 +708,22 @@ function MouseLine (Lt) {
         var mouseLatLng = Lt.viewer.mouseEventToLatLng(e);
         var point = Lt.viewer.latLngToLayerPoint(latLng);
 
-        /* Getting the four points for the h bars,
-      this is doing 90 degree rotations on mouse point */
-        newX = mousePoint.x +
-            (point.x - mousePoint.x) * Math.cos(Math.PI / 2) -
-            (point.y - mousePoint.y) * Math.sin(Math.PI / 2);
-        newY = mousePoint.y +
-            (point.x - mousePoint.x) * Math.sin(Math.PI / 2) +
-            (point.y - mousePoint.y) * Math.cos(Math.PI / 2);
+        /* Getting the four points for the h bars, this is doing 90 degree rotations on mouse point */
+        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 1);
+        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 1);
         var topRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = mousePoint.x +
-            (point.x - mousePoint.x) * Math.cos(Math.PI / 2 * 3) -
-            (point.y - mousePoint.y) * Math.sin(Math.PI / 2 * 3);
-        newY = mousePoint.y +
-            (point.x - mousePoint.x) * Math.sin(Math.PI / 2 * 3) +
-            (point.y - mousePoint.y) * Math.cos(Math.PI / 2 * 3);
+        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 3);
+        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 3);
         var bottomRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //doing rotations 90 degree rotations on latlng
-        newX = point.x +
-            (mousePoint.x - point.x) * Math.cos(Math.PI / 2) -
-            (mousePoint.y - point.y) * Math.sin(Math.PI / 2);
-        newY = point.y +
-            (mousePoint.x - point.x) * Math.sin(Math.PI / 2) +
-            (mousePoint.y - point.y) * Math.cos(Math.PI / 2);
+        newX = newCoordCalc(point.x, -1, mousePoint.y, point.y, 1);
+        newY = newCoordCalc(point.y, 1, mousePoint.x, point.x, 1);
         var topLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = point.x +
-            (mousePoint.x - point.x) * Math.cos(Math.PI / 2 * 3) -
-            (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
-        newY = point.y +
-            (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3) +
-            (mousePoint.y - point.y) * Math.cos(Math.PI / 2 * 3);
+        newX = point.x - (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
+        newY = point.y + (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //color for h-bar
