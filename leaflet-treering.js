@@ -499,7 +499,7 @@ function MeasurementData (dataObject) {
    */
   MeasurementData.prototype.insertZeroGrowth = function(i, latLng, hasLatewood) {
     var new_points = this.points;
-    var second_points = Object.values(this.points).splice(i + 1, this.index - 1);
+    var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
 
     var year_adjusted = this.points[i].year + 1;
@@ -518,7 +518,7 @@ function MeasurementData (dataObject) {
     var tempK = k-1;
 
     second_points.map(e => {
-      if (!e.start && !e.break) {
+      if (e && !e.start && !e.break) {
         e.year++;
       }
       new_points[k] = e;
