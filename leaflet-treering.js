@@ -28,6 +28,12 @@ function LTreering (viewer, basePath, options) {
     'hasLatewood': options.hasLatewood,
   }
 
+  this.preferences = {
+    'subAnnual': options.initialData.subAnnual,
+    'direction': options.initialData.measureBackward,
+  }
+
+
   this.data = new MeasurementData(options.initialData);
   this.aData = new AnnotationData(options.initialData.annotations);
   if (options.initialData.ppm) {
@@ -53,6 +59,7 @@ function LTreering (viewer, basePath, options) {
   this.viewData = new ViewData(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
+  this.measurementOptions = new MeasurementOptions(this);
   this.calibration = new Calibration(this);
 
   this.createAnnotation = new CreateAnnotation(this);
@@ -86,11 +93,11 @@ function LTreering (viewer, basePath, options) {
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.calibration.btn], 'settings', 'Change image and calibration settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn , this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn], 'settings', 'Change image settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment];
+  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': layer
@@ -1444,6 +1451,13 @@ function CreatePoint(Lt) {
    */
   CreatePoint.prototype.enable = function() {
     this.btn.state('active');
+
+    if (Lt.data.points.length == 0 && Lt.measurementOptions.choice == false) {
+      this.disable();
+      Lt.measurementOptions.enable();
+      return;
+    };
+
     Lt.mouseLine.enable();
 
     document.getElementById('map').style.cursor = 'pointer';
@@ -2744,6 +2758,101 @@ function ImageAdjustment(Lt) {
 }
 
 /**
+* Change measurement options (set hasLatewood and direction)
+* @constructor
+* @param {Ltreeing} Lt - Leaflet treering object
+*/
+function MeasurementOptions(Lt) {
+  this.choice = false;
+  this.hasLatewood = Lt.preferences.subAnnual || false;
+  this.measureBackward = Lt.preferences.measureBackward || false;
+
+  this.btn = new Button(
+    'timeline',
+    'Change measurement direction and annual/sub-annual mode',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+
+  this.dialog = L.control.dialog({
+    'size': [310, 155],
+    'anchor': [200, 800],
+    'initOpen': false
+  }).setContent(
+    '<div><h5 style="text-align:center">Please select measurement preferences</h5></div> \
+     <div><input type="checkbox" id="hasLatewood-checkbox"><b> Sub-annual measurement</input></b></div> \
+     <div><input type="checkbox" id="direction-checkbox"><b> Measure from later years to earlier years</b></input></div> \
+     <div><h5 style="text-align:center">Use enter or return to continue</h5></div>').addTo(Lt.viewer);
+
+  /**
+  * Set/change hasLatewood JSON values
+  * @function subAnnual
+  */
+  MeasurementOptions.prototype.subAnnual = function() {
+    var hasLatewoodCheckbox = document.getElementById("hasLatewood-checkbox");
+
+    hasLatewoodCheckbox.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.hasLatewood = true;
+      } else if (event.target.checked == false) {
+        this.hasLatewood = false;
+      };
+    });
+
+  };
+
+  /**
+  * Set/change hasLatewood JSON values
+  * @function measureDirection
+  */
+  MeasurementOptions.prototype.measureDirection = function() {
+    var directionCheckbox = document.getElementById("direction-checkbox");
+
+    directionCheckbox.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.measureBackward = true;
+      } else if (event.target.checked == false) {
+        this.measureBackward = false;
+      };
+    });
+
+  };
+
+  /**
+  * Open measurement options dialog
+  * @function enable
+  */
+  MeasurementOptions.prototype.enable = function() {
+    this.dialog.lock();
+    this.dialog.open();
+    var hasLatewoodCheckbox = document.getElementById("hasLatewood-checkbox");
+    var directionCheckbox = document.getElementById("direction-checkbox");
+    this.btn.state('active');
+    this.subAnnual();
+    this.measureDirection();
+
+    $(document).keypress(e => {
+      var key = e.which || e.keyCode;
+      if (key === 13) {
+        this.choice = true;
+        this.disable();
+      };
+    });
+  };
+
+    /**
+   * Close measurement options dialog
+   * @function disable
+   */
+  MeasurementOptions.prototype.disable = function() {
+    this.dialog.unlock();
+    this.dialog.close();
+    this.btn.state('inactive');
+  };
+
+}
+
+/**
  * Save a local copy of the measurement data
  * @constructor
  * @param {Ltreering} Lt - Leaflet treering object
@@ -2762,6 +2871,7 @@ function SaveLocal(Lt) {
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
+      'subAnnual': Lt.measurementOptions.hasLatewood,
       'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
       'points': Lt.data.points, 'annotations': Lt.aData.annotations};
 
@@ -2849,6 +2959,7 @@ function SaveCloud(Lt) {
       Lt.data.clean();
       this.updateDate();
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
+        'subAnnual': Lt.measurementOptions.subAnnual,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
       // don't serialize our default value
