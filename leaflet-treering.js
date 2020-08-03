@@ -29,7 +29,8 @@ function LTreering (viewer, basePath, options) {
   }
 
   this.preferences = {
-    'subAnnual': options.initialData.subAnnual,
+    'forward': options.initialData.directionForward,
+    'subAnnual': options.initialData.subAnnual
   }
 
   this.data = new MeasurementData(options.initialData);
@@ -174,7 +175,6 @@ function LTreering (viewer, basePath, options) {
   LTreering.prototype.loadData = function() {
     this.visualAsset.reload();
     this.annotationAsset.reload();
-    this.measurementOptions.reload();
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
@@ -2764,6 +2764,13 @@ function ImageAdjustment(Lt) {
 */
 function MeasurementOptions(Lt) {
   this.choice = false;
+  this.subIncrement = Lt.preferences.subAnnual || false;
+
+  if (Lt.preferences.forward == false) {
+    this.forwardDirection = false;
+  } else {
+    this.forwardDirection = true;
+  };
 
   this.btn = new Button(
     'timeline',
@@ -2772,46 +2779,40 @@ function MeasurementOptions(Lt) {
     () => { this.disable() }
   );
 
-   /**
-   * Reload dialog box
-   * @function subAnnual
-   */
-   MeasurementOptions.prototype.reload = function() {
-     this.hasLatewood = Lt.preferences.subAnnual || false;
-     if (this.hasLatewood == true) {
-       console.log(this.hasLatewood);
-       var checkmark = ' checked';
-     } else if (this.hasLatewood == false) {
-       console.log(this.hasLatewood);
-       var checkmark = '';
-     };
-
-     return this.dialog = L.control.dialog({
-       'size': [310, 155],
-       'anchor': [200, 800],
+  this.dialog = L.control.dialog({
+       'size': [510, 350],
+       'anchor': [200, 730],
        'initOpen': false
      }).setContent(
-       '<div><h5 style="text-align:center">Please select measurement preferences</h5></div> \
-        <div><input type="checkbox" id="hasLatewood-checkbox"' + checkmark + '><b> Sub-annual measurement</input></b></div> \
-        <div><input type="checkbox" id="direction-checkbox"><b> Measure from later years to earlier years</b></input></div> \
-        <div><h5 style="text-align:center">Use enter or return to continue</h5></div>').addTo(Lt.viewer);
-   };
-
-   this.dialog = this.reload()
-
+       '<div><h4 style="text-align:center">Please select this assets time-series preferences</h4></div> \
+       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+        <div><h5>Measurement Options:</div> \
+        <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g. 1900 &rArr; 1901)</input> \
+         <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g. 2020 &rArr; 2019)</input></div> \
+       <br> \
+        <div><h5>Annual/Sub-annual Options:</div> \
+        <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
+         <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
+       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+        <div><h4 style="text-align:center">Use enter or return to continue</h4></div>').addTo(Lt.viewer);
 
   /**
   * Set/change hasLatewood JSON values
   * @function subAnnual
   */
   MeasurementOptions.prototype.subAnnual = function() {
-    var hasLatewoodCheckbox = document.getElementById("hasLatewood-checkbox");
+    var annualRadio = document.getElementById("annual_radio");
+    var subAnnualRadio = document.getElementById("subannual_radio");
 
-    hasLatewoodCheckbox.addEventListener('change', (event) => {
+    annualRadio.addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.hasLatewood = true;
-      } else if (event.target.checked == false) {
-        this.hasLatewood = false;
+        this.subIncrement = false;
+      };
+    });
+
+    subAnnualRadio.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.subIncrement = true
       };
     });
 
@@ -2821,14 +2822,19 @@ function MeasurementOptions(Lt) {
   * Set/change hasLatewood JSON values
   * @function measureDirection
   */
-  MeasurementOptions.prototype.measureDirection = function() {
-    var directionCheckbox = document.getElementById("direction-checkbox");
+  MeasurementOptions.prototype.measurementDirection = function() {
+    var forwardRadio = document.getElementById("forward_radio");
+    var backwardRadio = document.getElementById("backward_radio");
 
-    directionCheckbox.addEventListener('change', (event) => {
+    forwardRadio.addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.measureBackward = true;
-      } else if (event.target.checked == false) {
-        this.measureBackward = false;
+        this.forwardDirection = true;
+      };
+    });
+
+    backwardRadio.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.forwardDirection = false;
       };
     });
 
@@ -2839,20 +2845,34 @@ function MeasurementOptions(Lt) {
   * @function enable
   */
   MeasurementOptions.prototype.enable = function() {
+    if (Lt.preferences.pointData && Lt.data.points.length > 0) {
+      alert ('Delete all markers to change time-series preferences.')
+      return;
+    }
+
     this.dialog.lock();
     this.dialog.open();
-    var hasLatewoodCheckbox = document.getElementById("hasLatewood-checkbox");
-    var directionCheckbox = document.getElementById("direction-checkbox");
     this.btn.state('active');
+
     this.subAnnual();
-    this.measureDirection();
+    this.measurementDirection();
+
+    if (this.subIncrement == true) {
+      document.getElementById("subannual_radio").checked = true;
+    } else if (this.subIncrement == false) {
+      document.getElementById("annual_radio").checked = true;
+    };
+
+    if (this.forwardDirection == true) {
+      document.getElementById("forward_radio").checked = true;
+    } else if (this.forwardDirection == false) {
+      document.getElementById("backward_radio").checked = true;
+    };
 
     $(document).keypress(e => {
       var key = e.which || e.keyCode;
       if (key === 13) {
         this.choice = true;
-        this.disable();
-      } else if (key === 27) {
         this.disable();
       };
     });
@@ -2889,7 +2909,8 @@ function SaveLocal(Lt) {
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
-      'subAnnual': Lt.measurementOptions.hasLatewood,
+      'forward': Lt.measurementOptions.forwardDirection,
+      'subAnnual': Lt.measurementOptions.subIncrement,
       'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
       'points': Lt.data.points, 'annotations': Lt.aData.annotations};
 
@@ -2977,7 +2998,8 @@ function SaveCloud(Lt) {
       Lt.data.clean();
       this.updateDate();
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
-        'subAnnual': Lt.measurementOptions.subAnnual,
+        'forward': Lt.measurementOptions.forwardDirection,
+        'subAnnual': Lt.measurementOptions.subIncrement,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
       // don't serialize our default value
@@ -3054,6 +3076,7 @@ function LoadLocal(Lt) {
       let newDataJSON = JSON.parse(e.target.result);
 
       Lt.preferences = {
+        'forwardDirection': newDataJSON.directionForward,
         'subAnnual': newDataJSON.subAnnual,
       };
 
