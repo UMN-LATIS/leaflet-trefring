@@ -30,9 +30,7 @@ function LTreering (viewer, basePath, options) {
 
   this.preferences = {
     'subAnnual': options.initialData.subAnnual,
-    'direction': options.initialData.measureBackward,
   }
-
 
   this.data = new MeasurementData(options.initialData);
   this.aData = new AnnotationData(options.initialData.annotations);
@@ -58,8 +56,9 @@ function LTreering (viewer, basePath, options) {
 
   this.viewData = new ViewData(this);
 
-  this.imageAdjustment = new ImageAdjustment(this);
   this.measurementOptions = new MeasurementOptions(this);
+
+  this.imageAdjustment = new ImageAdjustment(this);
   this.calibration = new Calibration(this);
 
   this.createAnnotation = new CreateAnnotation(this);
@@ -175,6 +174,7 @@ function LTreering (viewer, basePath, options) {
   LTreering.prototype.loadData = function() {
     this.visualAsset.reload();
     this.annotationAsset.reload();
+    this.measurementOptions.reload();
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
@@ -2764,8 +2764,6 @@ function ImageAdjustment(Lt) {
 */
 function MeasurementOptions(Lt) {
   this.choice = false;
-  this.hasLatewood = Lt.preferences.subAnnual || false;
-  this.measureBackward = Lt.preferences.measureBackward || false;
 
   this.btn = new Button(
     'timeline',
@@ -2774,15 +2772,33 @@ function MeasurementOptions(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({
-    'size': [310, 155],
-    'anchor': [200, 800],
-    'initOpen': false
-  }).setContent(
-    '<div><h5 style="text-align:center">Please select measurement preferences</h5></div> \
-     <div><input type="checkbox" id="hasLatewood-checkbox"><b> Sub-annual measurement</input></b></div> \
-     <div><input type="checkbox" id="direction-checkbox"><b> Measure from later years to earlier years</b></input></div> \
-     <div><h5 style="text-align:center">Use enter or return to continue</h5></div>').addTo(Lt.viewer);
+   /**
+   * Reload dialog box
+   * @function subAnnual
+   */
+   MeasurementOptions.prototype.reload = function() {
+     this.hasLatewood = Lt.preferences.subAnnual || false;
+     if (this.hasLatewood == true) {
+       console.log(this.hasLatewood);
+       var checkmark = ' checked';
+     } else if (this.hasLatewood == false) {
+       console.log(this.hasLatewood);
+       var checkmark = '';
+     };
+
+     return this.dialog = L.control.dialog({
+       'size': [310, 155],
+       'anchor': [200, 800],
+       'initOpen': false
+     }).setContent(
+       '<div><h5 style="text-align:center">Please select measurement preferences</h5></div> \
+        <div><input type="checkbox" id="hasLatewood-checkbox"' + checkmark + '><b> Sub-annual measurement</input></b></div> \
+        <div><input type="checkbox" id="direction-checkbox"><b> Measure from later years to earlier years</b></input></div> \
+        <div><h5 style="text-align:center">Use enter or return to continue</h5></div>').addTo(Lt.viewer);
+   };
+
+   this.dialog = this.reload()
+
 
   /**
   * Set/change hasLatewood JSON values
@@ -2835,6 +2851,8 @@ function MeasurementOptions(Lt) {
       var key = e.which || e.keyCode;
       if (key === 13) {
         this.choice = true;
+        this.disable();
+      } else if (key === 27) {
         this.disable();
       };
     });
@@ -3034,6 +3052,10 @@ function LoadLocal(Lt) {
 
     fr.onload = function(e) {
       let newDataJSON = JSON.parse(e.target.result);
+
+      Lt.preferences = {
+        'subAnnual': newDataJSON.subAnnual,
+      };
 
       Lt.data = new MeasurementData(newDataJSON);
       Lt.aData = new AnnotationData(newDataJSON.annotations);
