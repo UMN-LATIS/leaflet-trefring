@@ -2773,6 +2773,10 @@ function MeasurementOptions(Lt) {
     () => { this.disable() }
   );
 
+  console.log('initial', this.forwardDirection, this.subAnnual);
+  this.reload();
+  console.log('reload', this.forwardDirection, this.subAnnual);
+
   this.dialog = L.control.dialog({
        'size': [510, 350],
        'anchor': [200, 730],
@@ -2789,6 +2793,53 @@ function MeasurementOptions(Lt) {
          <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
        <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
         <div><h4 style="text-align:center">Use enter or return to continue</h4></div>').addTo(Lt.viewer);
+
+  var direction = 'Measure forward in time';
+  if (this.directionForward == false) {
+    direction = 'Measure backward in time';
+  };
+
+  var increment = 'Measure one increment per year';
+  if (this.subAnnual == true) {
+    increment = 'Measure two increments per year';
+  };
+
+  this.dialogPoints = L.control.dialog({
+    'size': [320, 285],
+    'anchor': [50, 5],
+    'initOpen': false
+  }).setContent(
+    '<div><h4>Current time-series preferences</h4></div> \
+     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+     <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
+     <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
+     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+     <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
+
+ /**
+ * Reload preferences based after saved & loaded
+ * @function reload
+ */
+ MeasurementOptions.prototype.reload = function () {
+   var ewFalse = [];
+   for (i = 0; i <= Lt.data.points.length; i++) { // test for assets which use hasLatewood
+     if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
+       ewFalse.push(i);
+     }};
+   if (ewFalse.length > 0) {
+     this.hasLatewood = true;
+   } else {
+     this.hasLatewood = false;
+   };
+
+   this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false;
+
+   if (Lt.preferences.forward == false) {
+     this.forwardDirection = false;
+   } else {
+     this.forwardDirection = true;
+   };
+ };
 
   /**
   * Set/change hasLatewood JSON values
@@ -2833,55 +2884,6 @@ function MeasurementOptions(Lt) {
     });
 
   };
-
-  /**
-  * Reload preferences based after saved & loaded
-  * @function reload
-  */
-  MeasurementOptions.prototype.reload = function () {
-    var ewFalse = [];
-    for (i = 0; i <= Lt.data.points.length; i++) { // test for assets which use hasLatewood
-      if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
-        ewFalse.push(i);
-      }};
-    if (ewFalse.length > 0) {
-      this.hasLatewood = true;
-    } else {
-      this.hasLatewood = false;
-    };
-
-    this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false;
-
-    if (Lt.preferences.forward == false) {
-      this.forwardDirection = false;
-    } else {
-      this.forwardDirection = true;
-    };
-
-    console.log(this.forwardDirection, this.subAnnual)
-
-    var direction = 'Measure forward in time';
-    if (this.directionForward == false) {
-      direction = 'Measure backward in time';
-    };
-
-    var increment = 'Measure one increment per year';
-    if (this.subAnnual == true) {
-      increment = 'Measure two increments per year';
-    };
-
-    this.dialogPoints = L.control.dialog({
-      'size': [320, 285],
-      'anchor': [50, 5],
-      'initOpen': false
-    }).setContent(
-      '<div><h4>Current time-series preferences</h4></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-       <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
-       <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-       <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
-  }
 
   /**
   * Open measurement options dialog
