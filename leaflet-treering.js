@@ -29,7 +29,7 @@ function LTreering (viewer, basePath, options) {
   }
 
   this.preferences = {
-    'forward': options.initialData.directionForward,
+    'forward': options.initialData.forward,
     'subAnnual': options.initialData.subAnnual
   }
 
@@ -93,7 +93,7 @@ function LTreering (viewer, basePath, options) {
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn , this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
 
@@ -175,6 +175,7 @@ function LTreering (viewer, basePath, options) {
   LTreering.prototype.loadData = function() {
     this.visualAsset.reload();
     this.annotationAsset.reload();
+    this.measurementOptions.reload();
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
@@ -2764,13 +2765,6 @@ function ImageAdjustment(Lt) {
 */
 function MeasurementOptions(Lt) {
   this.choice = false;
-  this.subIncrement = Lt.preferences.subAnnual || false;
-
-  if (Lt.preferences.forward == false) {
-    this.forwardDirection = false;
-  } else {
-    this.forwardDirection = true;
-  };
 
   this.btn = new Button(
     'timeline',
@@ -2798,21 +2792,21 @@ function MeasurementOptions(Lt) {
 
   /**
   * Set/change hasLatewood JSON values
-  * @function subAnnual
+  * @function incrementInput
   */
-  MeasurementOptions.prototype.subAnnual = function() {
+  MeasurementOptions.prototype.incrementInput = function() {
     var annualRadio = document.getElementById("annual_radio");
     var subAnnualRadio = document.getElementById("subannual_radio");
 
     annualRadio.addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.subIncrement = false;
+        this.subAnnual = false;
       };
     });
 
     subAnnualRadio.addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.subIncrement = true
+        this.subAnnual = true
       };
     });
 
@@ -2820,9 +2814,9 @@ function MeasurementOptions(Lt) {
 
   /**
   * Set/change hasLatewood JSON values
-  * @function measureDirection
+  * @function directionInput
   */
-  MeasurementOptions.prototype.measurementDirection = function() {
+  MeasurementOptions.prototype.directionInput = function() {
     var forwardRadio = document.getElementById("forward_radio");
     var backwardRadio = document.getElementById("backward_radio");
 
@@ -2841,12 +2835,71 @@ function MeasurementOptions(Lt) {
   };
 
   /**
+  * Reload preferences based after saved & loaded
+  * @function reload
+  */
+  MeasurementOptions.prototype.reload = function () {
+    var ewFalse = [];
+    for (i = 0; i <= Lt.data.points.length; i++) { // test for assets which use hasLatewood
+      if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
+        ewFalse.push(i);
+      }};
+    if (ewFalse.length > 0) {
+      this.hasLatewood = true;
+    } else {
+      this.hasLatewood = false;
+    };
+
+    this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false;
+
+    if (Lt.preferences.forward == false) {
+      this.forwardDirection = false;
+    } else {
+      this.forwardDirection = true;
+    };
+
+    console.log(this.forwardDirection, this.subAnnual)
+
+    var direction = 'Measure forward in time';
+    if (this.directionForward == false) {
+      direction = 'Measure backward in time';
+    };
+
+    var increment = 'Measure one increment per year';
+    if (this.subAnnual == true) {
+      increment = 'Measure two increments per year';
+    };
+
+    this.dialogPoints = L.control.dialog({
+      'size': [320, 285],
+      'anchor': [50, 5],
+      'initOpen': false
+    }).setContent(
+      '<div><h4>Current time-series preferences</h4></div> \
+       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+       <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
+       <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
+       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+       <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
+  }
+
+  /**
   * Open measurement options dialog
   * @function enable
   */
   MeasurementOptions.prototype.enable = function() {
-    if (Lt.preferences.pointData && Lt.data.points.length > 0) {
-      alert ('Delete all markers to change time-series preferences.')
+    if (Lt.data.points.length > 0) {
+      this.dialogPoints.lock();
+      this.dialogPoints.open();
+      this.btn.state('active');
+
+      $(document).keypress(e => {
+        var key = e.which || e.keyCode;
+        if (key === 13) { // 13 is return key code
+          this.disable();
+        };
+      });
+
       return;
     }
 
@@ -2854,12 +2907,12 @@ function MeasurementOptions(Lt) {
     this.dialog.open();
     this.btn.state('active');
 
-    this.subAnnual();
-    this.measurementDirection();
+    this.incrementInput();
+    this.directionInput();
 
-    if (this.subIncrement == true) {
+    if (this.subAnnual == true) {
       document.getElementById("subannual_radio").checked = true;
-    } else if (this.subIncrement == false) {
+    } else if (this.subAnnual == false) {
       document.getElementById("annual_radio").checked = true;
     };
 
@@ -2885,6 +2938,8 @@ function MeasurementOptions(Lt) {
   MeasurementOptions.prototype.disable = function() {
     this.dialog.unlock();
     this.dialog.close();
+    this.dialogPoints.unlock();
+    this.dialogPoints.close();
     this.btn.state('inactive');
   };
 
@@ -2910,7 +2965,7 @@ function SaveLocal(Lt) {
     Lt.data.clean();
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
       'forward': Lt.measurementOptions.forwardDirection,
-      'subAnnual': Lt.measurementOptions.subIncrement,
+      'subAnnual': Lt.measurementOptions.subAnnual,
       'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
       'points': Lt.data.points, 'annotations': Lt.aData.annotations};
 
@@ -2999,7 +3054,7 @@ function SaveCloud(Lt) {
       this.updateDate();
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
         'forward': Lt.measurementOptions.forwardDirection,
-        'subAnnual': Lt.measurementOptions.subIncrement,
+        'subAnnual': Lt.measurementOptions.subAnnual,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
       // don't serialize our default value
@@ -3076,7 +3131,7 @@ function LoadLocal(Lt) {
       let newDataJSON = JSON.parse(e.target.result);
 
       Lt.preferences = {
-        'forwardDirection': newDataJSON.directionForward,
+        'forward': newDataJSON.forward,
         'subAnnual': newDataJSON.subAnnual,
       };
 
