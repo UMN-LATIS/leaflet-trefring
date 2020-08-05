@@ -2797,39 +2797,10 @@ function MeasurementOptions(Lt) {
     this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false; // increment object
   };
 
-  /**
-  * Display dialog box to show user selected preferences
-  * @function dialogPoints
-  */
-  MeasurementOptions.prototype.dialogPoints = function () {
-    var direction = 'Measure forward in time';
-    if (this.forwardDirection == false) {
-      direction = 'Measure backward in time';
-    };
-
-    var increment = 'Measure one increment per year';
-    if (this.subAnnual == true) {
-      increment = 'Measure two increments per year';
-    };
-
-    return L.control.dialog({
-      'size': [320, 300],
-      'anchor': [50, 5],
-      'initOpen': false
-    }).setContent(
-      ' <div><h4 style="text-align:center">Current time-series preferences</h4></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-        <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
-        <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-        <div><h4 style="text-align:center">To modify time-series preferences, delete all markers</h4></div> \
-        <div><button type="button" id="confirmPoints-button" class="preferences-button"> Close </button></div>').addTo(Lt.viewer);
-};
-
-MeasurementOptions.prototype.dialogNone = function () {
+MeasurementOptions.prototype.displayDialog = function () {
   return L.control.dialog({
-     'size': [510, 350],
-     'anchor': [200, 730],
+     'size': [510, 405],
+     'anchor': [50, 5],
      'initOpen': false
    }).setContent(
      '<div><h4 style="text-align:center">Please select this assets time-series preferences</h4></div> \
@@ -2842,7 +2813,8 @@ MeasurementOptions.prototype.dialogNone = function () {
       <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
        <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><button type="button" id="confirmNone-button" class="preferences-button"> Save & close </button></div>').addTo(Lt.viewer);
+      <div><h4 style="text-align:center">To modify preferences, delete all existing points</h4></div> \
+      <div><p style="text-align:center;font-size:16px">&#9831; &#9831; &#9831; <button type="button" id="confirm-button" class="preferences-button"> Save & close </button> &#9831; &#9831; &#9831;</p></div>').addTo(Lt.viewer);
   };
 
   /**
@@ -2903,38 +2875,32 @@ MeasurementOptions.prototype.dialogNone = function () {
   * @function enable
   */
   MeasurementOptions.prototype.enable = function() {
-    if (Lt.data.points.length > 0) {
-      if (!this.dialogPts || this.dialogNo) {
-        if (this.dialogPts) {
-          this.dialogPts.destroy();
-        };
-        this.dialogPts = this.dialogPoints();
-      };
-
-      this.dialogPts.lock();
-      this.dialogPts.open();
-      this.btn.state('active');
-
-      $("#confirmPoints-button").click(() => {
-        this.choice = true;
-        this.disable();
-      });
-    } else if (Lt.data.points.length === 0) {
-        if (!this.dialogNo) {
-          this.dialogNo = this.dialogNone();
-        };
-        this.selectedBtns();
-        this.prefBtnListener();
-
-        this.dialogNo.lock();
-        this.dialogNo.open();
-        this.btn.state('active');
-
-        $("#confirmNone-button").click(() => {
-          this.choice = true;
-          this.disable();
-        });
+    if (!this.dialog) {
+      this.dialog = this.displayDialog();
     };
+
+    this.selectedBtns();
+    if (Lt.data.points.length === 0 || !Lt.data.points[0]) {
+      document.getElementById("forward_radio").disabled = false;
+      document.getElementById("backward_radio").disabled = false;
+      document.getElementById("annual_radio").disabled = false;
+      document.getElementById("subannual_radio").disabled = false;
+      this.prefBtnListener();
+    } else {
+      document.getElementById("forward_radio").disabled = true;
+      document.getElementById("backward_radio").disabled = true;
+      document.getElementById("annual_radio").disabled = true;
+      document.getElementById("subannual_radio").disabled = true;
+    }
+
+    this.dialog.lock();
+    this.dialog.open();
+    this.btn.state('active');
+
+    $("#confirm-button").click(() => {
+      this.choice = true;
+      this.disable();
+    });
 
     $(document).keypress(e => {
       var key = e.which || e.keyCode;
@@ -2950,15 +2916,10 @@ MeasurementOptions.prototype.dialogNone = function () {
   * @function disable
   */
   MeasurementOptions.prototype.disable = function() {
-    if (this.dialogPts) {
-      this.dialogPts.unlock();
-      this.dialogPts.close();
+    if (this.dialog) {
+      this.dialog.unlock();
+      this.dialog.close();
     };
-
-    if (this.dialogNo) {
-      this.dialogNo.unlock();
-      this.dialogNo.close();
-    }
 
     this.btn.state('inactive');
   };
