@@ -2814,16 +2814,17 @@ function MeasurementOptions(Lt) {
       };
 
       return L.control.dialog({
-        'size': [320, 285],
+        'size': [320, 300],
         'anchor': [50, 5],
         'initOpen': false
       }).setContent(
-        '<div><h4>Current time-series preferences</h4></div> \
+        ' <div><h4 style="text-align:center">Current time-series preferences</h4></div> \
          <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-         <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
-         <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
+          <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
+          <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
          <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-         <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
+          <div><h4 style="text-align:center">To modify time-series preferences, delete all markers</h4></div> \
+          <div><button type="button" id="confirm-button" class="preferences-button"> Close </button></div>').addTo(Lt.viewer);
     } else {
       return L.control.dialog({
            'size': [510, 350],
@@ -2840,7 +2841,7 @@ function MeasurementOptions(Lt) {
             <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
              <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
            <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-            <div><h4 style="text-align:center">Use enter or return to continue</h4></div>').addTo(Lt.viewer);
+            <div><button type="button" id="confirm-button" class="preferences-button"> Save & close </button></div>').addTo(Lt.viewer);
     };
   };
 
@@ -2897,22 +2898,27 @@ function MeasurementOptions(Lt) {
     });
   };
 
-  this.dialog == null;
   /**
   * Open measurement options dialog
   * @function enable
   */
   MeasurementOptions.prototype.enable = function() {
+    console.log(this.forwardDirection, this.subAnnual)
     this.dialog = this.displayDialog();
 
     if (Lt.data.points.length == 0) {
       this.selectedBtns();
       this.prefBtnListener();
-    }
+    };
 
     this.dialog.lock();
     this.dialog.open();
     this.btn.state('active');
+
+    $("#confirm-button").click(() => {
+      this.choice = true;
+      this.disable();
+    });
 
     $(document).keypress(e => {
       var key = e.which || e.keyCode;
@@ -2928,8 +2934,10 @@ function MeasurementOptions(Lt) {
   * @function disable
   */
   MeasurementOptions.prototype.disable = function() {
-    this.dialog.unlock();
-    this.dialog.close();
+    if (this.dialog) {
+      this.dialog.unlock();
+      this.dialog.close();
+    }
     this.btn.state('inactive');
   };
 
