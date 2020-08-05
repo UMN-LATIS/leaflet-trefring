@@ -29,7 +29,7 @@ function LTreering (viewer, basePath, options) {
   }
 
   this.preferences = {
-    'forward': options.initialData.forward,
+    'forwardDirection': options.initialData.forwardDirection,
     'subAnnual': options.initialData.subAnnual
   }
 
@@ -175,7 +175,7 @@ function LTreering (viewer, basePath, options) {
   LTreering.prototype.loadData = function() {
     this.visualAsset.reload();
     this.annotationAsset.reload();
-    this.measurementOptions.reload();
+    this.measurementOptions.preferencesInfo();
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
@@ -2765,7 +2765,6 @@ function ImageAdjustment(Lt) {
 */
 function MeasurementOptions(Lt) {
   this.choice = false;
-
   this.btn = new Button(
     'timeline',
     'Change measurement direction and annual/sub-annual mode',
@@ -2773,103 +2772,105 @@ function MeasurementOptions(Lt) {
     () => { this.disable() }
   );
 
-  console.log('initial', this.forwardDirection, this.subAnnual);
-  this.reload();
-  console.log('reload', this.forwardDirection, this.subAnnual);
-
-  this.dialog = L.control.dialog({
-       'size': [510, 350],
-       'anchor': [200, 730],
-       'initOpen': false
-     }).setContent(
-       '<div><h4 style="text-align:center">Please select this assets time-series preferences</h4></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-        <div><h5>Measurement Options:</div> \
-        <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g. 1900 &rArr; 1901)</input> \
-         <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g. 2020 &rArr; 2019)</input></div> \
-       <br> \
-        <div><h5>Annual/Sub-annual Options:</div> \
-        <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
-         <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
-       <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-        <div><h4 style="text-align:center">Use enter or return to continue</h4></div>').addTo(Lt.viewer);
-
-  var direction = 'Measure forward in time';
-  if (this.directionForward == false) {
-    direction = 'Measure backward in time';
-  };
-
-  var increment = 'Measure one increment per year';
-  if (this.subAnnual == true) {
-    increment = 'Measure two increments per year';
-  };
-
-  this.dialogPoints = L.control.dialog({
-    'size': [320, 285],
-    'anchor': [50, 5],
-    'initOpen': false
-  }).setContent(
-    '<div><h4>Current time-series preferences</h4></div> \
-     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-     <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
-     <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
-     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-     <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
-
- /**
- * Reload preferences based after saved & loaded
- * @function reload
- */
- MeasurementOptions.prototype.reload = function () {
-   var ewFalse = [];
-   for (i = 0; i <= Lt.data.points.length; i++) { // test for assets which use hasLatewood
-     if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
-       ewFalse.push(i);
-     }};
-   if (ewFalse.length > 0) {
-     this.hasLatewood = true;
-   } else {
-     this.hasLatewood = false;
-   };
-
-   this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false;
-
-   if (Lt.preferences.forward == false) {
-     this.forwardDirection = false;
-   } else {
-     this.forwardDirection = true;
-   };
- };
-
   /**
-  * Set/change hasLatewood JSON values
-  * @function incrementInput
+  * Data from Lt.preferences
+  * @function preferencesInfo
   */
-  MeasurementOptions.prototype.incrementInput = function() {
-    var annualRadio = document.getElementById("annual_radio");
-    var subAnnualRadio = document.getElementById("subannual_radio");
+  MeasurementOptions.prototype.preferencesInfo = function () {
+    if (Lt.preferences.forwardDirection == false) { // direction object
+      this.forwardDirection = false;
+    } else {
+      this.forwardDirection = true;
+    }
 
-    annualRadio.addEventListener('change', (event) => {
-      if (event.target.checked == true) {
-        this.subAnnual = false;
-      };
-    });
+    let ewFalse = [];
+    for (i = 0; i <= Lt.data.points.length; i++) { // for assets which use hasLatewood
+       if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
+         ewFalse.push(i);
+       }};
+    if (ewFalse.length > 0) {
+      this.hasLatewood = true;
+    } else {
+      this.hasLatewood = false;
+    };
 
-    subAnnualRadio.addEventListener('change', (event) => {
-      if (event.target.checked == true) {
-        this.subAnnual = true
-      };
-    });
-
+    this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false; // increment object
   };
 
   /**
-  * Set/change hasLatewood JSON values
-  * @function directionInput
+  * Display dialog box to show user selected preferences or have user select preferences
+  * @function displayDialog
   */
-  MeasurementOptions.prototype.directionInput = function() {
+  MeasurementOptions.prototype.displayDialog = function () {
+    if (Lt.data.points.length > 0) {
+      var direction = 'Measure forward in time';
+      if (this.forwardDirection == false) {
+        direction = 'Measure backward in time';
+      };
+
+      var increment = 'Measure one increment per year';
+      if (this.subAnnual == true) {
+        increment = 'Measure two increments per year';
+      };
+
+      return L.control.dialog({
+        'size': [320, 285],
+        'anchor': [50, 5],
+        'initOpen': false
+      }).setContent(
+        '<div><h4>Current time-series preferences</h4></div> \
+         <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+         <div><p style="font-size:16px">&#9831 ' + direction + '</p></div> \
+         <div><p style="font-size:16px">&#9831 ' + increment + '</p></div> \
+         <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+         <div><h4>Delete all markers to change time-series preferences. Use enter or return to continue.</h4></div>').addTo(Lt.viewer);
+    } else {
+      return L.control.dialog({
+           'size': [510, 350],
+           'anchor': [200, 730],
+           'initOpen': false
+         }).setContent(
+           '<div><h4 style="text-align:center">Please select this assets time-series preferences</h4></div> \
+           <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+            <div><h5>Measurement Options:</div> \
+            <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g. 1900 &rArr; 1901)</input> \
+             <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g. 2020 &rArr; 2019)</input></div> \
+           <br> \
+            <div><h5>Annual/Sub-annual Options:</div> \
+            <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
+             <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
+           <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
+            <div><h4 style="text-align:center">Use enter or return to continue</h4></div>').addTo(Lt.viewer);
+    };
+  };
+
+  /**
+  * Based on initial data, selects buttons/dialog text
+  * @function selectedBtns
+  */
+  MeasurementOptions.prototype.selectedBtns = function () {
+    if (this.forwardDirection == true) {
+      document.getElementById("forward_radio").checked = true;
+    } else {
+      document.getElementById("backward_radio").checked = true;
+    };
+
+    if (this.subAnnual == true) {
+      document.getElementById("subannual_radio").checked = true;
+    } else {
+      document.getElementById("annual_radio").checked = true;
+    };
+  };
+
+  /**
+  * Changes direction & increment object to be saved
+  * @function prefBtnListener
+  */
+  MeasurementOptions.prototype.prefBtnListener = function () {
     var forwardRadio = document.getElementById("forward_radio");
     var backwardRadio = document.getElementById("backward_radio");
+    var annualRadio = document.getElementById("annual_radio");
+    var subAnnualRadio = document.getElementById("subannual_radio");
 
     forwardRadio.addEventListener('change', (event) => {
       if (event.target.checked == true) {
@@ -2883,46 +2884,35 @@ function MeasurementOptions(Lt) {
       };
     });
 
+    annualRadio.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.subAnnual = false;
+      };
+    });
+
+    subAnnualRadio.addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        this.subAnnual = true
+      };
+    });
   };
 
+  this.dialog == null;
   /**
   * Open measurement options dialog
   * @function enable
   */
   MeasurementOptions.prototype.enable = function() {
-    if (Lt.data.points.length > 0) {
-      this.dialogPoints.lock();
-      this.dialogPoints.open();
-      this.btn.state('active');
+    this.dialog = this.displayDialog();
 
-      $(document).keypress(e => {
-        var key = e.which || e.keyCode;
-        if (key === 13) { // 13 is return key code
-          this.disable();
-        };
-      });
-
-      return;
+    if (Lt.data.points.length == 0) {
+      this.selectedBtns();
+      this.prefBtnListener();
     }
 
     this.dialog.lock();
     this.dialog.open();
     this.btn.state('active');
-
-    this.incrementInput();
-    this.directionInput();
-
-    if (this.subAnnual == true) {
-      document.getElementById("subannual_radio").checked = true;
-    } else if (this.subAnnual == false) {
-      document.getElementById("annual_radio").checked = true;
-    };
-
-    if (this.forwardDirection == true) {
-      document.getElementById("forward_radio").checked = true;
-    } else if (this.forwardDirection == false) {
-      document.getElementById("backward_radio").checked = true;
-    };
 
     $(document).keypress(e => {
       var key = e.which || e.keyCode;
@@ -2933,15 +2923,13 @@ function MeasurementOptions(Lt) {
     });
   };
 
-    /**
-   * Close measurement options dialog
-   * @function disable
-   */
+  /**
+  * Close measurement options dialog
+  * @function disable
+  */
   MeasurementOptions.prototype.disable = function() {
     this.dialog.unlock();
     this.dialog.close();
-    this.dialogPoints.unlock();
-    this.dialogPoints.close();
     this.btn.state('inactive');
   };
 
@@ -2966,7 +2954,7 @@ function SaveLocal(Lt) {
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
     var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
-      'forward': Lt.measurementOptions.forwardDirection,
+      'forwardDirection': Lt.measurementOptions.forwardDirection,
       'subAnnual': Lt.measurementOptions.subAnnual,
       'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
       'points': Lt.data.points, 'annotations': Lt.aData.annotations};
@@ -3055,7 +3043,7 @@ function SaveCloud(Lt) {
       Lt.data.clean();
       this.updateDate();
       var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
-        'forward': Lt.measurementOptions.forwardDirection,
+        'forwardDirection': Lt.measurementOptions.forwardDirection,
         'subAnnual': Lt.measurementOptions.subAnnual,
         'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
         'points': Lt.data.points, 'annotations': Lt.aData.annotations};
@@ -3133,7 +3121,7 @@ function LoadLocal(Lt) {
       let newDataJSON = JSON.parse(e.target.result);
 
       Lt.preferences = {
-        'forward': newDataJSON.forward,
+        'forwardDirection': newDataJSON.forwardDirection,
         'subAnnual': newDataJSON.subAnnual,
       };
 
