@@ -228,22 +228,30 @@ function MeasurementData (dataObject) {
   * Add a new point into the measurement data
   * @function newPoint
   */
-  MeasurementData.prototype.newPoint = function(start, latLng, subAnnual) {
+  MeasurementData.prototype.newPoint = function(start, latLng, subAnnual, forwardDirection) {
     if (start) {
       this.points[this.index] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng};
     } else {
       this.points[this.index] = {'start': false, 'skip': false, 'break': false, 'year': this.year, 'earlywood': this.earlywood, 'latLng': latLng};
-      if (subAnnual) {
+      if (subAnnual) { // check if points alternate ew & lw
         if (this.earlywood) {
           this.earlywood = false;
         } else {
           this.earlywood = true;
-          this.year++;
+          if (forwardDirection) {
+            this.year++;
+          } else {
+            this.year--;
+          };
         }
       } else {
-        this.year++;
-      }
-    }
+        if (forwardDirection) {
+          this.year++;
+        } else {
+          this.year--;
+        };
+      };
+    };
     this.index++;
   };
 
@@ -251,7 +259,7 @@ function MeasurementData (dataObject) {
    * delete a point from the measurement data
    * @function deletePoint
    */
-  MeasurementData.prototype.deletePoint = function(i, subAnnual) {
+  MeasurementData.prototype.deletePoint = function(i, subAnnual, forwardDirection) {
     var second_points;
     var shift;
     if (this.points[i].start) {
@@ -303,10 +311,18 @@ function MeasurementData (dataObject) {
           if (subAnnual) {
             e.earlywood = !e.earlywood;
             if (!e.earlywood) {
-              e.year--;
-            }
+              if (forwardDirection) {
+                e.year--;
+              } else {
+                e.year++;
+              };
+            };
           } else {
-            e.year--;
+            if (forwardDirection) {
+              e.year--;
+            } else {
+              e.year++;
+            };
           }
         }
         new_points[k] = e;
@@ -354,7 +370,7 @@ function MeasurementData (dataObject) {
    * insert a point in the middle of the measurement data
    * @function insertPoint
    */
-  MeasurementData.prototype.insertPoint = function(latLng, subAnnual) {
+  MeasurementData.prototype.insertPoint = function(latLng, subAnnual, forwardDirection) {
     var disList = [];
 
     /**
@@ -443,16 +459,30 @@ function MeasurementData (dataObject) {
     var earlywood_adjusted = true;
 
     if (this.points[i - 1]) {
-      if (this.points[i - 1].earlywood && subAnnual) {
-        year_adjusted = this.points[i - 1].year;
+      if (this.points[i - 1].earlywood && subAnnual) { // case 1: subAnnual enabled & previous point ew
         earlywood_adjusted = false;
-      } else if (this.points[i - 1].start) {
-        year_adjusted = this.points[i + 1].year;
-          if (this.points[i - 2] && this.points[i - 2].earlywood && subAnnual) {
-            earlywood_adjusted = false;
-          };
-      } else {
-        year_adjusted = this.points[i - 1].year + 1;
+        if (forwardDirection) {
+          year_adjusted = this.points[i - 1].year;
+        } else {
+          year_adjusted = this.points[i].year;
+        };
+
+      } else if (this.points[i - 1].start) { // case 2: previous point is start
+        if (forwardDirection) {
+          year_adjusted = this.points[i + 1].year;
+        } else {
+          year_adjusted = this.points[i].year;
+        };
+        if (this.points[i - 2] && this.points[i - 2].earlywood && subAnnual) {
+          earlywood_adjusted = false;
+        };
+
+      } else { // case 3: subAnnual disabled or previous point lw
+        if (forwardDirection) {
+          year_adjusted = this.points[i - 1].year + 1;
+        } else {
+          year_adjusted = this.points[i].year;
+        };
       };
     } else {
       alert('Please insert new point closer to connecting line.')
@@ -475,15 +505,24 @@ function MeasurementData (dataObject) {
        return;
       }
       if (!e.start && !e.break) {
-        if (subAnnual) {
+        if (subAnnual) { // case 1: subAnnual enabled
           e.earlywood = !e.earlywood;
           if (e.earlywood) {
+            if (forwardDirection) {
+              e.year++;
+            } else {
+              e.year--;
+            };
+          };
+
+        } else { // case 2: subAnnual disabled
+          if (forwardDirection) {
             e.year++;
-          }
-        } else {
-          e.year++;
-        }
-      }
+          } else {
+            e.year--;
+          };
+        };
+      };
       new_points[k] = e;
       k++;
     });
@@ -504,12 +543,16 @@ function MeasurementData (dataObject) {
    * insert a zero growth year in the middle of the measurement data
    * @function insertZeroGrowth
    */
-  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, subAnnual) {
+  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, subAnnual, forwardDirection) {
     var new_points = this.points;
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
 
-    var year_adjusted = this.points[i].year + 1;
+    if (forwardDirection) {
+      var year_adjusted = this.points[i].year + 1;
+    } else {
+      var year_adjusted = this.points[i].year - 1;
+    }
 
     new_points[k] = {'start': false, 'skip': false, 'break': false,
       'year': year_adjusted, 'earlywood': true, 'latLng': latLng};
@@ -526,15 +569,24 @@ function MeasurementData (dataObject) {
 
     second_points.map(e => {
       if (e && !e.start && !e.break) {
-        e.year++;
-      }
+        if (forwardDirection) {
+          e.year++;
+        } else {
+          e.year--;
+        };
+      };
       new_points[k] = e;
       k++;
     });
 
     this.points = new_points;
     this.index = k;
-    this.year++;
+
+    if (forwardDirection) {
+      this.year++;
+    } else {
+      this.year--;
+    };
 
     return tempK;
   };
@@ -1492,10 +1544,10 @@ function CreatePoint(Lt) {
             popup.remove(Lt.viewer);
           }
         });
-        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual);
+        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
         this.startPoint = false;
       } else {
-        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual);
+        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
       }
 
       //call newLatLng with current index and new latlng
@@ -1554,7 +1606,11 @@ function CreateZeroGrowth(Lt) {
         Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
         Lt.data.index++;
       }
-      Lt.data.year++;
+      if (Lt.measurementOptions.forwardDirection) {
+        Lt.data.year++;
+      } else {
+        Lt.data.year--;
+      }
     } else {
       alert('First year cannot be missing!');
     }
@@ -1644,7 +1700,7 @@ function DeletePoint(Lt) {
   DeletePoint.prototype.action = function(i) {
     Lt.undo.push();
 
-    Lt.data.deletePoint(i, Lt.measurementOptions.subAnnual);
+    Lt.data.deletePoint(i, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
 
     Lt.visualAsset.reload();
   };
@@ -1760,7 +1816,7 @@ function InsertPoint(Lt) {
 
       Lt.undo.push();
 
-      var k = Lt.data.insertPoint(latLng, Lt.measurementOptions.subAnnual);
+      var k = Lt.data.insertPoint(latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
       if (k != null) {
         Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
         Lt.visualAsset.reload();
@@ -1825,7 +1881,7 @@ function InsertZeroGrowth(Lt) {
 
     Lt.undo.push();
 
-    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.measurementOptions.subAnnual);
+    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
     if (k !== null) {
       if (Lt.measurementOptions.subAnnual) Lt.visualAsset.newLatLng(Lt.data.points, k-1, latLng);
       Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
