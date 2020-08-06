@@ -25,7 +25,6 @@ function LTreering (viewer, basePath, options) {
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
-    'hasLatewood': options.hasLatewood,
   }
 
   this.preferences = {
@@ -173,10 +172,10 @@ function LTreering (viewer, basePath, options) {
    * @function loadData
    */
   LTreering.prototype.loadData = function() {
+    this.measurementOptions.preferencesInfo();
     this.visualAsset.reload();
     this.annotationAsset.reload();
-    this.measurementOptions.preferencesInfo();
-    if ( this.meta.savePermission ) {
+        if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
     }
@@ -229,12 +228,12 @@ function MeasurementData (dataObject) {
   * Add a new point into the measurement data
   * @function newPoint
   */
-  MeasurementData.prototype.newPoint = function(start, latLng, hasLatewood) {
+  MeasurementData.prototype.newPoint = function(start, latLng, subAnnual) {
     if (start) {
       this.points[this.index] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng};
     } else {
       this.points[this.index] = {'start': false, 'skip': false, 'break': false, 'year': this.year, 'earlywood': this.earlywood, 'latLng': latLng};
-      if (hasLatewood) {
+      if (subAnnual) {
         if (this.earlywood) {
           this.earlywood = false;
         } else {
@@ -252,7 +251,7 @@ function MeasurementData (dataObject) {
    * delete a point from the measurement data
    * @function deletePoint
    */
-  MeasurementData.prototype.deletePoint = function(i, hasLatewood) {
+  MeasurementData.prototype.deletePoint = function(i, subAnnual) {
     var second_points;
     var shift;
     if (this.points[i].start) {
@@ -301,7 +300,7 @@ function MeasurementData (dataObject) {
       second_points = this.points.slice().splice(i + 1, this.index - 1);
       second_points.map(e => {
         if (e && !e.start && !e.break) {
-          if (hasLatewood) {
+          if (subAnnual) {
             e.earlywood = !e.earlywood;
             if (!e.earlywood) {
               e.year--;
@@ -355,7 +354,7 @@ function MeasurementData (dataObject) {
    * insert a point in the middle of the measurement data
    * @function insertPoint
    */
-  MeasurementData.prototype.insertPoint = function(latLng, hasLatewood) {
+  MeasurementData.prototype.insertPoint = function(latLng, subAnnual) {
     var disList = [];
 
     /**
@@ -444,12 +443,12 @@ function MeasurementData (dataObject) {
     var earlywood_adjusted = true;
 
     if (this.points[i - 1]) {
-      if (this.points[i - 1].earlywood && hasLatewood) {
+      if (this.points[i - 1].earlywood && subAnnual) {
         year_adjusted = this.points[i - 1].year;
         earlywood_adjusted = false;
       } else if (this.points[i - 1].start) {
         year_adjusted = this.points[i + 1].year;
-          if (this.points[i - 2] && this.points[i - 2].earlywood && hasLatewood) {
+          if (this.points[i - 2] && this.points[i - 2].earlywood && subAnnual) {
             earlywood_adjusted = false;
           };
       } else {
@@ -476,7 +475,7 @@ function MeasurementData (dataObject) {
        return;
       }
       if (!e.start && !e.break) {
-        if (hasLatewood) {
+        if (subAnnual) {
           e.earlywood = !e.earlywood;
           if (e.earlywood) {
             e.year++;
@@ -491,10 +490,10 @@ function MeasurementData (dataObject) {
 
     this.points = new_points;
     this.index = k;
-    if (hasLatewood) {
+    if (subAnnual) {
       this.earlywood = !this.earlywood;
     };
-    if (!this.points[this.index - 1].earlywood || !hasLatewood) {
+    if (!this.points[this.index - 1].earlywood || !subAnnual) {
       this.year++;
     };
 
@@ -505,7 +504,7 @@ function MeasurementData (dataObject) {
    * insert a zero growth year in the middle of the measurement data
    * @function insertZeroGrowth
    */
-  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, hasLatewood) {
+  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, subAnnual) {
     var new_points = this.points;
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
@@ -517,7 +516,7 @@ function MeasurementData (dataObject) {
 
     k++;
 
-    if (hasLatewood) {
+    if (subAnnual) {
       new_points[k] = {'start': false, 'skip': false, 'break': false,
         'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
       k++;
@@ -736,7 +735,7 @@ function MouseLine (Lt) {
 
         //color for h-bar
         var color;
-        if (Lt.data.earlywood || !Lt.meta.hasLatewood) {
+        if (Lt.data.earlywood || !Lt.measurementOptions.subAnnual) {
           color = '#00BCD4';
         } else {
           color = '#00838f';
@@ -829,7 +828,7 @@ function VisualAsset (Lt) {
       marker = getMarker(leafLatLng, 'white_start', Lt.basePath, draggable, 'Start');
     } else if (pts[i].break) { //check if point is a break
       marker = getMarker(leafLatLng, 'white_break', Lt.basePath, draggable, 'Break');
-    } else if (Lt.meta.hasLatewood) { //check if point hasLatewood
+    } else if (Lt.measurementOptions.subAnnual) { //check if point subAnnual
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
             marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
@@ -903,7 +902,7 @@ function VisualAsset (Lt) {
         }
       }
       if (Lt.insertZeroGrowth.active) {
-        if ((pts[i].earlywood && Lt.meta.hasLatewood) || pts[i].start ||
+        if ((pts[i].earlywood && Lt.measurementOptions.subAnnual) || pts[i].start ||
             pts[i].break) {
           alert('Missing year can only be placed at the end of a year!');
         } else {
@@ -922,7 +921,7 @@ function VisualAsset (Lt) {
     if (pts[i - 1] != undefined && !pts[i].start) {
       var opacity = '.5';
       var weight = '3';
-      if (pts[i].earlywood || !Lt.meta.hasLatewood ||
+      if (pts[i].earlywood || !Lt.measurementOptions.subAnnual ||
           (!pts[i - 1].earlywood && pts[i].break)) {
         var color = '#17b0d4'; // original = #00BCD4 : actual = #5dbcd
       } else {
@@ -933,7 +932,7 @@ function VisualAsset (Lt) {
       if (pts[i].year % 10 == 0){
         var opacity = '.6';
         var weight = '5';
-        if (Lt.meta.hasLatewood && pts[i].earlywood) {
+        if (Lt.measurementOptions.subAnnual && pts[i].earlywood) {
           var color = '#e06f4c' // actual = #FC9272
         } else {
           var color = '#db2314' // actual = #EF3B2C
@@ -1493,10 +1492,10 @@ function CreatePoint(Lt) {
             popup.remove(Lt.viewer);
           }
         });
-        Lt.data.newPoint(this.startPoint, latLng, Lt.meta.hasLatewood);
+        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual);
         this.startPoint = false;
       } else {
-        Lt.data.newPoint(this.startPoint, latLng, Lt.meta.hasLatewood);
+        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual);
       }
 
       //call newLatLng with current index and new latlng
@@ -1549,7 +1548,7 @@ function CreateZeroGrowth(Lt) {
         'year': Lt.data.year, 'earlywood': true, 'latLng': latLng};
       Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
       Lt.data.index++;
-      if (Lt.meta.hasLatewood) {
+      if (Lt.measurementOptions.subAnnual) {
         Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
           'year': Lt.data.year, 'earlywood': false, 'latLng': latLng};
         Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
@@ -1645,7 +1644,7 @@ function DeletePoint(Lt) {
   DeletePoint.prototype.action = function(i) {
     Lt.undo.push();
 
-    Lt.data.deletePoint(i, Lt.meta.hasLatewood);
+    Lt.data.deletePoint(i, Lt.measurementOptions.subAnnual);
 
     Lt.visualAsset.reload();
   };
@@ -1761,7 +1760,7 @@ function InsertPoint(Lt) {
 
       Lt.undo.push();
 
-      var k = Lt.data.insertPoint(latLng, Lt.meta.hasLatewood);
+      var k = Lt.data.insertPoint(latLng, Lt.measurementOptions.subAnnual);
       if (k != null) {
         Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
         Lt.visualAsset.reload();
@@ -1826,9 +1825,9 @@ function InsertZeroGrowth(Lt) {
 
     Lt.undo.push();
 
-    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.meta.hasLatewood);
+    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.measurementOptions.subAnnual);
     if (k !== null) {
-      if (Lt.meta.hasLatewood) Lt.visualAsset.newLatLng(Lt.data.points, k-1, latLng);
+      if (Lt.measurementOptions.subAnnual) Lt.visualAsset.newLatLng(Lt.data.points, k-1, latLng);
       Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
       Lt.visualAsset.reload();
     }
@@ -2106,7 +2105,7 @@ function ViewData(Lt) {
       var break_length;
       var length_string;
 
-      if (Lt.meta.hasLatewood) {
+      if (Lt.measurementOptions.subAnnual) {
 
         var sum_string = '';
         var ew_string = '';
@@ -2401,7 +2400,7 @@ function ViewData(Lt) {
           if (length == 9.999) {
             length = 9.998;
           }
-          if (Lt.meta.hasLatewood) {
+          if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
             if (e.earlywood) {
@@ -2759,7 +2758,7 @@ function ImageAdjustment(Lt) {
 }
 
 /**
-* Change measurement options (set hasLatewood and direction)
+* Change measurement options (set subAnnual, previously hasLatewood, and direction)
 * @constructor
 * @param {Ltreeing} Lt - Leaflet treering object
 */
