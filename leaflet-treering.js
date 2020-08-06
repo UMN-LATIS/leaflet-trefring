@@ -2795,11 +2795,18 @@ function MeasurementOptions(Lt) {
     };
 
     this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false; // increment object
+    if (Lt.preferences.subAnnual == false) {
+      this.subAnnual = false;
+    }
   };
 
+  /**
+  * Creates dialog box with preferences
+  * @function displayDialog
+  */
 MeasurementOptions.prototype.displayDialog = function () {
   return L.control.dialog({
-     'size': [510, 405],
+     'size': [510, 430],
      'anchor': [50, 5],
      'initOpen': false
    }).setContent(
@@ -2813,7 +2820,7 @@ MeasurementOptions.prototype.displayDialog = function () {
       <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
        <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><h4 style="text-align:center">To modify preferences, delete all existing points</h4></div> \
+      <div><h4 style="text-align:center">To modify preferences, enter measurement mode and/or delete all existing points</h4></div> \
       <div><p style="text-align:center;font-size:16px">&#9831; &#9831; &#9831; <button type="button" id="confirm-button" class="preferences-button"> Save & close </button> &#9831; &#9831; &#9831;</p></div>').addTo(Lt.viewer);
   };
 
@@ -2840,30 +2847,25 @@ MeasurementOptions.prototype.displayDialog = function () {
   * @function prefBtnListener
   */
   MeasurementOptions.prototype.prefBtnListener = function () {
-    var forwardRadio = document.getElementById("forward_radio");
-    var backwardRadio = document.getElementById("backward_radio");
-    var annualRadio = document.getElementById("annual_radio");
-    var subAnnualRadio = document.getElementById("subannual_radio");
-
-    forwardRadio.addEventListener('change', (event) => {
+    document.getElementById("forward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = true;
       };
     });
 
-    backwardRadio.addEventListener('change', (event) => {
+    document.getElementById("backward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = false;
       };
     });
 
-    annualRadio.addEventListener('change', (event) => {
+    document.getElementById("annual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.subAnnual = false;
       };
     });
 
-    subAnnualRadio.addEventListener('change', (event) => {
+    document.getElementById("subannual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.subAnnual = true
       };
@@ -2880,18 +2882,23 @@ MeasurementOptions.prototype.displayDialog = function () {
     };
 
     this.selectedBtns();
-    if (Lt.data.points.length === 0 || !Lt.data.points[0]) {
-      document.getElementById("forward_radio").disabled = false;
-      document.getElementById("backward_radio").disabled = false;
-      document.getElementById("annual_radio").disabled = false;
-      document.getElementById("subannual_radio").disabled = false;
+
+    var forwardRadio = document.getElementById("forward_radio");
+    var backwardRadio = document.getElementById("backward_radio");
+    var annualRadio = document.getElementById("annual_radio");
+    var subAnnualRadio = document.getElementById("subannual_radio");
+    if ((Lt.data.points.length === 0 || !Lt.data.points[0]) && window.name.includes('popout')) {
+      forwardRadio.disabled = false;
+      backwardRadio.disabled = false;
+      annualRadio.disabled = false;
+      subAnnualRadio.disabled = false;
       this.prefBtnListener();
-    } else {
-      document.getElementById("forward_radio").disabled = true;
-      document.getElementById("backward_radio").disabled = true;
-      document.getElementById("annual_radio").disabled = true;
-      document.getElementById("subannual_radio").disabled = true;
-    }
+    } else { // lets users see preferences without being able to change them mid-measurement
+      forwardRadio.disabled = true;
+      backwardRadio.disabled = true;
+      annualRadio.disabled = true;
+      subAnnualRadio.disabled = true;
+    };
 
     this.dialog.lock();
     this.dialog.open();
@@ -2900,14 +2907,6 @@ MeasurementOptions.prototype.displayDialog = function () {
     $("#confirm-button").click(() => {
       this.choice = true;
       this.disable();
-    });
-
-    $(document).keypress(e => {
-      var key = e.which || e.keyCode;
-      if (key === 13) {
-        this.choice = true;
-        this.disable();
-      };
     });
   };
 
