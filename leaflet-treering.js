@@ -27,7 +27,7 @@ function LTreering (viewer, basePath, options) {
     'assetName': options.assetName || 'N/A',
   }
 
-  this.preferences = {
+  this.preferences = { // catch for if forwardDirection or subAnnual are undefined/null on line ~2830
     'forwardDirection': options.initialData.forwardDirection,
     'subAnnual': options.initialData.subAnnual
   }
@@ -261,18 +261,14 @@ function MeasurementData (dataObject) {
    */
   MeasurementData.prototype.deletePoint = function(i, subAnnual, forwardDirection) {
     var second_points;
-    var shift;
     if (this.points[i].start) {
       if (this.points[i - 1] != undefined && this.points[i - 1].break) {
         i--;
         second_points = this.points.slice().splice(i + 2, this.index - 1);
-        shift = this.points[i + 2].year - this.points[i - 1].year - 1;
         second_points.map(e => {
-          e.year -= shift;
           this.points[i] = e;
           i++;
         });
-        this.year -= shift;
         this.index -= 2;
         delete this.points[this.index];
         delete this.points[this.index + 1];
@@ -292,13 +288,10 @@ function MeasurementData (dataObject) {
       }
     } else if (this.points[i].break) {
       second_points = this.points.slice().splice(i + 2, this.index - 1);
-      shift = this.points[i + 2].year - this.points[i - 1].year - 1;
       second_points.map(e => {
-        e.year -= shift;
         this.points[i] = e;
         i++;
       });
-      this.year -= shift;
       this.index -= 2;
       delete this.points[this.index];
       delete this.points[this.index + 1];
