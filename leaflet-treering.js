@@ -32,7 +32,9 @@ function LTreering (viewer, basePath, options) {
     'subAnnual': options.initialData.subAnnual
   }
 
-  this.data = new MeasurementData(options.initialData);
+  this.measurementOptions = new MeasurementOptions(this);
+
+  this.data = new MeasurementData(options.initialData, this.measurementOptions);
   this.aData = new AnnotationData(options.initialData.annotations);
   if (options.initialData.ppm) {
     this.meta.ppm = options.initialData.ppm;
@@ -55,8 +57,6 @@ function LTreering (viewer, basePath, options) {
   this.redo = new Redo(this);
 
   this.viewData = new ViewData(this);
-
-  this.measurementOptions = new MeasurementOptions(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
   this.calibration = new Calibration(this);
@@ -216,7 +216,7 @@ function LTreering (viewer, basePath, options) {
  * @constructor
  * @param {object} dataObject -
  */
-function MeasurementData (dataObject) {
+function MeasurementData (dataObject, measurementOptions) {
   this.saveDate = dataObject.saveDate || dataObject.SaveDate || {};
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
@@ -224,30 +224,44 @@ function MeasurementData (dataObject) {
   this.points = dataObject.points || [];
   this.annotations = dataObject.annotations || {};
 
+  function directionCheck () {
+    const forwardInTime = 'forward';
+    const backwardInTime = 'backward';
+    if (measurementOptions.forwardDirection) { // check if years counting up
+      return forwardInTime;
+    } else { // otherwise years counting down
+      return backwardInTime;
+    };
+  }
+
  /**
   * Add a new point into the measurement data
   * @function newPoint
   */
-  MeasurementData.prototype.newPoint = function(start, latLng, subAnnual, forwardDirection) {
+  MeasurementData.prototype.newPoint = function(start, latLng) {
+    const forwardInTime = 'forward';
+    const backwardInTime = 'backward';
+    let direction = directionCheck();
+
     if (start) {
       this.points[this.index] = {'start': true, 'skip': false, 'break': false, 'latLng': latLng};
     } else {
       this.points[this.index] = {'start': false, 'skip': false, 'break': false, 'year': this.year, 'earlywood': this.earlywood, 'latLng': latLng};
-      if (subAnnual) { // check if points alternate ew & lw
+      if (measurementOptions.subAnnual) { // check if points alternate ew & lw
         if (this.earlywood) {
           this.earlywood = false;
         } else {
           this.earlywood = true;
-          if (forwardDirection) {
+          if (direction == forwardInTime) {
             this.year++;
-          } else {
+          } else if (direction == backwardInTime) {
             this.year--;
           };
         }
       } else {
-        if (forwardDirection) {
+        if (direction == forwardInTime) {
           this.year++;
-        } else {
+        } else if (direction == backwardInTime) {
           this.year--;
         };
       };
@@ -259,7 +273,11 @@ function MeasurementData (dataObject) {
    * delete a point from the measurement data
    * @function deletePoint
    */
-  MeasurementData.prototype.deletePoint = function(i, subAnnual, forwardDirection) {
+  MeasurementData.prototype.deletePoint = function(i) {
+    const forwardInTime = 'forward';
+    const backwardInTime = 'backward';
+    let direction = directionCheck();
+
     var second_points;
     if (this.points[i].start) {
       if (this.points[i - 1] != undefined && this.points[i - 1].break) {
@@ -301,19 +319,19 @@ function MeasurementData (dataObject) {
       second_points = this.points.slice().splice(i + 1, this.index - 1);
       second_points.map(e => {
         if (e && !e.start && !e.break) {
-          if (subAnnual) {
+          if (measurementOptions.subAnnual) {
             e.earlywood = !e.earlywood;
             if (!e.earlywood) {
-              if (forwardDirection) {
+              if (direction == forwardInTime) {
                 e.year--;
-              } else {
+              } else if (direction == backwardInTime) {
                 e.year++;
               };
             };
           } else {
-            if (forwardDirection) {
+            if (direction == forwardInTime) {
               e.year--;
-            } else {
+            } else if (direction == backwardInTime) {
               e.year++;
             };
           }
@@ -363,7 +381,10 @@ function MeasurementData (dataObject) {
    * insert a point in the middle of the measurement data
    * @function insertPoint
    */
-  MeasurementData.prototype.insertPoint = function(latLng, subAnnual, forwardDirection) {
+  MeasurementData.prototype.insertPoint = function(latLng) {
+    const forwardInTime = 'forward';
+    const backwardInTime = 'backward';
+    let direction = directionCheck();
     var disList = [];
 
     /**
@@ -452,28 +473,28 @@ function MeasurementData (dataObject) {
     var earlywood_adjusted = true;
 
     if (this.points[i - 1]) {
-      if (this.points[i - 1].earlywood && subAnnual) { // case 1: subAnnual enabled & previous point ew
+      if (this.points[i - 1].earlywood && measurementOptions.subAnnual) { // case 1: subAnnual enabled & previous point ew
         earlywood_adjusted = false;
-        if (forwardDirection) {
+        if (direction == forwardInTime) {
           year_adjusted = this.points[i - 1].year;
-        } else {
+        } else if (direction == backwardInTime) {
           year_adjusted = this.points[i].year;
         };
 
       } else if (this.points[i - 1].start) { // case 2: previous point is start
-        if (forwardDirection) {
+        if (direction == forwardInTime) {
           year_adjusted = this.points[i + 1].year;
-        } else {
+        } else if (direction == backwardInTime) {
           year_adjusted = this.points[i].year;
         };
-        if (this.points[i - 2] && this.points[i - 2].earlywood && subAnnual) {
+        if (this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) {
           earlywood_adjusted = false;
         };
 
       } else { // case 3: subAnnual disabled or previous point lw
-        if (forwardDirection) {
+        if (direction == forwardInTime) {
           year_adjusted = this.points[i - 1].year + 1;
-        } else {
+        } else if (direction == backwardInTime) {
           year_adjusted = this.points[i].year;
         };
       };
@@ -498,20 +519,20 @@ function MeasurementData (dataObject) {
        return;
       }
       if (!e.start && !e.break) {
-        if (subAnnual) { // case 1: subAnnual enabled
+        if (measurementOptions.subAnnual) { // case 1: subAnnual enabled
           e.earlywood = !e.earlywood;
           if (e.earlywood) {
-            if (forwardDirection) {
+            if (direction == forwardInTime) {
               e.year++;
-            } else {
+            } else if (direction == backwardInTime) {
               e.year--;
             };
           };
 
         } else { // case 2: subAnnual disabled
-          if (forwardDirection) {
+          if (direction == forwardInTime) {
             e.year++;
-          } else {
+          } else if (direction == backwardInTime) {
             e.year--;
           };
         };
@@ -522,10 +543,10 @@ function MeasurementData (dataObject) {
 
     this.points = new_points;
     this.index = k;
-    if (subAnnual) {
+    if (measurementOptions.subAnnual) {
       this.earlywood = !this.earlywood;
     };
-    if (!this.points[this.index - 1].earlywood || !subAnnual) {
+    if (!this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) {
       this.year++;
     };
 
@@ -536,14 +557,17 @@ function MeasurementData (dataObject) {
    * insert a zero growth year in the middle of the measurement data
    * @function insertZeroGrowth
    */
-  MeasurementData.prototype.insertZeroGrowth = function(i, latLng, subAnnual, forwardDirection) {
+  MeasurementData.prototype.insertZeroGrowth = function(i, latLng) {
+    const forwardInTime = 'forward';
+    const backwardInTime = 'backward';
+    let direction = directionCheck();
     var new_points = this.points;
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
 
-    if (forwardDirection) {
+    if (direction == forwardInTime) {
       var year_adjusted = this.points[i].year + 1;
-    } else {
+    } else if (direction == backwardInTime) {
       var year_adjusted = this.points[i].year - 1;
     }
 
@@ -552,7 +576,7 @@ function MeasurementData (dataObject) {
 
     k++;
 
-    if (subAnnual) {
+    if (measurementOptions.subAnnual) {
       new_points[k] = {'start': false, 'skip': false, 'break': false,
         'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
       k++;
@@ -562,9 +586,9 @@ function MeasurementData (dataObject) {
 
     second_points.map(e => {
       if (e && !e.start && !e.break) {
-        if (forwardDirection) {
+        if (direction == forwardInTime) {
           e.year++;
-        } else {
+        } else if (direction == backwardInTime) {
           e.year--;
         };
       };
@@ -575,9 +599,9 @@ function MeasurementData (dataObject) {
     this.points = new_points;
     this.index = k;
 
-    if (forwardDirection) {
+    if (direction == forwardInTime) {
       this.year++;
-    } else {
+    } else if (direction == backwardInTime) {
       this.year--;
     };
 
@@ -1497,7 +1521,7 @@ function CreatePoint(Lt) {
   CreatePoint.prototype.enable = function() {
     this.btn.state('active');
 
-    if (Lt.data.points.length == 0 && Lt.measurementOptions.choice == false) {
+    if (Lt.data.points.length == 0 && Lt.measurementOptions.userSelectedPref == false) {
       this.disable();
       Lt.measurementOptions.enable();
       return;
@@ -1537,10 +1561,10 @@ function CreatePoint(Lt) {
             popup.remove(Lt.viewer);
           }
         });
-        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
+        Lt.data.newPoint(this.startPoint, latLng);
         this.startPoint = false;
       } else {
-        Lt.data.newPoint(this.startPoint, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
+        Lt.data.newPoint(this.startPoint, latLng);
       }
 
       //call newLatLng with current index and new latlng
@@ -1693,7 +1717,7 @@ function DeletePoint(Lt) {
   DeletePoint.prototype.action = function(i) {
     Lt.undo.push();
 
-    Lt.data.deletePoint(i, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
+    Lt.data.deletePoint(i);
 
     Lt.visualAsset.reload();
   };
@@ -1809,7 +1833,7 @@ function InsertPoint(Lt) {
 
       Lt.undo.push();
 
-      var k = Lt.data.insertPoint(latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
+      var k = Lt.data.insertPoint(latLng);
       if (k != null) {
         Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
         Lt.visualAsset.reload();
@@ -1874,7 +1898,7 @@ function InsertZeroGrowth(Lt) {
 
     Lt.undo.push();
 
-    var k = Lt.data.insertZeroGrowth(i, latLng, Lt.measurementOptions.subAnnual, Lt.measurementOptions.forwardDirection);
+    var k = Lt.data.insertZeroGrowth(i, latLng);
     if (k !== null) {
       if (Lt.measurementOptions.subAnnual) Lt.visualAsset.newLatLng(Lt.data.points, k-1, latLng);
       Lt.visualAsset.newLatLng(Lt.data.points, k, latLng);
@@ -2812,7 +2836,7 @@ function ImageAdjustment(Lt) {
 * @param {Ltreeing} Lt - Leaflet treering object
 */
 function MeasurementOptions(Lt) {
-  this.choice = false;
+  this.userSelectedPref = false;
   this.btn = new Button(
     'timeline',
     'Change measurement direction and annual/sub-annual mode',
@@ -2831,21 +2855,19 @@ function MeasurementOptions(Lt) {
       this.forwardDirection = true;
     }
 
-    let ewFalse = [];
-    for (i = 0; i <= Lt.data.points.length; i++) { // for assets which use hasLatewood
-       if (Lt.data.points[i] && Lt.data.points[i].earlywood == false) {
-         ewFalse.push(i);
-       }};
+    var pts = Lt.data.points;
+    let ewFalse = pts.filter(pt => pts && pts.earlywood == false);
     if (ewFalse.length > 0) {
       this.hasLatewood = true;
     } else {
       this.hasLatewood = false;
     };
 
-    this.subAnnual = Lt.preferences.subAnnual || this.hasLatewood || false; // increment object
-    if (Lt.preferences.subAnnual == false) {
-      this.subAnnual = false;
-    }
+    if (!Lt.preferences.subAnnual) {
+      this.subAnnual = this.hasLatewood;
+    } else {
+      this.subAnnual = Lt.preferences.subAnnual;
+    };
   };
 
   /**
@@ -2858,7 +2880,7 @@ MeasurementOptions.prototype.displayDialog = function () {
      'anchor': [50, 5],
      'initOpen': false
    }).setContent(
-     '<div><h4 style="text-align:center">Please select this assets time-series preferences</h4></div> \
+     '<div><h4 style="text-align:center">Please select this asset\'s time-series preferences</h4></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
       <div><h5>Measurement Options:</div> \
       <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g. 1900 &rArr; 1901)</input> \
@@ -2953,7 +2975,7 @@ MeasurementOptions.prototype.displayDialog = function () {
     this.btn.state('active');
 
     $("#confirm-button").click(() => {
-      this.choice = true;
+      this.userSelectedPref = true;
       this.disable();
     });
   };
@@ -3163,7 +3185,7 @@ function LoadLocal(Lt) {
         'subAnnual': newDataJSON.subAnnual,
       };
 
-      Lt.data = new MeasurementData(newDataJSON);
+      Lt.data = new MeasurementData(newDataJSON, Lt);
       Lt.aData = new AnnotationData(newDataJSON.annotations);
 
       // if the JSON has PPM data, use that instead of loaded data.
