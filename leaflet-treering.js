@@ -34,7 +34,7 @@ function LTreering (viewer, basePath, options) {
 
   this.measurementOptions = new MeasurementOptions(this);
 
-  this.data = new MeasurementData(options.initialData, this.measurementOptions);
+  this.data = new MeasurementData(options.initialData, this);
   this.aData = new AnnotationData(options.initialData.annotations);
   if (options.initialData.ppm) {
     this.meta.ppm = options.initialData.ppm;
@@ -214,9 +214,11 @@ function LTreering (viewer, basePath, options) {
 /**
  * A measurement data object
  * @constructor
- * @param {object} dataObject -
+ * @param {object} dataObject
+ * @param {object} LTreeRing - Lt
  */
-function MeasurementData (dataObject, measurementOptions) {
+function MeasurementData (dataObject, Lt) {
+  var measurementOptions = Lt.measurementOptions
   this.saveDate = dataObject.saveDate || dataObject.SaveDate || {};
   this.index = dataObject.index || 0;
   this.year = dataObject.year || 0;
@@ -224,13 +226,14 @@ function MeasurementData (dataObject, measurementOptions) {
   this.points = dataObject.points || [];
   this.annotations = dataObject.annotations || {};
 
+  const forwardInTime = 'forward';
+  const backwardInTime = 'backward';
+
   function directionCheck () {
-    const forwardInTime = 'forward';
-    const backwardInTime = 'backward';
     if (measurementOptions.forwardDirection) { // check if years counting up
-      return forwardInTime;
+      return 'forward';
     } else { // otherwise years counting down
-      return backwardInTime;
+      return 'backward';
     };
   }
 
@@ -239,8 +242,6 @@ function MeasurementData (dataObject, measurementOptions) {
   * @function newPoint
   */
   MeasurementData.prototype.newPoint = function(start, latLng) {
-    const forwardInTime = 'forward';
-    const backwardInTime = 'backward';
     let direction = directionCheck();
 
     if (start) {
@@ -274,8 +275,6 @@ function MeasurementData (dataObject, measurementOptions) {
    * @function deletePoint
    */
   MeasurementData.prototype.deletePoint = function(i) {
-    const forwardInTime = 'forward';
-    const backwardInTime = 'backward';
     let direction = directionCheck();
 
     var second_points;
@@ -382,8 +381,6 @@ function MeasurementData (dataObject, measurementOptions) {
    * @function insertPoint
    */
   MeasurementData.prototype.insertPoint = function(latLng) {
-    const forwardInTime = 'forward';
-    const backwardInTime = 'backward';
     let direction = directionCheck();
     var disList = [];
 
@@ -558,8 +555,6 @@ function MeasurementData (dataObject, measurementOptions) {
    * @function insertZeroGrowth
    */
   MeasurementData.prototype.insertZeroGrowth = function(i, latLng) {
-    const forwardInTime = 'forward';
-    const backwardInTime = 'backward';
     let direction = directionCheck();
     var new_points = this.points;
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
@@ -868,7 +863,7 @@ function VisualAsset (Lt) {
 
     //plot the data back onto the map
     if (Lt.data.points !== undefined) {
-      Object.values(Lt.data.points).map((e, i) => {
+      Lt.data.points.map((e, i) => {
         if (e != undefined) {
           this.newLatLng(Lt.data.points, i, e.latLng);
         }
@@ -1452,7 +1447,7 @@ function Dating(Lt) {
 
             var shift = new_year - Lt.data.points[i].year;
 
-            Object.values(Lt.data.points).map((e, i) => {
+            Lt.data.points.map((e, i) => {
               if (Lt.data.points[i] && Lt.data.points[i].year != undefined) {
                 Lt.data.points[i].year += shift;
               }
@@ -1954,7 +1949,7 @@ function InsertBreak(Lt) {
    */
   InsertBreak.prototype.action = function(i) {
     var new_points = Lt.data.points;
-    var second_points = Object.values(Lt.data.points).splice(i + 1, Lt.data.index - 1);
+    var second_points = Lt.data.points.slice().splice(i + 1, Lt.data.index - 1);
     var first_point = true;
     var second_point = false;
     var k = i + 1;
@@ -2063,7 +2058,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [350, 400], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [360, 400], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
 
@@ -2185,7 +2180,7 @@ function ViewData(Lt) {
         var lw_string = '';
 
         y = Lt.data.points[1].year;
-        var sum_points = Object.values(Lt.data.points).filter(e => {
+        var sum_points = Lt.data.points.filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -2265,7 +2260,7 @@ function ViewData(Lt) {
         }
 
         break_point = false;
-        Object.values(Lt.data.points).map((e, i, a) => {
+        Lt.data.points.map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
@@ -2352,7 +2347,7 @@ function ViewData(Lt) {
       } else {
 
         var y = Lt.data.points[1].year;
-        sum_points = Object.values(Lt.data.points);
+        sum_points = Lt.data.points;
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
@@ -2431,18 +2426,16 @@ function ViewData(Lt) {
    */
   ViewData.prototype.enable = function() {
     this.btn.state('active');
-    var string;
+    var stringSetup; // buttons & table headers
+    var stringContent = ''; // years and lengths
     if (Lt.data.points[0] != undefined) {
       var y = Lt.data.points[1].year;
-      string = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>download</button><button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>delete all</button></div><table><tr>' +
-          '<th style="width: 45%;">Year</th>' +
-          '<th style="width: 70%;">Length</th></tr>';
+      stringSetup = '<div><button id="download-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact">download</button><button id="refresh-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact">refresh</button><button id="delete-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact">delete all</button></div>' +
+          '<table><tr><th style="width: 45%;">Year</th>' +
+                     '<th style="width: 70%;">Length</th></tr>';
 
       var break_point = false;
       var last_latLng;
@@ -2450,7 +2443,7 @@ function ViewData(Lt) {
       var break_point;
       var length;
       Lt.data.clean();
-      Object.values(Lt.data.points).map((e, i, a) => {
+      Lt.data.points.map((e, i, a) => {
 
         if (e.start) {
           last_latLng = e.latLng;
@@ -2460,7 +2453,7 @@ function ViewData(Lt) {
           break_point = true;
         } else {
           while (e.year > y) {
-            string = string.concat('<tr><td>' + y +
+            stringContent = stringContent.concat('<tr><td>' + y +
                 '-</td><td>N/A</td></tr>');
             y++;
           }
@@ -2483,23 +2476,28 @@ function ViewData(Lt) {
               wood = 'L';
               row_color = '#00838f';
               y++;
-            }
-            string =
-                string.concat('<tr style="color:' + row_color + ';">');
-            string = string.concat('<td>' + e.year + wood + '</td><td>'+
-                length + ' mm</td></tr>');
+            };
+            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+              stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
+              stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
+            } else { // otherwise years counting down
+              stringContent = '<tr style="color:' + row_color + ';">' + '<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>' + stringContent
+            };
           } else {
             y++;
-            string = string.concat('<tr style="color: #00d2e6;">');
-            string = string.concat('<td>' + e.year + '</td><td>' +
-                length + ' mm</td></tr>');
+            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+              stringContent = stringContent.concat('<tr style="color: #00d2e6;">');
+              stringContent = stringContent.concat('<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
+            } else { // otherwise years counting down
+              stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
+            };
           }
           last_latLng = e.latLng;
         }
       });
-      this.dialog.setContent(string + '</table>');
+      this.dialog.setContent(stringSetup + stringContent + '</table>');
     } else {
-      string = '<div><button id="download-button"' +
+      stringSetup = '<div><button id="download-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           'disabled>download</button>' +
           '<button id="refresh-button"' +
@@ -2508,7 +2506,7 @@ function ViewData(Lt) {
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>delete all</button></div>' +
           '<h3>There are no data points to measure</h3>';
-      this.dialog.setContent(string);
+      this.dialog.setContent(stringSetup);
     }
     this.dialog.lock();
     this.dialog.open();
@@ -2856,7 +2854,7 @@ function MeasurementOptions(Lt) {
     }
 
     var pts = Lt.data.points;
-    let ewFalse = pts.filter(pt => pts && pts.earlywood == false);
+    let ewFalse = pts.filter(pt => pt && pt.earlywood == false);
     if (ewFalse.length > 0) {
       this.hasLatewood = true;
     } else {
@@ -2876,22 +2874,22 @@ function MeasurementOptions(Lt) {
   */
 MeasurementOptions.prototype.displayDialog = function () {
   return L.control.dialog({
-     'size': [510, 430],
+     'size': [510, 420],
      'anchor': [50, 5],
      'initOpen': false
    }).setContent(
-     '<div><h4 style="text-align:center">Please select this asset\'s time-series preferences</h4></div> \
+     '<div><h4 style="text-align:left">Select Preferences for Time-Series Measurement:</h4></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><h5>Measurement Options:</div> \
-      <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g. 1900 &rArr; 1901)</input> \
-       <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g. 2020 &rArr; 2019)</input></div> \
+      <div><h4>Measurement Direction:</h4></div> \
+      <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g., 1257 &rArr; 1258 &rArr; 1259 ... 2020)</input> \
+       <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g., 2020 &rArr; 2019 &rArr; 2018 ... 1257)</input></div> \
      <br> \
-      <div><h5>Annual/Sub-annual Options:</div> \
-      <div><input type="radio" name="increment" id="annual_radio"> Measure one increment per year (e.g. total ring width)</input> \
-       <br><input type="radio" name="increment" id="subannual_radio"> Measure two increments per year (e.g. earlywood & latewood ring width)</input></div> \
+      <div><h4>Measurement Interval:</h4></div> \
+      <div><input type="radio" name="increment" id="annual_radio"> One increment per year (e.g., total-ring width)</input> \
+       <br><input type="radio" name="increment" id="subannual_radio"> Two increments per year (e.g., earlywood- & latewood-ring width)</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><h4 style="text-align:center">To modify preferences, enter measurement mode and/or delete all existing points</h4></div> \
-      <div><p style="text-align:center;font-size:16px">&#9831; &#9831; &#9831; <button type="button" id="confirm-button" class="preferences-button"> Save & close </button> &#9831; &#9831; &#9831;</p></div>').addTo(Lt.viewer);
+      <div><p style="text-align:right;font-size:20px">&#9831; &#9831; &#9831;  &#9831; &#9831; &#9831; &#9831; &#9831; &#9831; &#9831;<button type="button" id="confirm-button" class="preferences-button"> Save & close </button></p></div> \
+      <div><p style="text-align:left;font-size:12px">Please note: Once measurements are initiated, these preferences are set. To modify, delete all existing points for this asset and initiate a new set of measurements.</p></div>').addTo(Lt.viewer);
   };
 
   /**
@@ -2920,12 +2918,14 @@ MeasurementOptions.prototype.displayDialog = function () {
     document.getElementById("forward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = true;
+        Lt.data.earlywood = true;
       };
     });
 
     document.getElementById("backward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = false;
+        Lt.data.earlywood = false;
       };
     });
 
