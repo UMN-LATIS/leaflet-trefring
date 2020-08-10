@@ -863,7 +863,7 @@ function VisualAsset (Lt) {
 
     //plot the data back onto the map
     if (Lt.data.points !== undefined) {
-      Lt.data.points.map((e, i) => {
+      Object.values(Lt.data.points).map((e, i) => {
         if (e != undefined) {
           this.newLatLng(Lt.data.points, i, e.latLng);
         }
@@ -895,15 +895,32 @@ function VisualAsset (Lt) {
     } else if (Lt.measurementOptions.subAnnual) { //check if point subAnnual
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
-            marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            // which marker asset is used depends on measurement direction
+            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+              marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            } else { // otherwise years counting down & marker assets need to be flipped
+              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+            };
           } else {
-            marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            if (Lt.measurementOptions.forwardDirection) {
+              marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+            } else {
+              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+            }
           }
         } else { //otherwise it's latewood
             if (pts[i].year % 10 == 0) {
-              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+                marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              } else { // otherwise years counting down
+                marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+              };
             } else {
-              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              if (Lt.measurementOptions.forwardDirection) {
+                marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              } else {
+                marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+              }
             }
         }
     } else {
@@ -992,16 +1009,23 @@ function VisualAsset (Lt) {
         var color = '#026d75'; // original = #00838f : actual = #14848c
       };
 
+      var comparisonPt = null;
+      if (Lt.measurementOptions.forwardDirection) { // years counting up
+        comparisonPt = pts[i].year
+      } else { // years counting down
+        comparisonPt = pts[i - 1].year;
+      };
+
       //mark decades with red line
-      if (pts[i].year % 10 == 0){
+      if (comparisonPt % 10 == 0) {
         var opacity = '.6';
         var weight = '5';
         if (Lt.measurementOptions.subAnnual && pts[i].earlywood) {
-          var color = '#e06f4c' // actual = #FC9272
+          var color = '#e06f4c' // actual pale_red = #FC9272
         } else {
-          var color = '#db2314' // actual = #EF3B2C
-        }
-      }
+          var color = '#db2314' // actual light_red = #EF3B2C
+        };
+      };
 
       this.lines[i] =
           L.polyline([pts[i - 1].latLng, leafLatLng],
@@ -1447,7 +1471,7 @@ function Dating(Lt) {
 
             var shift = new_year - Lt.data.points[i].year;
 
-            Lt.data.points.map((e, i) => {
+            Object.values(Lt.data.points).map((e, i) => {
               if (Lt.data.points[i] && Lt.data.points[i].year != undefined) {
                 Lt.data.points[i].year += shift;
               }
@@ -1949,7 +1973,7 @@ function InsertBreak(Lt) {
    */
   InsertBreak.prototype.action = function(i) {
     var new_points = Lt.data.points;
-    var second_points = Lt.data.points.slice().splice(i + 1, Lt.data.index - 1);
+    var second_points = Object.values(Lt.data.points).splice(i + 1, Lt.data.index - 1);
     var first_point = true;
     var second_point = false;
     var k = i + 1;
@@ -2180,7 +2204,7 @@ function ViewData(Lt) {
         var lw_string = '';
 
         y = Lt.data.points[1].year;
-        var sum_points = Lt.data.points.filter(e => {
+        var sum_points = Object.values(Lt.data.points).filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -2260,7 +2284,7 @@ function ViewData(Lt) {
         }
 
         break_point = false;
-        Lt.data.points.map((e, i, a) => {
+        Object.values(Lt.data.points).map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
@@ -2347,7 +2371,7 @@ function ViewData(Lt) {
       } else {
 
         var y = Lt.data.points[1].year;
-        sum_points = Lt.data.points;
+        sum_points = Object.values(Lt.data.points);
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
@@ -2443,7 +2467,7 @@ function ViewData(Lt) {
       var break_point;
       var length;
       Lt.data.clean();
-      Lt.data.points.map((e, i, a) => {
+      Object.values(Lt.data.points).map((e, i, a) => {
 
         if (e.start) {
           last_latLng = e.latLng;
@@ -3045,7 +3069,7 @@ function SaveCloud(Lt) {
   this.date = new Date(),
 
   /**
-   * Update the save date
+   * Update the save date & meta data
    * @function updateDate
    */
   SaveCloud.prototype.updateDate = function() {
@@ -3064,6 +3088,17 @@ function SaveCloud(Lt) {
    * @function displayDate
    */
   SaveCloud.prototype.displayDate = function() {
+    if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
+      var increment = 'sub-annual increments &nbsp;|&nbsp; ';
+    } else { // otherwise 1 increment per year
+      var increment  = 'annual increments &nbsp;|&nbsp; ';
+    };
+    if (Lt.measurementOptions.forwardDirection) { // if years counting up
+      var direction = 'Measuring forward, ';
+    } else { // otherwise years counting down
+      var direction = 'Measuring backward, '
+    };
+
     var date = Lt.data.saveDate;
     console.log(date);
     if (date.day != undefined && date.hour != undefined) {
@@ -3079,17 +3114,15 @@ function SaveCloud(Lt) {
       if (date.minute < 10) {
         minute_string = '0' + date.minute;
       }
+
       document.getElementById('leaflet-save-time-tag').innerHTML =
-          'Saved to cloud at ' + date.hour + ':' + minute_string +
-          am_pm + ' on ' + date.month + '/' + date.day + '/' +
-          date.year;
+          direction + increment + 'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day + ' ' + date.hour + ':' + minute_string + am_pm;
     } else if (date.day != undefined) {
       document.getElementById('leaflet-save-time-tag').innerHTML =
-          'Saved to cloud on ' + date.month + '/' + date.day + '/' +
-          date.year;
+          direction + increment +  'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
     } else {
       document.getElementById('leaflet-save-time-tag').innerHTML =
-          'No data saved to cloud';
+          direction + increment + 'No data saved to cloud';
     }
     Lt.data.saveDate;
   };
