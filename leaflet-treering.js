@@ -481,10 +481,7 @@ function MeasurementData (dataObject, Lt) {
 
       } else if (this.points[i - 1].start || this.points[i].start) { // case 2: previous point is start
           year_adjusted = this.points[i].year;
-          if (direction == backwardInTime) {
-            earlywood_adjusted = false;
-          };
-          if (this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) {
+          if ((this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) || direction == backwardInTime) {
             earlywood_adjusted = false;
           };
 
