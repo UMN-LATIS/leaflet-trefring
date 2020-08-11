@@ -231,10 +231,12 @@ function MeasurementData (dataObject, Lt) {
   const backwardInTime = 'backward';
 
   function directionCheck () {
+    const forwardString = 'forward';
+    const backwardString = 'backward';
     if (measurementOptions.forwardDirection) { // check if years counting up
-      return 'forward';
+      return forwardString;
     } else { // otherwise years counting down
-      return 'backward';
+      return backwardString;
     };
   }
 
@@ -479,7 +481,7 @@ function MeasurementData (dataObject, Lt) {
           year_adjusted = this.points[i].year;
         };
 
-      } else if (this.points[i - 1].start || this.points[i].start) { // case 2: previous point is start
+      } else if (this.points[i - 1].start || this.points[i].start) { // case 2: previous or closest point is start
           year_adjusted = this.points[i].year;
           if ((this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) || direction == backwardInTime) {
             earlywood_adjusted = false;
