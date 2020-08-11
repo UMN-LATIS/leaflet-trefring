@@ -1635,13 +1635,21 @@ function CreateZeroGrowth(Lt) {
 
       Lt.undo.push();
 
+      if (Lt.data.points[Lt.data.index - 1].earlywood && Lt.measurementOptions.subAnnual) {
+        var firstEWCheck = false;
+        var secondEWCheck = true;
+      } else if (!Lt.data.points[Lt.data.index - 1].earlywood || !Lt.measurementOptions.subAnnual) {
+        var firstEWCheck = true;
+        var secondEWCheck = false;
+      };
+
       Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
-        'year': Lt.data.year, 'earlywood': true, 'latLng': latLng};
+        'year': Lt.data.year, 'earlywood': firstEWCheck, 'latLng': latLng};
       Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
       Lt.data.index++;
       if (Lt.measurementOptions.subAnnual) {
         Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
-          'year': Lt.data.year, 'earlywood': false, 'latLng': latLng};
+          'year': Lt.data.year, 'earlywood': secondEWCheck, 'latLng': latLng};
         Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
         Lt.data.index++;
       }
