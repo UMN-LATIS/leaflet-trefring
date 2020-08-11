@@ -1638,7 +1638,7 @@ function CreateZeroGrowth(Lt) {
       if (Lt.data.points[Lt.data.index - 1].earlywood && Lt.measurementOptions.subAnnual) {
         var firstEWCheck = false;
         var secondEWCheck = true;
-      } else if (!Lt.data.points[Lt.data.index - 1].earlywood || !Lt.measurementOptions.subAnnual) {
+      } else {
         var firstEWCheck = true;
         var secondEWCheck = false;
       };
