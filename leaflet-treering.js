@@ -89,7 +89,8 @@ function LTreering (viewer, basePath, options) {
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
-  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn, this.insertBreak.btn], 'edit', 'Edit measurements');
+  // add this.insertBreak.btn below once fixed
+  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
@@ -478,15 +479,14 @@ function MeasurementData (dataObject, Lt) {
           year_adjusted = this.points[i].year;
         };
 
-      } else if (this.points[i - 1].start) { // case 2: previous point is start
-        if (direction == forwardInTime) {
-          year_adjusted = this.points[i + 1].year;
-        } else if (direction == backwardInTime) {
+      } else if (this.points[i - 1].start || this.points[i].start) { // case 2: previous point is start
           year_adjusted = this.points[i].year;
-        };
-        if (this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) {
-          earlywood_adjusted = false;
-        };
+          if (direction == backwardInTime) {
+            earlywood_adjusted = false;
+          };
+          if (this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) {
+            earlywood_adjusted = false;
+          };
 
       } else { // case 3: subAnnual disabled or previous point lw
         if (direction == forwardInTime) {
@@ -985,7 +985,11 @@ function VisualAsset (Lt) {
       if (Lt.insertZeroGrowth.active) {
         if ((pts[i].earlywood && Lt.measurementOptions.subAnnual) || pts[i].start ||
             pts[i].break) {
-          alert('Missing year can only be placed at the end of a year!');
+              if (Lt.measurementOptions.forwardDirection) {
+                alert('Missing year can only be placed at the end of a year!');
+              } else { // if years counting down, points are flipped
+                alert('Missing year can only be placed at the beginning of a year!');
+              }
         } else {
           Lt.insertZeroGrowth.action(i);
         }
@@ -2553,9 +2557,13 @@ function ViewData(Lt) {
       $('#confirm-delete').click(() => {
         Lt.undo.push();
 
-        Lt.data.points = {};
+        Lt.data.points = [];
         Lt.data.year = 0;
-        Lt.data.earlywood = true;
+        if (Lt.measurementOptions.forwardDirection || Lt.measurementOptions.subAnnual == false) { // if years counting up or annual increments, need ew first
+          Lt.data.earlywood = true;
+        } else if (Lt.measurementOptions.forwardDirection == false){ // if year counting down, need lw first
+          Lt.data.earlywood = false;
+        };
         Lt.data.index = 0;
 
         Lt.visualAsset.reload();
@@ -2885,7 +2893,7 @@ function MeasurementOptions(Lt) {
       this.hasLatewood = false;
     };
 
-    if (!Lt.preferences.subAnnual) {
+    if (Lt.preferences.subAnnual == undefined) {
       this.subAnnual = this.hasLatewood;
     } else {
       this.subAnnual = Lt.preferences.subAnnual;
@@ -2999,7 +3007,10 @@ MeasurementOptions.prototype.displayDialog = function () {
     this.btn.state('active');
 
     $("#confirm-button").click(() => {
-      this.userSelectedPref = true;
+      if (this.userSelectedPref == false) {
+        this.userSelectedPref = true;
+        Lt.createPoint.enable();
+      };
       this.disable();
     });
   };
