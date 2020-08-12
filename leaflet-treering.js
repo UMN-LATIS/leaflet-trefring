@@ -1976,7 +1976,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [350, 400], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [450, 400], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
 
@@ -2353,15 +2353,18 @@ function ViewData(Lt) {
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>refresh</button><button id="delete-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>delete all</button></div><table><tr>' +
+          '>delete all</button><button id="copy-data-button"' +
+          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+          '>copy data</button></div><table><tr>' +
           '<th style="width: 45%;">Year</th>' +
-          '<th style="width: 70%;">Length</th></tr>';
+          '<th style="width: 70%;">Length (mm)</th></tr>';
 
       var break_point = false;
       var last_latLng;
       var break_length;
       var break_point;
       var length;
+      var allData = "\nYear\t\t"+"Length (mm)"+"\n";
       Lt.data.clean();
       Object.values(Lt.data.points).map((e, i, a) => {
 
@@ -2400,14 +2403,16 @@ function ViewData(Lt) {
             string =
                 string.concat('<tr style="color:' + row_color + ';">');
             string = string.concat('<td>' + e.year + wood + '</td><td>'+
-                length + ' mm</td></tr>');
+                length + ' </td></tr>');
+              
           } else {
             y++;
             string = string.concat('<tr style="color: #00d2e6;">');
             string = string.concat('<td>' + e.year + '</td><td>' +
-                length + ' mm</td></tr>');
+                length + ' </td></tr>');
           }
           last_latLng = e.latLng;
+          allData += e.year + wood + "\t\t"+ length +"\n";
         }
       });
       this.dialog.setContent(string + '</table>');
@@ -2419,13 +2424,25 @@ function ViewData(Lt) {
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>refresh</button><button id="delete-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>delete all</button></div>' +
+          '>delete all</button><button id="copy-data-button"' +
+          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+          '>copy data</button></div>' +
           '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(string);
     }
     this.dialog.lock();
     this.dialog.open();
     $('#download-button').click(() => this.download());
+    $('#copy-data-button').click(()=> {
+    console.log('allData: ', allData);
+    //Copies treering width to clipboard
+    const el = document.createElement('textarea');
+    el.value = allData;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    });
     $('#refresh-button').click(() => {
       this.disable();
       this.enable();
@@ -2472,6 +2489,7 @@ function ViewData(Lt) {
     $('#download-button').off('click');
     $('#refresh-button').off('click');
     $('#delete-button').off('click');
+    $('#copy-data-button').off('click');
     this.dialog.close();
   };
 }
