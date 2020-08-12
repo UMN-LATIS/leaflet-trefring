@@ -2210,12 +2210,18 @@ function ViewData(Lt) {
 
       if (Lt.measurementOptions.subAnnual) {
 
+      if (Lt.measurementOptions.forwardDirection) { // years ascending
+        var pointsArray = Lt.data.points;
+      } else { // years decending
+        var pointsArray = Lt.data.points.slice().reverse();
+      };
+
         var sum_string = '';
         var ew_string = '';
         var lw_string = '';
 
-        y = Lt.data.points[1].year;
-        var sum_points = Object.values(Lt.data.points).filter(e => {
+        y = pointsArray[1].year;
+        var sum_points = pointsArray.filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -2283,19 +2289,19 @@ function ViewData(Lt) {
         }
         sum_string = sum_string.concat(' -9999');
 
-        y = Lt.data.points[1].year;
+        y = pointsArray[1].year;
 
-        if (Lt.data.points[1].year % 10 > 0) {
+        if (pointsArray[1].year % 10 > 0) {
           ew_string = ew_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pointsArray[1].year));
           lw_string = lw_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pointsArray[1].year));
         }
 
         break_point = false;
-        Object.values(Lt.data.points).map((e, i, a) => {
+        Object.values(pointsArray).map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
