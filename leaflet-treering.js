@@ -2477,8 +2477,12 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
+
+      var pts = Lt.data.points;
+      var yearsCountUp = Lt.measurementOptions.forwardDirection;
+
       Lt.data.clean();
-      Object.values(Lt.data.points).map((e, i, a) => {
+      Object.values(pts).map((e, i, a) => {
 
         if (e.start) {
           last_latLng = e.latLng;
@@ -2502,6 +2506,7 @@ function ViewData(Lt) {
             length = 9.998;
           }
           if (Lt.measurementOptions.subAnnual) {
+            var year;
             var wood;
             var row_color;
             if (e.earlywood) {
@@ -2512,18 +2517,23 @@ function ViewData(Lt) {
               row_color = '#00838f';
               y++;
             };
-            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+            if (yearsCountUp) {
               stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
               stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years counting down
-              stringContent = '<tr style="color:' + row_color + ';">' + '<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>' + stringContent
+            } else { // otherwise years count down
+              if (pts[i - 1].start) {
+                year = pts[i].year
+              } else {
+                year = pts[i - 1].year
+              }
+              stringContent = '<tr style="color:' + row_color + ';">' + '<td>' + year + wood + '</td><td>'+ length + ' mm</td></tr>' + stringContent
             };
           } else {
             y++;
-            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
+            if (yearsCountUp) {
               stringContent = stringContent.concat('<tr style="color: #00d2e6;">');
               stringContent = stringContent.concat('<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years counting down
+            } else { // otherwise years count down
               stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
             };
           }
