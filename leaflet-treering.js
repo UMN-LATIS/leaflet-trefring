@@ -1020,7 +1020,7 @@ function VisualAsset (Lt) {
       };
 
       //mark decades with red line
-      if (comparisonPt % 10 == 0) {
+      if (comparisonPt % 10 == 0 && !pts[i].break) {
         var opacity = '.6';
         var weight = '5';
         if (Lt.measurementOptions.subAnnual && pts[i].earlywood) {
@@ -2123,6 +2123,90 @@ function ViewData(Lt) {
   }
 
   /**
+   * Format data to have years ascending
+   * @function reverseData
+   */
+  ViewData.prototype.reverseData = function() {
+    var pref = Lt.measurementOptions; // preferences
+    var pts = Lt.data.points.slice(); // points
+    var i;
+
+    if (pref.subAnnual == false) {
+      for (i = 0; i < pts.length; i++) {
+        pts[i].year--;
+      };
+    };
+
+    if (pref.subAnnual && !this.reversedOnce) { // swap earlywood and latewood
+      for (i = 0; i < pts.length; i++) {
+        if (pts[i]) {
+          if (pts[i].earlywood) {
+            pts[i].earlywood = false;
+          } else {
+            pts[i].earlywood = true;
+          };
+        };
+      };
+    };
+
+    for (i = 0; i < pts.length; i++) {
+      if (pts[i + 1] && pts[i]) {
+        if (pts[i].break && pts[i + 1].start) { // swap start and break points
+          pts[i].start = true;
+          pts[i].break = false;
+          pts[i + 1].start = false;
+          pts[i + 1].break = true;
+        };
+      };
+    };
+
+    for (i = 0; i < pts.length; i++) {
+      if (pts[i + 2] && pts[i + 1] && pts[i]) {
+        if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // swap start & normal points in middle of series
+          pts[i + 1].start = false;
+          pts[i + 1].year = pts[i].year;
+          pts[i + 1].earlywood = pts[i].earlywood;
+
+          pts[i].start = true;
+          pts[i].year = undefined;
+          pts[i].earlywood = undefined;
+        };
+      };
+    };
+
+    // reverse array order
+    pts.reverse();
+
+    //swap first and last point
+    pts[pts.length - 1].start = false;
+    if (pref.subAnnual && pts[pts.length - 2].earlywood) {
+      pts[pts.length - 1].year = pts[pts.length - 2].year;
+    } else {
+      pts[pts.length - 1].year = pts[pts.length - 2].year + 1;
+    }
+    if (pref.subAnnual && pts[pts.length - 2].earlywood == false) {
+      pts[pts.length - 1].earlywood = true;
+    } else {
+      pts[pts.length - 1].earlywood = false;
+    };
+
+    var firstNonNull = pts.findIndex(pt => pt != null)
+    pts[firstNonNull].start = true;
+    pts[firstNonNull].year = undefined;
+    pts[firstNonNull].earlywood = undefined;
+
+    for (i = pts.length - 1; i >= 0; i--) {
+      if (pts[i] == null) {
+        pts.splice(i, 1);
+      }
+    }
+
+    this.reversedOnce = true;
+
+    return pts
+  }
+
+  /**
    * Format and download data in Dan's archaic format
    * @function download
    */
@@ -2200,6 +2284,12 @@ function ViewData(Lt) {
       return string;
     };
 
+    if (Lt.measurementOptions.forwardDirection) { // years ascend in value
+      var pts = Lt.data.points;
+    } else { // otherwise years descend in value
+      var pts = this.reverseData();
+    }
+
     if (Lt.data.points != undefined && Lt.data.points[1] != undefined) {
 
       var sum_points;
@@ -2214,8 +2304,8 @@ function ViewData(Lt) {
         var ew_string = '';
         var lw_string = '';
 
-        y = Lt.data.points[1].year;
-        var sum_points = Lt.data.points.filter(e => {
+        y = pts[1].year;
+        var sum_points = pts.filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -2287,19 +2377,19 @@ function ViewData(Lt) {
         }
         sum_string = sum_string.concat(' -9999');
 
-        y = Lt.data.points[1].year;
+        y = pts[1].year;
 
-        if (Lt.data.points[1].year % 10 > 0) {
+        if (pts[1].year % 10 > 0) {
           ew_string = ew_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pts[1].year));
           lw_string = lw_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pts[1].year));
         }
 
         break_point = false;
-        Object.values(Lt.data.points).map((e, i, a) => {
+        pts.map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
@@ -2385,8 +2475,8 @@ function ViewData(Lt) {
 
       } else {
 
-        var y = Lt.data.points[1].year;
-        sum_points = Object.values(Lt.data.points);
+        var y = pts[1].year;
+        sum_points = pts;
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
@@ -2467,8 +2557,15 @@ function ViewData(Lt) {
     this.btn.state('active');
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
-    if (Lt.data.points[0] != undefined) {
-      var y = Lt.data.points[1].year;
+
+    if (Lt.measurementOptions.forwardDirection) { // years ascend in value
+      var pts = Lt.data.points;
+    } else { // otherwise years descend in value
+      var pts = this.reverseData();
+    };
+
+    if (pts[0] != undefined) {
+      var y = pts[1].year;
       stringSetup = '<div><button id="download-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact">download</button><button id="refresh-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact">refresh</button><button id="delete-button"' +
@@ -2481,9 +2578,6 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-
-      var pts = Lt.data.points;
-      var yearsCountUp = Lt.measurementOptions.forwardDirection;
 
       Lt.data.clean();
       Object.values(pts).map((e, i, a) => {
@@ -2521,25 +2615,11 @@ function ViewData(Lt) {
               row_color = '#00838f';
               y++;
             };
-            if (yearsCountUp) {
-              stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-              stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years count down
-              if (pts[i - 1].start) {
-                year = pts[i].year
-              } else {
-                year = pts[i - 1].year
-              }
-              stringContent = '<tr style="color:' + row_color + ';">' + '<td>' + year + wood + '</td><td>'+ length + ' mm</td></tr>' + stringContent
-            };
+            stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
+            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
           } else {
             y++;
-            if (yearsCountUp) {
-              stringContent = stringContent.concat('<tr style="color: #00d2e6;">');
-              stringContent = stringContent.concat('<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years count down
-              stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
-            };
+            stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
           }
           last_latLng = e.latLng;
         }
