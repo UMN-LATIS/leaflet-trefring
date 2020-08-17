@@ -2128,30 +2128,31 @@ function ViewData(Lt) {
    */
   ViewData.prototype.reverseData = function() {
     var pref = Lt.measurementOptions; // preferences
-    var pts = Lt.data.points.slice(); // points
-    var i;
+    var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
 
-    if (pref.subAnnual == false) {
-      for (i = 0; i < pts.length; i++) {
-        pts[i].year--;
-      };
-    };
+    var i; // index
+    var lastIndex = pts.length - 1;
+    var before_lastIndex = pts.length - 2;
 
-    if (pref.subAnnual && !this.reversedOnce) { // swap earlywood and latewood
-      for (i = 0; i < pts.length; i++) {
-        if (pts[i]) {
+    // reformatting done in seperate for-statements for code clarity/simplicity
+
+    for (i = 0; i < pts.length; i++) { // earlywood / year change cycle
+      if (pts[i]) {
+        if (pref.subAnnual) { // subannual earlywood and latewood values need to be swapped
           if (pts[i].earlywood) {
             pts[i].earlywood = false;
           } else {
             pts[i].earlywood = true;
           };
+        } else { // otherwise annual increments need to be shifted
+          pts[i].year--;
         };
       };
     };
 
-    for (i = 0; i < pts.length; i++) {
+    for (i = 0; i < pts.length; i++) { // swap start & break point cycle
       if (pts[i + 1] && pts[i]) {
-        if (pts[i].break && pts[i + 1].start) { // swap start and break points
+        if (pts[i].break && pts[i + 1].start) {
           pts[i].start = true;
           pts[i].break = false;
           pts[i + 1].start = false;
@@ -2160,13 +2161,12 @@ function ViewData(Lt) {
       };
     };
 
-    for (i = 0; i < pts.length; i++) {
+    for (i = 0; i < pts.length; i++) { // swap start & end point cycle
       if (pts[i + 2] && pts[i + 1] && pts[i]) {
-        if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // swap start & normal points in middle of series
+        if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // many conditions so prior cycle is not undone
           pts[i + 1].start = false;
           pts[i + 1].year = pts[i].year;
           pts[i + 1].earlywood = pts[i].earlywood;
-
           pts[i].start = true;
           pts[i].year = undefined;
           pts[i].earlywood = undefined;
@@ -2174,36 +2174,32 @@ function ViewData(Lt) {
       };
     };
 
-    // reverse array order
+    // reverse array order so years ascending
     pts.reverse();
 
-    //swap first and last point
-    pts[pts.length - 1].start = false;
-    if (pref.subAnnual && pts[pts.length - 2].earlywood) {
-      pts[pts.length - 1].year = pts[pts.length - 2].year;
-    } else {
-      pts[pts.length - 1].year = pts[pts.length - 2].year + 1;
-    }
-    if (pref.subAnnual && pts[pts.length - 2].earlywood == false) {
-      pts[pts.length - 1].earlywood = true;
-    } else {
-      pts[pts.length - 1].earlywood = false;
+    // change last point from start to end point
+    pts[lastIndex].start = false;
+
+    if (pts[before_lastIndex].earlywood) {
+      pts[lastIndex].year = pts[before_lastIndex].year;
+      pts[lastIndex].earlywood = false;
+    } else { // otherwise latewood or annual increment
+      pts[lastIndex].year = pts[before_lastIndex].year + 1
+      pts[lastIndex].earlywood = true;
     };
 
-    var firstNonNull = pts.findIndex(pt => pt != null)
-    pts[firstNonNull].start = true;
-    pts[firstNonNull].year = undefined;
-    pts[firstNonNull].earlywood = undefined;
-
-    for (i = pts.length - 1; i >= 0; i--) {
+    for (i = lastIndex; i >= 0; i--) { // remove any null points
       if (pts[i] == null) {
         pts.splice(i, 1);
-      }
-    }
+      };
+    };
 
-    this.reversedOnce = true;
+    // change first point to start point
+    pts[0].start = true;
+    pts[0].year = undefined;
+    pts[0].earlywood = undefined;
 
-    return pts
+    return pts;
   }
 
   /**
@@ -2580,7 +2576,7 @@ function ViewData(Lt) {
       var length;
 
       Lt.data.clean();
-      Object.values(pts).map((e, i, a) => {
+      pts.map((e, i, a) => {
 
         if (e.start) {
           last_latLng = e.latLng;
@@ -2604,7 +2600,6 @@ function ViewData(Lt) {
             length = 9.998;
           }
           if (Lt.measurementOptions.subAnnual) {
-            var year;
             var wood;
             var row_color;
             if (e.earlywood) {
@@ -2619,7 +2614,7 @@ function ViewData(Lt) {
             stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
           } else {
             y++;
-            stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
+            stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
           }
           last_latLng = e.latLng;
         }
