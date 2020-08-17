@@ -2168,8 +2168,8 @@ function ViewData(Lt) {
           pts[i + 1].year = pts[i].year;
           pts[i + 1].earlywood = pts[i].earlywood;
           pts[i].start = true;
-          pts[i].year = undefined;
-          pts[i].earlywood = undefined;
+          delete pts[i].year;
+          delete pts[i].earlywood;
         };
       };
     };
@@ -2196,8 +2196,8 @@ function ViewData(Lt) {
 
     // change first point to start point
     pts[0].start = true;
-    pts[0].year = undefined;
-    pts[0].earlywood = undefined;
+    delete pts[0].year;
+    delete pts[0].earlywood;
 
     return pts;
   }
