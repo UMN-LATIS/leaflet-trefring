@@ -982,13 +982,15 @@ function VisualAsset (Lt) {
         }
       }
       if (Lt.insertZeroGrowth.active) {
-        if ((pts[i].earlywood && Lt.measurementOptions.subAnnual) || pts[i].start ||
-            pts[i].break) {
-              if (Lt.measurementOptions.forwardDirection) {
-                alert('Missing year can only be placed at the end of a year!');
-              } else { // if years counting down, points are flipped
-                alert('Missing year can only be placed at the beginning of a year!');
-              }
+        var subAnnual = Lt.measurementOptions.subAnnual;
+        var pointEW = pts[i].earlywood == true;
+        var pointLW = pts[i].earlywood == false;
+        var yearsIncrease = Lt.measurementOptions.forwardDirection == true;
+        var yearsDecrease = Lt.measurementOptions.forwardDirection == false;
+
+        if ((subAnnual && ((pointEW && yearsIncrease) || (pointLW && yearsDecrease)))
+            || pts[i].start || pts[i].break) {
+              alert('Missing year can only be placed at the end of a year!');
         } else {
           Lt.insertZeroGrowth.action(i);
         }
@@ -1635,29 +1637,44 @@ function CreateZeroGrowth(Lt) {
 
       Lt.undo.push();
 
-      if (Lt.data.points[Lt.data.index - 1].earlywood && Lt.measurementOptions.subAnnual) {
-        var firstEWCheck = false;
-        var secondEWCheck = true;
-      } else {
+      var yearsIncrease = Lt.measurementOptions.forwardDirection == true;
+      var yearsDecrease = Lt.measurementOptions.forwardDirection == false;
+      var previousPointEW = Lt.data.points[Lt.data.index - 1].earlywood == true;
+      var previousPointLW = Lt.data.points[Lt.data.index - 1].earlywood == false;
+      var subAnnualIncrement = Lt.measurementOptions.subAnnual == true;
+      var annualIncrement = Lt.measurementOptions.subAnnual == false;
+
+      // ensure point only inserted at end of year
+      if (annualIncrement || (yearsIncrease && previousPointLW)) {
         var firstEWCheck = true;
         var secondEWCheck = false;
+        var yearAdjustment = Lt.data.year;
+      } else if (yearsDecrease && previousPointEW) {
+        var firstEWCheck = false;
+        var secondEWCheck = true;
+        var yearAdjustment = Lt.data.year - 1;
+      } else {
+        alert('Must be inserted at end of year.');
+        return;
       };
 
       Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
         'year': Lt.data.year, 'earlywood': firstEWCheck, 'latLng': latLng};
       Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
       Lt.data.index++;
-      if (Lt.measurementOptions.subAnnual) {
+      if (subAnnualIncrement) {
         Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
-          'year': Lt.data.year, 'earlywood': secondEWCheck, 'latLng': latLng};
+          'year': yearAdjustment, 'earlywood': secondEWCheck, 'latLng': latLng};
         Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
         Lt.data.index++;
-      }
-      if (Lt.measurementOptions.forwardDirection) {
+      };
+
+      if (yearsIncrease) {
         Lt.data.year++;
-      } else {
+      } else if (yearsDecrease){
         Lt.data.year--;
-      }
+      };
+
     } else {
       alert('First year cannot be missing!');
     }
@@ -2136,16 +2153,14 @@ function ViewData(Lt) {
 
     // reformatting done in seperate for-statements for code clarity/simplicity
 
-    for (i = 0; i < pts.length; i++) { // earlywood / year change cycle
-      if (pts[i]) {
-        if (pref.subAnnual) { // subannual earlywood and latewood values need to be swapped
+    if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
+      for (i = 0; i < pts.length; i++) {
+        if (pts[i]) {
           if (pts[i].earlywood) {
             pts[i].earlywood = false;
           } else {
             pts[i].earlywood = true;
           };
-        } else { // otherwise annual increments need to be shifted
-          pts[i].year--;
         };
       };
     };
@@ -2178,14 +2193,16 @@ function ViewData(Lt) {
     pts.reverse();
 
     // change last point from start to end point
-    pts[lastIndex].start = false;
+    if (pts[lastIndex] && pts[before_lastIndex]) {
+      pts[lastIndex].start = false;
 
-    if (pts[before_lastIndex].earlywood) {
-      pts[lastIndex].year = pts[before_lastIndex].year;
-      pts[lastIndex].earlywood = false;
-    } else { // otherwise latewood or annual increment
-      pts[lastIndex].year = pts[before_lastIndex].year + 1
-      pts[lastIndex].earlywood = true;
+      if (pts[before_lastIndex].earlywood) {
+        pts[lastIndex].year = pts[before_lastIndex].year;
+        pts[lastIndex].earlywood = false;
+      } else { // otherwise latewood or annual increment
+        pts[lastIndex].year = pts[before_lastIndex].year + 1
+        pts[lastIndex].earlywood = true;
+      };
     };
 
     for (i = lastIndex; i >= 0; i--) { // remove any null points
@@ -2195,9 +2212,11 @@ function ViewData(Lt) {
     };
 
     // change first point to start point
-    pts[0].start = true;
-    delete pts[0].year;
-    delete pts[0].earlywood;
+    if (pts.length > 0) {
+      pts[0].start = true;
+      delete pts[0].year;
+      delete pts[0].earlywood;
+    };
 
     return pts;
   }
