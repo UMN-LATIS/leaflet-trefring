@@ -563,16 +563,20 @@ function MeasurementData (dataObject, Lt) {
     var annualIncrement = Lt.measurementOptions.subAnnual == false;
 
     // ensure correct inserted point order
-    if (annualIncrement || direction == forwardInTime) {
+    if (direction == forwardInTime) {
       var firstEWCheck = true;
       var secondEWCheck = false;
       var firstYearAdjusted = this.points[i].year + 1;
-      var secondYearAdjusted = this.points[i].year + 1;
+      var secondYearAdjusted = firstYearAdjusted;
     } else if (direction == backwardInTime) {
       var firstEWCheck = false;
       var secondEWCheck = true;
       var firstYearAdjusted = this.points[i].year;
       var secondYearAdjusted = this.points[i].year - 1;
+      if (annualIncrement) {
+        var firstEWCheck = true;
+        var firstYearAdjusted = secondYearAdjusted;
+      }
     }
 
     new_points[k] = {'start': false, 'skip': false, 'break': false,
