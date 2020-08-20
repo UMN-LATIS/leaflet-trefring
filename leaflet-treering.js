@@ -559,20 +559,30 @@ function MeasurementData (dataObject, Lt) {
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
 
-    if (direction == forwardInTime) {
-      var year_adjusted = this.points[i].year + 1;
+    var subAnnualIncrement = Lt.measurementOptions.subAnnual == true;
+    var annualIncrement = Lt.measurementOptions.subAnnual == false;
+
+    // ensure correct inserted point order
+    if (annualIncrement || direction == forwardInTime) {
+      var firstEWCheck = true;
+      var secondEWCheck = false;
+      var firstYearAdjusted = this.points[i].year + 1;
+      var secondYearAdjusted = this.points[i].year + 1;
     } else if (direction == backwardInTime) {
-      var year_adjusted = this.points[i].year - 1;
+      var firstEWCheck = false;
+      var secondEWCheck = true;
+      var firstYearAdjusted = this.points[i].year;
+      var secondYearAdjusted = this.points[i].year - 1;
     }
 
     new_points[k] = {'start': false, 'skip': false, 'break': false,
-      'year': year_adjusted, 'earlywood': true, 'latLng': latLng};
+      'year': firstYearAdjusted, 'earlywood': firstEWCheck, 'latLng': latLng};
 
     k++;
 
-    if (measurementOptions.subAnnual) {
+    if (subAnnualIncrement) {
       new_points[k] = {'start': false, 'skip': false, 'break': false,
-        'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
+        'year': secondYearAdjusted, 'earlywood': secondEWCheck, 'latLng': latLng};
       k++;
     }
 
