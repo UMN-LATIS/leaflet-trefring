@@ -559,20 +559,34 @@ function MeasurementData (dataObject, Lt) {
     var second_points = this.points.slice().splice(i + 1, this.index - 1);
     var k = i + 1;
 
+    var subAnnualIncrement = Lt.measurementOptions.subAnnual == true;
+    var annualIncrement = Lt.measurementOptions.subAnnual == false;
+
+    // ensure correct inserted point order
     if (direction == forwardInTime) {
-      var year_adjusted = this.points[i].year + 1;
+      var firstEWCheck = true;
+      var secondEWCheck = false;
+      var firstYearAdjusted = this.points[i].year + 1;
+      var secondYearAdjusted = firstYearAdjusted;
     } else if (direction == backwardInTime) {
-      var year_adjusted = this.points[i].year - 1;
+      var firstEWCheck = false;
+      var secondEWCheck = true;
+      var firstYearAdjusted = this.points[i].year;
+      var secondYearAdjusted = this.points[i].year - 1;
+      if (annualIncrement) {
+        var firstEWCheck = true;
+        var firstYearAdjusted = secondYearAdjusted;
+      }
     }
 
     new_points[k] = {'start': false, 'skip': false, 'break': false,
-      'year': year_adjusted, 'earlywood': true, 'latLng': latLng};
+      'year': firstYearAdjusted, 'earlywood': firstEWCheck, 'latLng': latLng};
 
     k++;
 
-    if (measurementOptions.subAnnual) {
+    if (subAnnualIncrement) {
       new_points[k] = {'start': false, 'skip': false, 'break': false,
-        'year': year_adjusted, 'earlywood': false, 'latLng': latLng};
+        'year': secondYearAdjusted, 'earlywood': secondEWCheck, 'latLng': latLng};
       k++;
     }
 
@@ -982,13 +996,15 @@ function VisualAsset (Lt) {
         }
       }
       if (Lt.insertZeroGrowth.active) {
-        if ((pts[i].earlywood && Lt.measurementOptions.subAnnual) || pts[i].start ||
-            pts[i].break) {
-              if (Lt.measurementOptions.forwardDirection) {
-                alert('Missing year can only be placed at the end of a year!');
-              } else { // if years counting down, points are flipped
-                alert('Missing year can only be placed at the beginning of a year!');
-              }
+        var subAnnual = Lt.measurementOptions.subAnnual;
+        var pointEW = pts[i].earlywood == true;
+        var pointLW = pts[i].earlywood == false;
+        var yearsIncrease = Lt.measurementOptions.forwardDirection == true;
+        var yearsDecrease = Lt.measurementOptions.forwardDirection == false;
+
+        if ((subAnnual && ((pointEW && yearsIncrease) || (pointLW && yearsDecrease)))
+            || pts[i].start || pts[i].break) {
+              alert('Missing year can only be placed at the end of a year!');
         } else {
           Lt.insertZeroGrowth.action(i);
         }
@@ -1020,7 +1036,7 @@ function VisualAsset (Lt) {
       };
 
       //mark decades with red line
-      if (comparisonPt % 10 == 0) {
+      if (comparisonPt % 10 == 0 && !pts[i].break) {
         var opacity = '.6';
         var weight = '5';
         if (Lt.measurementOptions.subAnnual && pts[i].earlywood) {
@@ -1635,29 +1651,44 @@ function CreateZeroGrowth(Lt) {
 
       Lt.undo.push();
 
-      if (Lt.data.points[Lt.data.index - 1].earlywood && Lt.measurementOptions.subAnnual) {
-        var firstEWCheck = false;
-        var secondEWCheck = true;
-      } else {
+      var yearsIncrease = Lt.measurementOptions.forwardDirection == true;
+      var yearsDecrease = Lt.measurementOptions.forwardDirection == false;
+      var previousPointEW = Lt.data.points[Lt.data.index - 1].earlywood == true;
+      var previousPointLW = Lt.data.points[Lt.data.index - 1].earlywood == false;
+      var subAnnualIncrement = Lt.measurementOptions.subAnnual == true;
+      var annualIncrement = Lt.measurementOptions.subAnnual == false;
+
+      // ensure point only inserted at end of year
+      if (annualIncrement || (yearsIncrease && previousPointLW)) {
         var firstEWCheck = true;
         var secondEWCheck = false;
+        var yearAdjustment = Lt.data.year;
+      } else if (yearsDecrease && previousPointEW) {
+        var firstEWCheck = false;
+        var secondEWCheck = true;
+        var yearAdjustment = Lt.data.year - 1;
+      } else {
+        alert('Must be inserted at end of year.');
+        return;
       };
 
       Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
         'year': Lt.data.year, 'earlywood': firstEWCheck, 'latLng': latLng};
       Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
       Lt.data.index++;
-      if (Lt.measurementOptions.subAnnual) {
+      if (subAnnualIncrement) {
         Lt.data.points[Lt.data.index] = {'start': false, 'skip': false, 'break': false,
-          'year': Lt.data.year, 'earlywood': secondEWCheck, 'latLng': latLng};
+          'year': yearAdjustment, 'earlywood': secondEWCheck, 'latLng': latLng};
         Lt.visualAsset.newLatLng(Lt.data.points, Lt.data.index, latLng);
         Lt.data.index++;
-      }
-      if (Lt.measurementOptions.forwardDirection) {
+      };
+
+      if (yearsIncrease) {
         Lt.data.year++;
-      } else {
+      } else if (yearsDecrease){
         Lt.data.year--;
-      }
+      };
+
     } else {
       alert('First year cannot be missing!');
     }
@@ -2123,6 +2154,88 @@ function ViewData(Lt) {
   }
 
   /**
+   * Format data to have years ascending
+   * @function reverseData
+   */
+  ViewData.prototype.reverseData = function() {
+    var pref = Lt.measurementOptions; // preferences
+    var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
+
+    var i; // index
+    var lastIndex = pts.length - 1;
+    var before_lastIndex = pts.length - 2;
+
+    // reformatting done in seperate for-statements for code clarity/simplicity
+
+    if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
+      for (i = 0; i < pts.length; i++) {
+        if (pts[i]) {
+          if (pts[i].earlywood) {
+            pts[i].earlywood = false;
+          } else {
+            pts[i].earlywood = true;
+          };
+        };
+      };
+    };
+
+    for (i = 0; i < pts.length; i++) { // swap start & break point cycle
+      if (pts[i + 1] && pts[i]) {
+        if (pts[i].break && pts[i + 1].start) {
+          pts[i].start = true;
+          pts[i].break = false;
+          pts[i + 1].start = false;
+          pts[i + 1].break = true;
+        };
+      };
+    };
+
+    for (i = 0; i < pts.length; i++) { // swap start & end point cycle
+      if (pts[i + 2] && pts[i + 1] && pts[i]) {
+        if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // many conditions so prior cycle is not undone
+          pts[i + 1].start = false;
+          pts[i + 1].year = pts[i].year;
+          pts[i + 1].earlywood = pts[i].earlywood;
+          pts[i].start = true;
+          delete pts[i].year;
+          delete pts[i].earlywood;
+        };
+      };
+    };
+
+    // reverse array order so years ascending
+    pts.reverse();
+
+    // change last point from start to end point
+    if (pts[lastIndex] && pts[before_lastIndex]) {
+      pts[lastIndex].start = false;
+
+      if (pts[before_lastIndex].earlywood) {
+        pts[lastIndex].year = pts[before_lastIndex].year;
+        pts[lastIndex].earlywood = false;
+      } else { // otherwise latewood or annual increment
+        pts[lastIndex].year = pts[before_lastIndex].year + 1
+        pts[lastIndex].earlywood = true;
+      };
+    };
+
+    for (i = lastIndex; i >= 0; i--) { // remove any null points
+      if (pts[i] == null) {
+        pts.splice(i, 1);
+      };
+    };
+
+    // change first point to start point
+    if (pts.length > 0) {
+      pts[0].start = true;
+      delete pts[0].year;
+      delete pts[0].earlywood;
+    };
+
+    return pts;
+  }
+
+  /**
    * Format and download data in Dan's archaic format
    * @function download
    */
@@ -2200,6 +2313,12 @@ function ViewData(Lt) {
       return string;
     };
 
+    if (Lt.measurementOptions.forwardDirection) { // years ascend in value
+      var pts = Lt.data.points;
+    } else { // otherwise years descend in value
+      var pts = this.reverseData();
+    }
+
     if (Lt.data.points != undefined && Lt.data.points[1] != undefined) {
 
       var sum_points;
@@ -2214,8 +2333,8 @@ function ViewData(Lt) {
         var ew_string = '';
         var lw_string = '';
 
-        y = Lt.data.points[1].year;
-        var sum_points = Object.values(Lt.data.points).filter(e => {
+        y = pts[1].year;
+        var sum_points = pts.filter(e => {
           if (e.earlywood != undefined) {
             return !(e.earlywood);
           } else {
@@ -2255,6 +2374,10 @@ function ViewData(Lt) {
               }
             }
 
+            if (!last_latLng) {
+              last_latLng = e.latLng;
+            };
+
             var length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
@@ -2283,19 +2406,19 @@ function ViewData(Lt) {
         }
         sum_string = sum_string.concat(' -9999');
 
-        y = Lt.data.points[1].year;
+        y = pts[1].year;
 
-        if (Lt.data.points[1].year % 10 > 0) {
+        if (pts[1].year % 10 > 0) {
           ew_string = ew_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pts[1].year));
           lw_string = lw_string.concat(
               toEightCharString(Lt.meta.assetName) +
-              toFourCharString(Lt.data.points[1].year));
+              toFourCharString(pts[1].year));
         }
 
         break_point = false;
-        Object.values(Lt.data.points).map((e, i, a) => {
+        pts.map((e, i, a) => {
           if (e.start) {
             last_latLng = e.latLng;
           } else if (e.break) {
@@ -2381,8 +2504,8 @@ function ViewData(Lt) {
 
       } else {
 
-        var y = Lt.data.points[1].year;
-        sum_points = Object.values(Lt.data.points);
+        var y = pts[1].year;
+        sum_points = pts;
 
         if (sum_points[1].year % 10 > 0) {
           sum_string = sum_string.concat(
@@ -2463,8 +2586,15 @@ function ViewData(Lt) {
     this.btn.state('active');
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
-    if (Lt.data.points[0] != undefined) {
-      var y = Lt.data.points[1].year;
+
+    if (Lt.measurementOptions.forwardDirection) { // years ascend in value
+      var pts = Lt.data.points;
+    } else { // otherwise years descend in value
+      var pts = this.reverseData();
+    };
+
+    if (pts[0] != undefined) {
+      var y = pts[1].year;
       stringSetup = '<div><button id="download-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact">download</button><button id="refresh-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact">refresh</button><button id="delete-button"' +
@@ -2477,8 +2607,9 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
+
       Lt.data.clean();
-      Object.values(Lt.data.points).map((e, i, a) => {
+      pts.map((e, i, a) => {
 
         if (e.start) {
           last_latLng = e.latLng;
@@ -2512,20 +2643,11 @@ function ViewData(Lt) {
               row_color = '#00838f';
               y++;
             };
-            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
-              stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-              stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years counting down
-              stringContent = '<tr style="color:' + row_color + ';">' + '<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>' + stringContent
-            };
+            stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
+            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
           } else {
             y++;
-            if (Lt.measurementOptions.forwardDirection) { // check if years counting up
-              stringContent = stringContent.concat('<tr style="color: #00d2e6;">');
-              stringContent = stringContent.concat('<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
-            } else { // otherwise years counting down
-              stringContent = '<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>' + stringContent
-            };
+            stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
           }
           last_latLng = e.latLng;
         }
