@@ -2124,7 +2124,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [360, 400], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [300, 350], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
 
@@ -2595,19 +2595,30 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
-      stringSetup = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">download</button><button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">delete all</button></div>' +
-          '<table><tr><th style="width: 45%;">Year</th>' +
-                     '<th style="width: 70%;">Length</th></tr>';
+      stringSetup = '<div><button id="download-ltrr-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      '>download LTRR</button><button id="download-csv-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      '>download csv</button><button id="copy-data-button"' +
+      'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+      '>copy data</button><button id="refresh-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      '>refresh</button><button id="delete-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      '>delete all</button></div><table><tr>' +
+      '<th style="width: 45%;">Year</th>' +
+      '<th style="width: 70%;">Length (mm)</th></tr>';
 
       var break_point = false;
       var last_latLng;
       var break_length;
       var break_point;
       var length;
-
+      var copyDataString = "\nYear\t\t"+"Length (mm)"+"\n";
+      var EWoodcsvDataString = "Year," + Lt.meta.assetName + "_EW (mm)\n";
+      var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW (mm)\n";
+      var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW (mm)\n";
+      var lengthAsAString;
       Lt.data.clean();
       pts.map((e, i, a) => {
 
@@ -2632,6 +2643,11 @@ function ViewData(Lt) {
           if (length == 9.999) {
             length = 9.998;
           }
+
+          //Format length number into a string with trailing zeros
+          lengthAsAString = String(length);
+          lengthAsAString = lengthAsAString.padEnd(5,'0');
+
           if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
@@ -2650,13 +2666,29 @@ function ViewData(Lt) {
             stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
           }
           last_latLng = e.latLng;
+          //Copies data to a string that can be copied to the clipboard
+          copyDataString += e.year + wood + "\t\t"+ lengthAsAString +"\n";
+          if(wood=='E')
+          {
+            EWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+          }
+          else if (wood=='L')
+          {
+            LWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+            TWoodcsvDataString += e.year+","+"\n";
+          }
+          
         }
       });
       this.dialog.setContent(stringSetup + stringContent + '</table>');
     } else {
-      stringSetup = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          'disabled>download</button>' +
+      stringSetup = '<div><button id="download-ltrr-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      'disabled>download</button><button id="download-csv-button"' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+      '>download csv</button><button id="copy-data-button"' +
+      'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+      '>copy data</button>' +
           '<button id="refresh-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>refresh</button><button id="delete-button"' +
@@ -2667,7 +2699,15 @@ function ViewData(Lt) {
     }
     this.dialog.lock();
     this.dialog.open();
-    $('#download-button').click(() => this.download());
+    $('#download-ltrr-button').click(() => this.download());
+    $('#download-csv-button').click(() => {
+      
+      downloadCSVFiles(EWoodcsvDataString, LWoodcsvDataString,Lt);
+    }
+        );
+    $('#copy-data-button').click(()=>{
+    console.log('asset_name',LWoodcsvDataString);
+    copyToClipboard(copyDataString)});
     $('#refresh-button').click(() => {
       this.disable();
       this.enable();
@@ -2715,7 +2755,8 @@ function ViewData(Lt) {
     this.btn.state('inactive');
     $('#confirm-delete').off('click');
     $('#cancel-delete').off('click');
-    $('#download-button').off('click');
+    $('#download-ltrr-button').off('click');
+    $('#download-csv-button').off('click');
     $('#refresh-button').off('click');
     $('#delete-button').off('click');
     this.dialog.close();
@@ -3467,3 +3508,31 @@ function Panhandler(La) {
   La.viewer.addHandler('pan', this.panHandler);
   La.viewer.pan.enable();
 }
+/**
+   * copy text to clipboard
+   * @function enable
+   */
+  function copyToClipboard(allData){
+    const el = document.createElement('textarea');
+    el.value = allData;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
+
+  /**
+   * Dowload CSV ZIP file
+   * @function
+   */
+  function downloadCSVFiles(EWoodcsvDataString,LWoodcsvDataString,Lt)
+  {
+    var zip = new JSZip();
+    zip.file((Lt.meta.assetName + '_LW.csv'), LWoodcsvDataString);
+    zip.file((Lt.meta.assetName + '_EW.csv'), EWoodcsvDataString);
+    zip.generateAsync({type: 'blob'})
+          .then((blob) => {
+            saveAs(blob, (Lt.meta.assetName + '.zip'));
+          });
+    }
+    
