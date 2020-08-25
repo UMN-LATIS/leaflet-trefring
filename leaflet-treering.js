@@ -2619,6 +2619,7 @@ function ViewData(Lt) {
       var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW (mm)\n";
       var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW (mm)\n";
       var lengthAsAString;
+      var totalWidth = 0;
       Lt.data.clean();
       pts.map((e, i, a) => {
 
@@ -2660,23 +2661,40 @@ function ViewData(Lt) {
               y++;
             };
             stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ length + ' mm</td></tr>');
+            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
           } else {
             y++;
-            stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
+            stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
           }
           last_latLng = e.latLng;
           //Copies data to a string that can be copied to the clipboard
           copyDataString += e.year + wood + "\t\t"+ lengthAsAString +"\n";
+
+          
+          //Set up CSV files to download later
+          //For subannual measurements
+          if(Lt.measurementOptions.subAnnual)
+          {
           if(wood=='E')
           {
             EWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+            totalWidth+=length;
           }
-          else if (wood=='L')
+          else
           {
             LWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
-            TWoodcsvDataString += e.year+","+"\n";
+            totalWidth+=length;
+            totalWidth=Math.round(totalWidth * 1000) / 1000;
+            totalWidthString = String(totalWidth);
+            totalWidthString = totalWidthString.padEnd(5,'0');
+            TWoodcsvDataString += e.year+","+totalWidth+"\n";
+            totalWidth = 0;
           }
+        }
+        //For annual measurements
+        else{
+          TWoodcsvDataString+= e.year+","+lengthAsAString+"\n";
+        }
           
         }
       });
@@ -2701,12 +2719,16 @@ function ViewData(Lt) {
     this.dialog.open();
     $('#download-ltrr-button').click(() => this.download());
     $('#download-csv-button').click(() => {
-      
-      downloadCSVFiles(EWoodcsvDataString, LWoodcsvDataString,Lt);
+     if(Lt.measurementOptions.subAnnual)
+     {
+       downloadCSVFiles(Lt, TWoodcsvDataString,EWoodcsvDataString, LWoodcsvDataString);
+     } 
+     else{
+      downloadCSVFiles(Lt, TWoodcsvDataString);
+     }
     }
         );
     $('#copy-data-button').click(()=>{
-    console.log('asset_name',LWoodcsvDataString);
     copyToClipboard(copyDataString)});
     $('#refresh-button').click(() => {
       this.disable();
@@ -3525,11 +3547,16 @@ function Panhandler(La) {
    * Dowload CSV ZIP file
    * @function
    */
-  function downloadCSVFiles(EWoodcsvDataString,LWoodcsvDataString,Lt)
+  function downloadCSVFiles(Lt,TWoodcsvDataString,EWoodcsvDataString,LWoodcsvDataString)
   {
+    console.log(Lt.measurementOptions.subAnnual);
     var zip = new JSZip();
+    if(Lt.measurementOptions.subAnnual)
+    {
     zip.file((Lt.meta.assetName + '_LW.csv'), LWoodcsvDataString);
     zip.file((Lt.meta.assetName + '_EW.csv'), EWoodcsvDataString);
+    }
+    zip.file((Lt.meta.assetName + '_TW.csv'), TWoodcsvDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '.zip'));
