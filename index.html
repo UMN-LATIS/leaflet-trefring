@@ -9,37 +9,63 @@
                font-size: 60px;
                margin-top: 20px; }
 
-     #bottom { text-align: center;
+      #bottom { text-align: center;
               background-color: #AEDF95;
               font-size: 60px;
-              margin-top: 100px; }
+              margin-top: -10px; }
+
+      iframe { align: center;
+               width: 800px;
+               height: 600px;
+               margin-bottom: 30px;  }
 
       #links { text-align: center;
-               font-size: 40px; }
+               font-size: 30px;
+               margin-bottom: 5px; }
+
+      #fixed-tree-symbol { position: sticky; }
 
       #tree-symbol { text-align: center;
                      font-size: 300px;}
 
-      table { width: 100%; }
+      table { width: 90%;
+              margin-left: auto;
+              margin-right: auto; }
 
-      #table-links { width: 40%; }
+      td { text-align: center; }
 
     </style>
   </head>
   <body>
 
-    <p id="title"> Leaflet Tree Ring Testing Links </p> <br>
+    <p id="title">
+         &#9831; &#9831; &#9831;
+         &nbsp; &nbsp; &nbsp;
+         Leaflet Tree Ring Testing Links
+         &nbsp; &nbsp; &nbsp;
+         &#9831; &#9831; &#9831;
+    </p>
 
     <table>
       <tr>
-        <td> <p id="tree-symbol"> &#9831; </p> </td>
-        <td id="table-links">
-          <P id="links"> <a href="index_noPoints.html"> No Measurements </a> </p> <br>
-          <P id="links"> <a href="index_hasPoints_hasLatewood.html"> Sub-Annual Forward Measurements </a> </p> <br>
-          <P id="links"> <a href="index_backwards_annual.html"> Annual Backward Measurements </a> </p> <br>
-          <P id="links"> <a href="index_backwards_subAnnual.html"> Sub-Annual Backward Measurements </a> </p>
+        <td>
+          <p id="links"> No Measurements </p>
+          <iframe src="index_noPoints.html"> </iframe>
         </td>
-        <td> <p id="tree-symbol"> &#9831; </p> </td>
+        <td>
+          <P id="links"> Sub-Annual Forward Measurements </p>
+          <iframe src="index_hasPoints_hasLatewood.html"> </iframe>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <P id="links"> Annual Backward Measurements </p>
+          <iframe src="index_backwards_annual.html"> </iframe>
+        </td>
+        <td>
+          <P id="links"> Sub-Annual Backward Measurements </p>
+          <iframe src="index_backwards_subAnnual.html"> </iframe>
+        </td>
       </tr>
     </table>
 
