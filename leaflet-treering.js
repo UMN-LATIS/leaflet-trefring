@@ -52,6 +52,8 @@ function LTreering (viewer, basePath, options) {
   this.annotationAsset = new AnnotationAsset(this);
   this.panhandler = new Panhandler(this);
 
+  this.scaleBarCanvas = new ScaleBarCanvas(this);
+
   this.popout = new Popout(this);
   this.undo = new Undo(this);
   this.redo = new Redo(this);
@@ -159,6 +161,8 @@ function LTreering (viewer, basePath, options) {
       }
     });
 
+    this.scaleBarCanvas.load();
+
     if ( this.meta.savePermission ) {
       // initialize cloud save
       this.saveCloud.initialize();
@@ -176,7 +180,7 @@ function LTreering (viewer, basePath, options) {
     this.measurementOptions.preferencesInfo();
     this.visualAsset.reload();
     this.annotationAsset.reload();
-        if ( this.meta.savePermission ) {
+    if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
     }
@@ -1159,6 +1163,181 @@ function AnnotationAsset(Lt) {
   };
 }
 
+/**
+ * Scale bar for orientation & screenshots
+ * @constructor
+ * @param {LTreering} - Lt
+ */
+function ScaleBarCanvas (Lt) {
+
+  ScaleBarCanvas.prototype.load = function () {
+    var scaleBarDiv = document.createElement('div');
+    var nativeWindowWidth = document.getElementById("map_container").clientWidth;
+    scaleBarDiv.innerHTML =
+        '<div id="scale-bar-div"> \
+         <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
+         </div>';
+    document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(scaleBarDiv);
+
+    var canvas = document.getElementById("scale-bar-canvas");
+    var ctx = canvas.getContext("2d");
+
+    var map = Lt.viewer;
+    var pixelWidth;
+    map.eachLayer(function (layer) {
+      if (layer.options.maxNativeZoom) {
+        var leftMostPt = layer.options.bounds._southWest;
+        var rightMostPt = layer.options.bounds._northEast;
+        pixelWidth = map.project(rightMostPt, Lt.getMaxNativeZoom()).x - map.project(leftMostPt, Lt.getMaxNativeZoom()).x; // slightly off
+      }
+    });
+
+    var windowZoom = true;
+    function modifyScaleBar() {
+      ctx.clearRect(0, 0, nativeWindowWidth, 100);
+
+      if (windowZoom) {
+        this.initialZoomLevel = map.getZoom();
+        windowZoom = false;
+      }
+
+      var metricWidth = pixelWidth / Lt.meta.ppm;
+      var currentZoomLevel = map.getZoom();
+      var zoomExponentialChange = Math.pow(Math.E, -0.693 * (currentZoomLevel - this.initialZoomLevel)); // -0.693 found from plotting zoom level with respect to length in excel then fitting expoential eq.
+
+      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 10;
+      var rounded_metricLength = 'Error: Nano'
+      var stringValue;
+      var stringUnit;
+
+      var pixelLength = 200;
+
+      function scaleBarStretch (sv, su, tenth_mL) {
+        if (su == ' m') {
+          sv = sv * 1000;
+        } else if (su == ' cm') {
+          sv = sv * 10;
+        } else if ( su == ' um') {
+          sv = sv / 1000;
+        };
+        var stringValue_tenthMetric_ratio = sv / tenth_mL;
+        pL = stringValue_tenthMetric_ratio * (nativeWindowWidth / 10);
+        return pL;
+      };
+
+      // extra spaces for legibility
+      if (tenth_metricLength >= 1000) { // 1m & up
+        if (tenth_metricLength > 9999) {
+          stringValue = Math.round(tenth_metricLength / 10000) * 10;
+        } else if (tenth_metricLength > 5000){
+          stringValue = 10;
+        } else {
+          stringValue = 5;
+        }
+        stringUnit = ' m';
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (1000 > tenth_metricLength && tenth_metricLength >= 200) { // 10 cm to 99 cm
+        if (tenth_metricLength > 500) {
+          stringValue = 1;
+          stringUnit = ' m';
+        } else {
+          stringValue = 50;
+          stringUnit = ' cm';
+        };
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (200 > tenth_metricLength && tenth_metricLength >= 25) { // 20 mm to 100 mm
+        if (tenth_metricLength > 60) {
+          stringValue = 10;
+          stringUnit = ' cm';
+        } else {
+          stringValue = 50;
+          stringUnit = ' mm';
+        };
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (25 > tenth_metricLength && tenth_metricLength >= 3) { // 2 mm to 19 mm
+        if (tenth_metricLength > 5) {
+          stringValue = 10;
+        } else {
+          stringValue = 5;
+        };
+        stringUnit = ' mm';
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (3 > tenth_metricLength && tenth_metricLength >= .3) { // 0.1 mm to 1.9 mm
+        if (tenth_metricLength > .7) {
+          stringValue = 1;
+        } else {
+          stringValue = 0.5;
+        };
+        stringUnit = ' mm';
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (.3 > tenth_metricLength && tenth_metricLength >= .03) { // 0.01 mm to 0.09 mm
+        if (tenth_metricLength > .05) {
+          stringValue = 0.1;
+        } else {
+          stringValue = 0.05;
+        };
+        stringUnit = ' mm';
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else if (.03 > tenth_metricLength && tenth_metricLength >= .003) { // 1 um to .029 mm
+        if (tenth_metricLength > .005) {
+          stringValue = 0.01;
+          stringUnit = ' mm';
+        } else {
+          stringValue = 5;
+          stringUnit = ' um'
+        };
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+
+      } else { // less than .001 mm or 1 um
+        if (tenth_metricLength > .0005) {
+          stringValue = 1;
+          stringUnit = ' um';
+        } else {
+          stringValue = 0.5;
+          stringUnit = ' um'
+        };
+        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
+        rounded_metricLength = String(stringValue) + stringUnit;
+      };
+
+      ctx.fillStyle = '#f7f7f7'
+      ctx.globalAlpha = .7;
+      ctx.fillRect(0, 70, pixelLength + 70, 30); // background
+
+      ctx.fillStyle = '#000000';
+      ctx.globalAlpha = 1;
+      ctx.font = "12px Arial"
+      ctx.fillText(rounded_metricLength, pixelLength + 15, 90); // scale bar length text
+
+      ctx.fillRect(10, 90, pixelLength, 3); // bottom line
+      ctx.fillRect(10, 80, 3, 10); // left major line
+      ctx.fillRect(pixelLength + 7, 80, 3, 10); // right major line
+
+      var i;
+      for (i = 0; i < 4; i++) {
+        var distanceBetweenTicks = pixelLength / 5
+        var x = (distanceBetweenTicks) * i;
+        ctx.fillRect(x + distanceBetweenTicks + 10, 85, 1, 5); // 10 = initial canvas x value
+      };
+
+    }
+    map.on("zoom", modifyScaleBar);
+  };
+};
+
 /*****************************************************************************/
 
 /**
@@ -1415,13 +1594,13 @@ function Calibration(Lt) {
         $(document).keypress(e => {
           var key = e.which || e.keyCode;
           if (key === 13) {
-            var length = parseInt(document.getElementById('length').value);
+            var length = parseFloat(document.getElementById('length').value);
             this.calculatePPM(latLng_1, latLng_2, length);
             this.disable();
           }
         });
       } else {
-        var length = parseInt(document.getElementById('length').value);
+        var length = parseFloat(document.getElementById('length').value);
         this.calculatePPM(latLng_1, latLng_2, length);
         this.disable();
       }
