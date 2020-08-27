@@ -10,14 +10,12 @@
                margin-top: 20px; }
 
       #bottom { text-align: center;
-              background-color: #AEDF95;
-              font-size: 60px;
-              margin-top: -10px; }
+                background-color: #AEDF95;
+                font-size: 60px; }
 
-      iframe { align: center;
-               width: 800px;
-               height: 600px;
-               margin-bottom: 30px;  }
+      iframe { width: 90%;
+               height: 160%;
+               margin-bottom: 16px; }
 
       #links { text-align: center;
                font-size: 30px;
@@ -28,23 +26,18 @@
       #tree-symbol { text-align: center;
                      font-size: 300px;}
 
-      table { width: 90%;
+      table { width: 100%;
               margin-left: auto;
               margin-right: auto; }
 
-      td { text-align: center; }
+      td { text-align: center;
+           width: 50%; }
 
     </style>
   </head>
   <body>
 
-    <p id="title">
-         &#9831; &#9831; &#9831;
-         &nbsp; &nbsp; &nbsp;
-         Leaflet Tree Ring Testing Links
-         &nbsp; &nbsp; &nbsp;
-         &#9831; &#9831; &#9831;
-    </p>
+    <p id="title"> Leaflet Tree-Ring Test Site </p>
 
     <table>
       <tr>
@@ -54,7 +47,7 @@
         </td>
         <td>
           <P id="links"> Sub-Annual Forward Measurements </p>
-          <iframe src="index_hasPoints_hasLatewood.html"> </iframe>
+          <iframe id="iframe-right" src="index_hasPoints_hasLatewood.html"> </iframe>
         </td>
       </tr>
       <tr>
@@ -64,12 +57,12 @@
         </td>
         <td>
           <P id="links"> Sub-Annual Backward Measurements </p>
-          <iframe src="index_backwards_subAnnual.html"> </iframe>
+          <iframe id="iframe-right" src="index_backwards_subAnnual.html"> </iframe>
         </td>
       </tr>
     </table>
 
-    <p id="bottom"> ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ </p>
+    <p id="bottom">&nbsp;</p>
 
   </body>
 </html>

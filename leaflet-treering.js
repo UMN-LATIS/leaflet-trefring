@@ -1169,30 +1169,50 @@ function AnnotationAsset(Lt) {
  * @param {LTreering} - Lt
  */
 function ScaleBarCanvas (Lt) {
+  var scaleBarDiv = document.createElement('div');
+  var nativeWindowWidth = document.getElementById("map_container").clientWidth;
+  scaleBarDiv.innerHTML =
+      '<div id="scale-bar-div"> \
+       <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
+       </div>';
+  document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(scaleBarDiv);
+
+  var canvas = document.getElementById("scale-bar-canvas");
+  var ctx = canvas.getContext("2d");
+
+  var map = Lt.viewer;
+  var windowZoom = true;
+  var pixelWidth;
+
+  /**
+   * Convert string value to millimeters
+   * @function
+   * @param {stringValue} - sv
+   * @param {stringUnit} - su
+   * @param {tenth_mL} - tenth_metricLength
+   */
+  function scaleBarStretch (sv, su, tenth_mL) {
+    if (su == ' m') {
+      sv = sv * 1000;
+    } else if (su == ' cm') {
+      sv = sv * 10;
+    } else if ( su == ' um') {
+      sv = sv / 1000;
+    };
+    var stringValue_tenthMetric_ratio = sv / tenth_mL;
+    var pL = stringValue_tenthMetric_ratio * (nativeWindowWidth / 7); // pL - pixelLength
+    return pL;
+  };
 
   ScaleBarCanvas.prototype.load = function () {
-    var scaleBarDiv = document.createElement('div');
-    var nativeWindowWidth = document.getElementById("map_container").clientWidth;
-    scaleBarDiv.innerHTML =
-        '<div id="scale-bar-div"> \
-         <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
-         </div>';
-    document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(scaleBarDiv);
-
-    var canvas = document.getElementById("scale-bar-canvas");
-    var ctx = canvas.getContext("2d");
-
-    var map = Lt.viewer;
-    var pixelWidth;
     map.eachLayer(function (layer) {
       if (layer.options.maxNativeZoom) {
         var leftMostPt = layer.options.bounds._southWest;
         var rightMostPt = layer.options.bounds._northEast;
-        pixelWidth = map.project(rightMostPt, Lt.getMaxNativeZoom()).x - map.project(leftMostPt, Lt.getMaxNativeZoom()).x; // slightly off
+        pixelWidth = map.project(rightMostPt, Lt.getMaxNativeZoom()).x;
       }
     });
 
-    var windowZoom = true;
     function modifyScaleBar() {
       ctx.clearRect(0, 0, nativeWindowWidth, 100);
 
@@ -1205,25 +1225,12 @@ function ScaleBarCanvas (Lt) {
       var currentZoomLevel = map.getZoom();
       var zoomExponentialChange = Math.pow(Math.E, -0.693 * (currentZoomLevel - this.initialZoomLevel)); // -0.693 found from plotting zoom level with respect to length in excel then fitting expoential eq.
 
-      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 10;
+      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 7;
       var rounded_metricLength = 'Error: Nano'
       var stringValue;
       var stringUnit;
 
       var pixelLength = 200;
-
-      function scaleBarStretch (sv, su, tenth_mL) {
-        if (su == ' m') {
-          sv = sv * 1000;
-        } else if (su == ' cm') {
-          sv = sv * 10;
-        } else if ( su == ' um') {
-          sv = sv / 1000;
-        };
-        var stringValue_tenthMetric_ratio = sv / tenth_mL;
-        pL = stringValue_tenthMetric_ratio * (nativeWindowWidth / 10);
-        return pL;
-      };
 
       // extra spaces for legibility
       if (tenth_metricLength >= 1000) { // 1m & up
@@ -1238,7 +1245,7 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (1000 > tenth_metricLength && tenth_metricLength >= 200) { // 10 cm to 99 cm
+      } else if (1000 > tenth_metricLength && tenth_metricLength >= 200) { // 199 cm to 999 cm
         if (tenth_metricLength > 500) {
           stringValue = 1;
           stringUnit = ' m';
@@ -1249,7 +1256,7 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (200 > tenth_metricLength && tenth_metricLength >= 25) { // 20 mm to 100 mm
+      } else if (200 > tenth_metricLength && tenth_metricLength >= 25) { // 25 mm to 199 mm
         if (tenth_metricLength > 60) {
           stringValue = 10;
           stringUnit = ' cm';
@@ -1260,8 +1267,8 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (25 > tenth_metricLength && tenth_metricLength >= 3) { // 2 mm to 19 mm
-        if (tenth_metricLength > 5) {
+      } else if (25 > tenth_metricLength && tenth_metricLength >= 3) { // 3 mm to 24.9 mm
+        if (tenth_metricLength > 8) {
           stringValue = 10;
         } else {
           stringValue = 5;
@@ -1270,8 +1277,8 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (3 > tenth_metricLength && tenth_metricLength >= .3) { // 0.1 mm to 1.9 mm
-        if (tenth_metricLength > .7) {
+      } else if (3 > tenth_metricLength && tenth_metricLength >= .3) { // 0.3 mm to 2.9 mm
+        if (tenth_metricLength > 1) {
           stringValue = 1;
         } else {
           stringValue = 0.5;
@@ -1280,7 +1287,7 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (.3 > tenth_metricLength && tenth_metricLength >= .03) { // 0.01 mm to 0.09 mm
+      } else if (.3 > tenth_metricLength && tenth_metricLength >= .03) { // 0.03 mm to 0.29 mm
         if (tenth_metricLength > .05) {
           stringValue = 0.1;
         } else {
@@ -1290,7 +1297,7 @@ function ScaleBarCanvas (Lt) {
         pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
         rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (.03 > tenth_metricLength && tenth_metricLength >= .003) { // 1 um to .029 mm
+      } else if (.03 > tenth_metricLength && tenth_metricLength >= .003) { // 3 um to .029 mm
         if (tenth_metricLength > .005) {
           stringValue = 0.01;
           stringUnit = ' mm';
@@ -1332,8 +1339,9 @@ function ScaleBarCanvas (Lt) {
         var x = (distanceBetweenTicks) * i;
         ctx.fillRect(x + distanceBetweenTicks + 10, 85, 1, 5); // 10 = initial canvas x value
       };
-
     }
+
+    map.on("resize", modifyScaleBar)
     map.on("zoom", modifyScaleBar);
   };
 };
