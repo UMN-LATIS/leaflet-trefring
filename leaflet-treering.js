@@ -1181,30 +1181,9 @@ function ScaleBarCanvas (Lt) {
   var ctx = canvas.getContext("2d");
 
   var map = Lt.viewer;
-  var windowZoom = true;
-  var pixelWidth;
-
-  /**
-   * Convert string value to millimeters
-   * @function
-   * @param {stringValue} - sv
-   * @param {stringUnit} - su
-   * @param {tenth_mL} - tenth_metricLength
-   */
-  function scaleBarStretch (sv, su, tenth_mL) {
-    if (su == ' m') {
-      sv = sv * 1000;
-    } else if (su == ' cm') {
-      sv = sv * 10;
-    } else if ( su == ' um') {
-      sv = sv / 1000;
-    };
-    var stringValue_tenthMetric_ratio = sv / tenth_mL;
-    var pL = stringValue_tenthMetric_ratio * (nativeWindowWidth / 7); // pL - pixelLength
-    return pL;
-  };
 
   ScaleBarCanvas.prototype.load = function () {
+    var pixelWidth;
     map.eachLayer(function (layer) {
       if (layer.options.maxNativeZoom) {
         var leftMostPt = layer.options.bounds._southWest;
@@ -1213,6 +1192,7 @@ function ScaleBarCanvas (Lt) {
       }
     });
 
+    var windowZoom = true; // used to set initial zoom level
     function modifyScaleBar() {
       ctx.clearRect(0, 0, nativeWindowWidth, 100);
 
@@ -1225,100 +1205,167 @@ function ScaleBarCanvas (Lt) {
       var currentZoomLevel = map.getZoom();
       var zoomExponentialChange = Math.pow(Math.E, -0.693 * (currentZoomLevel - this.initialZoomLevel)); // -0.693 found from plotting zoom level with respect to length in excel then fitting expoential eq.
 
-      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 7;
-      var rounded_metricLength = 'Error: Nano'
-      var stringValue;
-      var stringUnit;
+      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 10;
 
-      var pixelLength = 200;
+      this.value = 'Error';
+      this.unit = ' nm';
+      this.mmValue = 0;
+      this.maxValue = Math.round(tenth_metricLength / 10000);
 
-      // extra spaces for legibility
-      if (tenth_metricLength >= 1000) { // 1m & up
-        if (tenth_metricLength > 9999) {
-          stringValue = Math.round(tenth_metricLength / 10000) * 10;
-        } else if (tenth_metricLength > 5000){
-          stringValue = 10;
-        } else {
-          stringValue = 5;
-        }
-        stringUnit = ' m';
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
+      this.unitTable =
+        {
+          row: [
+            {
+              begin: 10000,
+              end: Number.MAX_SAFE_INTEGER,
+              value: this.maxValue * 10,
+              mmValue: this.maxValue * 1000,
+              unit: ' m',
+            },
 
-      } else if (1000 > tenth_metricLength && tenth_metricLength >= 200) { // 199 cm to 999 cm
-        if (tenth_metricLength > 500) {
-          stringValue = 1;
-          stringUnit = ' m';
-        } else {
-          stringValue = 50;
-          stringUnit = ' cm';
+            {
+              begin: 5000,
+              end: 10000,
+              value: 10,
+              mmValue: 10000,
+              unit: ' m',
+            },
+
+            {
+              begin: 1000,
+              end: 5000,
+              value: 5,
+              mmValue: 5000,
+              unit: ' m',
+            },
+
+            {
+              begin: 500,
+              end: 1000,
+              value: 1,
+              mmValue: 1000,
+              unit: ' m',
+            },
+
+            {
+              begin: 200,
+              end: 500,
+              value: 50,
+              mmValue: 500,
+              unit: ' cm',
+            },
+
+            {
+              begin: 50,
+              end: 200,
+              value: 10,
+              mmValue: 100,
+              unit: ' cm',
+            },
+
+            {
+              begin: 30,
+              end: 50,
+              value: 5,
+              mmValue: 50,
+              unit: ' cm',
+            },
+
+            {
+              begin: 8,
+              end: 30,
+              value: 10,
+              mmValue: 10,
+              unit: ' mm',
+            },
+
+            {
+              begin: 3,
+              end: 8,
+              value: 5,
+              mmValue: 5,
+              unit: ' mm',
+            },
+
+            {
+              begin: 1,
+              end: 3,
+              value: 1,
+              mmValue: 1,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.3,
+              end: 1,
+              value: 0.5,
+              mmValue: 0.5,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.05,
+              end: 0.3,
+              value: 0.1,
+              mmValue: 0.1,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.03,
+              end: 0.05,
+              value: 0.05,
+              mmValue: 0.05,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.005,
+              end: 0.03,
+              value: 0.01,
+              mmValue: 0.01,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.003,
+              end: 0.005,
+              value: 5,
+              mmValue: 0.005,
+              unit: ' um',
+            },
+
+            {
+              begin: 0.0005,
+              end: 0.003,
+              value: 1,
+              mmValue: 0.001,
+              unit: ' um',
+            },
+
+            {
+              begin: Number.MIN_SAFE_INTEGER,
+              end: 0.0005,
+              value: 0.5,
+              mmValue: 0.0005,
+              unit: ' um',
+            },
+          ]
         };
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
 
-      } else if (200 > tenth_metricLength && tenth_metricLength >= 25) { // 25 mm to 199 mm
-        if (tenth_metricLength > 60) {
-          stringValue = 10;
-          stringUnit = ' cm';
-        } else {
-          stringValue = 50;
-          stringUnit = ' mm';
+      var table = this.unitTable;
+      var i;
+      for (i = 0; i < table.row.length; i++) {
+        if (table.row[i].end > tenth_metricLength && tenth_metricLength >= table.row[i].begin) {
+          this.value = table.row[i].value;
+          this.unit = table.row[i].unit;
+          this.mmValue = table.row[i].mmValue;
         };
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
-
-      } else if (25 > tenth_metricLength && tenth_metricLength >= 3) { // 3 mm to 24.9 mm
-        if (tenth_metricLength > 8) {
-          stringValue = 10;
-        } else {
-          stringValue = 5;
-        };
-        stringUnit = ' mm';
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
-
-      } else if (3 > tenth_metricLength && tenth_metricLength >= .3) { // 0.3 mm to 2.9 mm
-        if (tenth_metricLength > 1) {
-          stringValue = 1;
-        } else {
-          stringValue = 0.5;
-        };
-        stringUnit = ' mm';
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
-
-      } else if (.3 > tenth_metricLength && tenth_metricLength >= .03) { // 0.03 mm to 0.29 mm
-        if (tenth_metricLength > .05) {
-          stringValue = 0.1;
-        } else {
-          stringValue = 0.05;
-        };
-        stringUnit = ' mm';
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
-
-      } else if (.03 > tenth_metricLength && tenth_metricLength >= .003) { // 3 um to .029 mm
-        if (tenth_metricLength > .005) {
-          stringValue = 0.01;
-          stringUnit = ' mm';
-        } else {
-          stringValue = 5;
-          stringUnit = ' um'
-        };
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
-
-      } else { // less than .001 mm or 1 um
-        if (tenth_metricLength > .0005) {
-          stringValue = 1;
-          stringUnit = ' um';
-        } else {
-          stringValue = 0.5;
-          stringUnit = ' um'
-        };
-        pixelLength = scaleBarStretch(stringValue, stringUnit, tenth_metricLength);
-        rounded_metricLength = String(stringValue) + stringUnit;
       };
+
+      var stringValue_tenthMetric_ratio = this.mmValue / tenth_metricLength;
+      var pixelLength = stringValue_tenthMetric_ratio * (nativeWindowWidth / 10);
+      var rounded_metricLength = String(this.value) + this.unit;
 
       ctx.fillStyle = '#f7f7f7'
       ctx.globalAlpha = .7;
@@ -1341,7 +1388,7 @@ function ScaleBarCanvas (Lt) {
       };
     }
 
-    map.on("resize", modifyScaleBar)
+    map.on("resize", modifyScaleBar);
     map.on("zoom", modifyScaleBar);
   };
 };
