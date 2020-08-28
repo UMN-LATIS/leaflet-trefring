@@ -1170,7 +1170,8 @@ function AnnotationAsset(Lt) {
  */
 function ScaleBarCanvas (Lt) {
   var scaleBarDiv = document.createElement('div');
-  var nativeWindowWidth = document.getElementById("map_container").clientWidth;
+  var nativeWindowWidth = document.getElementById("map").clientWidth;
+
   scaleBarDiv.innerHTML =
       '<div id="scale-bar-div"> \
        <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
@@ -1365,7 +1366,7 @@ function ScaleBarCanvas (Lt) {
 
       var stringValue_tenthMetric_ratio = this.mmValue / tenth_metricLength;
       var pixelLength = stringValue_tenthMetric_ratio * (nativeWindowWidth / 10);
-      var rounded_metricLength = String(this.value) + this.unit;
+      var rounded_metricLength = '~' + String(this.value) + this.unit;
 
       ctx.fillStyle = '#f7f7f7'
       ctx.globalAlpha = .7;
