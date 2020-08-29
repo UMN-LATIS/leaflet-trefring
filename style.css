@@ -24,11 +24,14 @@
 	padding-top: 5px;
 	font-size: 1.7em;
 }
-
 .mdc-button{
 	margin-right: 10px;
 	margin-bottom: 10px;
 	height: 20px;
+}
+
+.mdc-button.mdc-button--unelevated.mdc-button-compact.delete{
+background-color: red;
 }
 
 table{
@@ -72,10 +75,15 @@ textarea{
 	background-color: #6200ee;
 	color: white;
 	border: none;
-	padding: 10px, 24px;
+	padding: 20px, 24px;
 	margin-left:auto;
 	margin-right:auto;
 	margin-top: 3px;
 	display: inline;
 	float: left;
+}
+
+.center{
+	margin-left: auto;
+	margin-right: auto;
 }

@@ -2604,8 +2604,8 @@ function ViewData(Lt) {
       '>copy data</button><button id="refresh-button"' +
       'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
       '>refresh</button><button id="delete-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      '>delete all</button></div><table><tr>' +
+      'class="mdc-button mdc-button--unelevated mdc-button-compact delete"' +
+      '>delete all</button></div><table class = "center"><tr>' +
       '<th style="width: 45%;">Year</th>' +
       '<th style="width: 70%;">Length (mm)</th></tr>';
 
@@ -2614,7 +2614,7 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      var copyDataString = "\nYear\t\t"+"Length (mm)"+"\n";
+      var copyDataString = Lt.meta.assetName+ "\nYear\t\t"+"Length (mm)"+"\n";
       var EWoodcsvDataString = "Year," + Lt.meta.assetName + "_EW (mm)\n";
       var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW (mm)\n";
       var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW (mm)\n";
@@ -2660,11 +2660,17 @@ function ViewData(Lt) {
               row_color = '#00838f';
               y++;
             };
+            if(e.year%10===0)
+            {
+              row_color='red';
+            }
+
             stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
             stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
           } else {
             y++;
-            stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
+            row_color = e.year%10===0? 'red':'#00d2e6';
+            stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
           }
           last_latLng = e.latLng;
           //Copies data to a string that can be copied to the clipboard
@@ -2683,11 +2689,13 @@ function ViewData(Lt) {
           else
           {
             LWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+            //adding two parts of the year together
             totalWidth+=length;
             totalWidth=Math.round(totalWidth * 1000) / 1000;
             totalWidthString = String(totalWidth);
             totalWidthString = totalWidthString.padEnd(5,'0');
-            TWoodcsvDataString += e.year+","+totalWidth+"\n";
+            TWoodcsvDataString += e.year+","+totalWidthString+"\n";
+            //set to zero only after latewood has been added and totalWidth is in csv
             totalWidth = 0;
           }
         }
@@ -2702,15 +2710,15 @@ function ViewData(Lt) {
     } else {
       stringSetup = '<div><button id="download-ltrr-button"' +
       'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      'disabled>download</button><button id="download-csv-button"' +
+      'disabled>download ltrr</button><button id="download-csv-button"' +
       'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      '>download csv</button><button id="copy-data-button"' +
+      'disabled>download csv</button><button id="copy-data-button"' +
       'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
       '>copy data</button>' +
           '<button id="refresh-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact delete"' +
           '>delete all</button></div>' +
           '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(stringSetup);
@@ -3544,7 +3552,7 @@ function Panhandler(La) {
   }
 
   /**
-   * Dowload CSV ZIP file
+   * Download CSV ZIP file
    * @function
    */
   function downloadCSVFiles(Lt,TWoodcsvDataString,EWoodcsvDataString,LWoodcsvDataString)
