@@ -3557,7 +3557,6 @@ function Panhandler(La) {
    */
   function downloadCSVFiles(Lt,TWoodcsvDataString,EWoodcsvDataString,LWoodcsvDataString)
   {
-    console.log(Lt.measurementOptions.subAnnual);
     var zip = new JSZip();
     if(Lt.measurementOptions.subAnnual)
     {
