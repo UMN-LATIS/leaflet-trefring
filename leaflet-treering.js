@@ -52,6 +52,8 @@ function LTreering (viewer, basePath, options) {
   this.annotationAsset = new AnnotationAsset(this);
   this.panhandler = new Panhandler(this);
 
+  this.scaleBarCanvas = new ScaleBarCanvas(this);
+
   this.popout = new Popout(this);
   this.undo = new Undo(this);
   this.redo = new Redo(this);
@@ -159,6 +161,8 @@ function LTreering (viewer, basePath, options) {
       }
     });
 
+    this.scaleBarCanvas.load();
+
     if ( this.meta.savePermission ) {
       // initialize cloud save
       this.saveCloud.initialize();
@@ -176,7 +180,7 @@ function LTreering (viewer, basePath, options) {
     this.measurementOptions.preferencesInfo();
     this.visualAsset.reload();
     this.annotationAsset.reload();
-        if ( this.meta.savePermission ) {
+    if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
     }
@@ -1159,6 +1163,237 @@ function AnnotationAsset(Lt) {
   };
 }
 
+/**
+ * Scale bar for orientation & screenshots
+ * @constructor
+ * @param {LTreering} - Lt
+ */
+function ScaleBarCanvas (Lt) {
+  var scaleBarDiv = document.createElement('div');
+  var nativeWindowWidth = document.getElementById("map").clientWidth;
+
+  scaleBarDiv.innerHTML =
+      '<div id="scale-bar-div"> \
+       <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
+       </div>';
+  document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(scaleBarDiv);
+
+  var canvas = document.getElementById("scale-bar-canvas");
+  var ctx = canvas.getContext("2d");
+
+  var map = Lt.viewer;
+
+  ScaleBarCanvas.prototype.load = function () {
+    var pixelWidth;
+    map.eachLayer(function (layer) {
+      if (layer.options.maxNativeZoom) {
+        var leftMostPt = layer.options.bounds._southWest;
+        var rightMostPt = layer.options.bounds._northEast;
+        pixelWidth = map.project(rightMostPt, Lt.getMaxNativeZoom()).x;
+      }
+    });
+
+    var windowZoom = true; // used to set initial zoom level
+    function modifyScaleBar() {
+      ctx.clearRect(0, 0, nativeWindowWidth, 100);
+
+      if (windowZoom) {
+        this.initialZoomLevel = map.getZoom();
+        windowZoom = false;
+      }
+
+      var metricWidth = pixelWidth / Lt.meta.ppm;
+      var currentZoomLevel = map.getZoom();
+      var zoomExponentialChange = Math.pow(Math.E, -0.693 * (currentZoomLevel - this.initialZoomLevel)); // -0.693 found from plotting zoom level with respect to length in excel then fitting expoential eq.
+
+      var tenth_metricLength = (metricWidth * zoomExponentialChange) / 10;
+
+      this.value = 'Error';
+      this.unit = ' nm';
+      this.mmValue = 0;
+      this.maxValue = Math.round(tenth_metricLength / 10000);
+
+      this.unitTable =
+        {
+          row: [
+            {
+              begin: 10000,
+              end: Number.MAX_SAFE_INTEGER,
+              value: this.maxValue * 10,
+              mmValue: this.maxValue * 1000,
+              unit: ' m',
+            },
+
+            {
+              begin: 5000,
+              end: 10000,
+              value: 10,
+              mmValue: 10000,
+              unit: ' m',
+            },
+
+            {
+              begin: 1000,
+              end: 5000,
+              value: 5,
+              mmValue: 5000,
+              unit: ' m',
+            },
+
+            {
+              begin: 500,
+              end: 1000,
+              value: 1,
+              mmValue: 1000,
+              unit: ' m',
+            },
+
+            {
+              begin: 200,
+              end: 500,
+              value: 50,
+              mmValue: 500,
+              unit: ' cm',
+            },
+
+            {
+              begin: 50,
+              end: 200,
+              value: 10,
+              mmValue: 100,
+              unit: ' cm',
+            },
+
+            {
+              begin: 30,
+              end: 50,
+              value: 5,
+              mmValue: 50,
+              unit: ' cm',
+            },
+
+            {
+              begin: 8,
+              end: 30,
+              value: 10,
+              mmValue: 10,
+              unit: ' mm',
+            },
+
+            {
+              begin: 3,
+              end: 8,
+              value: 5,
+              mmValue: 5,
+              unit: ' mm',
+            },
+
+            {
+              begin: 1,
+              end: 3,
+              value: 1,
+              mmValue: 1,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.3,
+              end: 1,
+              value: 0.5,
+              mmValue: 0.5,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.05,
+              end: 0.3,
+              value: 0.1,
+              mmValue: 0.1,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.03,
+              end: 0.05,
+              value: 0.05,
+              mmValue: 0.05,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.005,
+              end: 0.03,
+              value: 0.01,
+              mmValue: 0.01,
+              unit: ' mm',
+            },
+
+            {
+              begin: 0.003,
+              end: 0.005,
+              value: 5,
+              mmValue: 0.005,
+              unit: ' um',
+            },
+
+            {
+              begin: 0.0005,
+              end: 0.003,
+              value: 1,
+              mmValue: 0.001,
+              unit: ' um',
+            },
+
+            {
+              begin: Number.MIN_SAFE_INTEGER,
+              end: 0.0005,
+              value: 0.5,
+              mmValue: 0.0005,
+              unit: ' um',
+            },
+          ]
+        };
+
+      var table = this.unitTable;
+      var i;
+      for (i = 0; i < table.row.length; i++) {
+        if (table.row[i].end > tenth_metricLength && tenth_metricLength >= table.row[i].begin) {
+          this.value = table.row[i].value;
+          this.unit = table.row[i].unit;
+          this.mmValue = table.row[i].mmValue;
+        };
+      };
+
+      var stringValue_tenthMetric_ratio = this.mmValue / tenth_metricLength;
+      var pixelLength = stringValue_tenthMetric_ratio * (nativeWindowWidth / 10);
+      var rounded_metricLength = '~' + String(this.value) + this.unit;
+
+      ctx.fillStyle = '#f7f7f7'
+      ctx.globalAlpha = .7;
+      ctx.fillRect(0, 70, pixelLength + 70, 30); // background
+
+      ctx.fillStyle = '#000000';
+      ctx.globalAlpha = 1;
+      ctx.font = "12px Arial"
+      ctx.fillText(rounded_metricLength, pixelLength + 15, 90); // scale bar length text
+
+      ctx.fillRect(10, 90, pixelLength, 3); // bottom line
+      ctx.fillRect(10, 80, 3, 10); // left major line
+      ctx.fillRect(pixelLength + 7, 80, 3, 10); // right major line
+
+      var i;
+      for (i = 0; i < 4; i++) {
+        var distanceBetweenTicks = pixelLength / 5
+        var x = (distanceBetweenTicks) * i;
+        ctx.fillRect(x + distanceBetweenTicks + 10, 85, 1, 5); // 10 = initial canvas x value
+      };
+    }
+
+    map.on("resize", modifyScaleBar);
+    map.on("zoom", modifyScaleBar);
+  };
+};
+
 /*****************************************************************************/
 
 /**
@@ -1415,13 +1650,13 @@ function Calibration(Lt) {
         $(document).keypress(e => {
           var key = e.which || e.keyCode;
           if (key === 13) {
-            var length = parseInt(document.getElementById('length').value);
+            var length = parseFloat(document.getElementById('length').value);
             this.calculatePPM(latLng_1, latLng_2, length);
             this.disable();
           }
         });
       } else {
-        var length = parseInt(document.getElementById('length').value);
+        var length = parseFloat(document.getElementById('length').value);
         this.calculatePPM(latLng_1, latLng_2, length);
         this.disable();
       }
