@@ -2359,7 +2359,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [360, 400], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [250, 400], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
 
@@ -2819,6 +2819,7 @@ function ViewData(Lt) {
    */
   ViewData.prototype.enable = function() {
     this.btn.state('active');
+
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
 
@@ -2831,18 +2832,25 @@ function ViewData(Lt) {
     if (pts[0] != undefined) {
       var y = pts[1].year;
       stringSetup = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">download</button><button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact">delete all</button></div>' +
-          '<table><tr><th style="width: 45%;">Year</th>' +
-                     '<th style="width: 70%;">Length</th></tr>';
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>download</button><button id="copy-data-button"' +
+          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+          '>copy data</button><button id="refresh-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>refresh</button><button id="delete-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>delete all</button></div><table><tr>' +
+          '<th style="width: 45%;">Year</th>' +
+          '<th style="width: 70%;">Length (mm)</th></tr>';
+
 
       var break_point = false;
       var last_latLng;
       var break_length;
       var break_point;
       var length;
-
+      var copyDataString = "\nYear\t\t"+"Length (mm)"+"\n";
+      var lengthAsAString;
       Lt.data.clean();
       pts.map((e, i, a) => {
 
@@ -2867,6 +2875,11 @@ function ViewData(Lt) {
           if (length == 9.999) {
             length = 9.998;
           }
+
+          //Format length number into a string with trailing zeros
+          lengthAsAString = String(length);
+          lengthAsAString = lengthAsAString.padEnd(5,'0');
+          
           if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
@@ -2885,13 +2898,17 @@ function ViewData(Lt) {
             stringContent = stringContent.concat('<tr style="color: #00d2e6;">' + '<td>' + e.year + '</td><td>'+ length + ' mm</td></tr>');
           }
           last_latLng = e.latLng;
+          //Copies data to a string that can be copied to the clipboard
+          copyDataString += e.year + wood + "\t\t"+ lengthAsAString +"\n";
         }
       });
       this.dialog.setContent(stringSetup + stringContent + '</table>');
     } else {
       stringSetup = '<div><button id="download-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          'disabled>download</button>' +
+          'disabled>download</button><button id="copy-data-button"' +
+          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+          '>copy data</button>' +
           '<button id="refresh-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>refresh</button><button id="delete-button"' +
@@ -2903,6 +2920,8 @@ function ViewData(Lt) {
     this.dialog.lock();
     this.dialog.open();
     $('#download-button').click(() => this.download());
+    $('#copy-data-button').click(()=>
+    copyToClipboard(copyDataString));
     $('#refresh-button').click(() => {
       this.disable();
       this.enable();
@@ -2940,6 +2959,18 @@ function ViewData(Lt) {
       });
     });
   },
+  /**
+   * copy text to clipboard
+   * @function enable
+   */
+  copyToClipboard = function(allData){
+    const el = document.createElement('textarea');
+    el.value = allData;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
 
   /**
    * close the data viewer box
@@ -2953,6 +2984,7 @@ function ViewData(Lt) {
     $('#download-button').off('click');
     $('#refresh-button').off('click');
     $('#delete-button').off('click');
+    $('#copy-data-button').off('click');
     this.dialog.close();
   };
 }
