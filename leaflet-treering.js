@@ -3417,6 +3417,8 @@ MeasurementOptions.prototype.displayDialog = function () {
     var backwardRadio = document.getElementById("backward_radio");
     var annualRadio = document.getElementById("annual_radio");
     var subAnnualRadio = document.getElementById("subannual_radio");
+    var hbarGrowthRadio = document.getElementById("hbar_growth_radio");
+    var hbarFullscreenRadio = document.getElementById("hbar_fullscreen_radio");
     if ((Lt.data.points.length === 0 || !Lt.data.points[0]) && window.name.includes('popout')) {
       forwardRadio.disabled = false;
       backwardRadio.disabled = false;
@@ -3429,6 +3431,14 @@ MeasurementOptions.prototype.displayDialog = function () {
       annualRadio.disabled = true;
       subAnnualRadio.disabled = true;
     };
+
+    if (window.name.includes('popout')) {
+      hbarGrowthRadio.disabled = false;
+      hbarFullscreenRadio.disabled = false;
+    } else { // only change option in measurement mode
+      hbarGrowthRadio.disabled = true;
+      hbarFullscreenRadio.disabled = true;
+    }
 
     this.dialog.lock();
     this.dialog.open();
