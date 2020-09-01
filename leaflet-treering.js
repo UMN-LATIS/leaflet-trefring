@@ -785,8 +785,16 @@ function MouseLine (Lt) {
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
 
-    function newCoordCalc (pointA, coefficientB, pointB, pointC, coefficientTrig) {
-      return pointA + ((coefficientB * (pointB - pointC)) * Math.sin(coefficientTrig * Math.PI / 2));
+    var scalerCoefficient = 1; // h-bar legs will grow & shrink as mouse moves
+    if (this.entireScreenLength) {
+      scalerCoefficient = window.innerHeight; // h-bar legs use entire screen length
+    };
+
+    // new X or Y = coordinate X or Y + scaler * (h-bar length)
+    // h-bar length: difference between (mouse point X or Y) & (point X or Y)
+    // scaler: multiplier to increase h-bar length
+    function newCoordCalc (pointA, pointB, pointC) {
+      return pointA + scalerCoefficient * (pointB - pointC);
     };
 
     $(Lt.viewer._container).mousemove(e => {
@@ -797,21 +805,21 @@ function MouseLine (Lt) {
         var point = Lt.viewer.latLngToLayerPoint(latLng);
 
         /* Getting the four points for the h bars, this is doing 90 degree rotations on mouse point */
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 1);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 1);
+        newX = newCoordCalc(mousePoint.x, mousePoint.y, point.y);
+        newY = newCoordCalc(mousePoint.y, point.x, mousePoint.x);
         var topRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 3);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 3);
+        newX = newCoordCalc(mousePoint.x, point.y, mousePoint.y);
+        newY = newCoordCalc(mousePoint.y, mousePoint.x, point.x);
         var bottomRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //doing rotations 90 degree rotations on latlng
-        newX = newCoordCalc(point.x, -1, mousePoint.y, point.y, 1);
-        newY = newCoordCalc(point.y, 1, mousePoint.x, point.x, 1);
+        newX = newCoordCalc(point.x, point.y, mousePoint.y);
+        newY = newCoordCalc(point.y, mousePoint.x, point.x);
         var topLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = point.x - (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
-        newY = point.y + (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3);
+        newX = newCoordCalc(point.x, mousePoint.y, point.y);
+        newY = newCoordCalc(point.y, point.x, mousePoint.x);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //color for h-bar
@@ -2879,7 +2887,7 @@ function ViewData(Lt) {
           //Format length number into a string with trailing zeros
           lengthAsAString = String(length);
           lengthAsAString = lengthAsAString.padEnd(5,'0');
-          
+
           if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
@@ -3302,7 +3310,7 @@ function MeasurementOptions(Lt) {
   */
 MeasurementOptions.prototype.displayDialog = function () {
   return L.control.dialog({
-     'size': [510, 420],
+     'size': [510, 520],
      'anchor': [50, 5],
      'initOpen': false
    }).setContent(
@@ -3315,6 +3323,10 @@ MeasurementOptions.prototype.displayDialog = function () {
       <div><h4>Measurement Interval:</h4></div> \
       <div><input type="radio" name="increment" id="annual_radio"> One increment per year (e.g., total-ring width)</input> \
        <br><input type="radio" name="increment" id="subannual_radio"> Two increments per year (e.g., earlywood- & latewood-ring width)</input></div> \
+     <br> \
+     <div><h4>H-Bar Appearance:</h4></div> \
+     <div><input type="radio" name="hbar_appearance" id="hbar_growth_radio"> H-bar legs grow & shrink as mouse moves</input> \
+      <br><input type="radio" name="hbar_appearance" id="hbar_fullscreen_radio"> H-bar legs fill screen width & height</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
       <div><p style="text-align:right;font-size:20px">&#9831; &#9831; &#9831;  &#9831; &#9831; &#9831; &#9831; &#9831; &#9831; &#9831;<button type="button" id="confirm-button" class="preferences-button"> Save & close </button></p></div> \
       <div><p style="text-align:left;font-size:12px">Please note: Once measurements are initiated, these preferences are set. To modify, delete all existing points for this asset and initiate a new set of measurements.</p></div>').addTo(Lt.viewer);
@@ -3336,6 +3348,13 @@ MeasurementOptions.prototype.displayDialog = function () {
     } else {
       document.getElementById("annual_radio").checked = true;
     };
+
+    if (Lt.mouseLine.entireScreenLength == true) {
+      document.getElementById("hbar_fullscreen_radio").checked = true;
+    } else {
+      document.getElementById("hbar_growth_radio").checked = true;
+    };
+
   };
 
   /**
@@ -3365,9 +3384,22 @@ MeasurementOptions.prototype.displayDialog = function () {
 
     document.getElementById("subannual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.subAnnual = true
+        this.subAnnual = true;
       };
     });
+
+    document.getElementById("hbar_growth_radio").addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        Lt.mouseLine.entireScreenLength = false;
+      };
+    });
+
+    document.getElementById("hbar_fullscreen_radio").addEventListener('change', (event) => {
+      if (event.target.checked == true) {
+        Lt.mouseLine.entireScreenLength = true;
+      };
+    });
+
   };
 
   /**
