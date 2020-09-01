@@ -757,6 +757,7 @@ function MarkerIcon(color, imagePath) {
 function MouseLine (Lt) {
   this.layer = L.layerGroup().addTo(Lt.viewer);
   this.active = false;
+  this.entireScreenLength = false;
 
   /**
    * Enable the mouseline
@@ -3435,6 +3436,7 @@ MeasurementOptions.prototype.displayDialog = function () {
     if (window.name.includes('popout')) {
       hbarGrowthRadio.disabled = false;
       hbarFullscreenRadio.disabled = false;
+      this.prefBtnListener();
     } else { // only change option in measurement mode
       hbarGrowthRadio.disabled = true;
       hbarFullscreenRadio.disabled = true;
