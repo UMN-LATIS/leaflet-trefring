@@ -97,7 +97,7 @@ function LTreering (viewer, basePath, options) {
   if (window.name.includes('popout'))
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn], 'settings', 'Change image and measurement settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
@@ -853,11 +853,16 @@ function MouseLine (Lt) {
           var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
           var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
 
+          // need 3 polylines so lines cover screen
           this.layer.addLayer(L.polyline([latLng, latLngOne],
               {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
 
-          this.layer.addLayer(L.polyline([latLng, latLngTwo],
+          this.layer.addLayer(L.polyline([latLng, mouseLatLng],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+          this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
               {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
 
@@ -1457,13 +1462,15 @@ function Button(icon, toolTip, enable, disable) {
   if (disable !== null) {
     if (icon == 'expand') { // only used for mouse line toggle
       var icon = 'compress';
+      var title = 'Enable proportional h-bar';
     } else {
       var icon = 'clear';
+      var title = 'Cancel';
     }
     states.push({
       stateName: 'active',
       icon: '<i class="material-icons md-18">' + icon + '</i>',
-      title: 'Cancel',
+      title: title,
       onClick: disable
     })
   }
