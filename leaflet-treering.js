@@ -95,9 +95,9 @@ function LTreering (viewer, basePath, options) {
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn], 'settings', 'Change image and measurement settings');
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
@@ -759,6 +759,11 @@ function MouseLine (Lt) {
   this.active = false;
   this.entireScreenLength = false;
 
+  this.btn = new Button ('expand', 'Enable global h-bar',
+             () => { Lt.disableTools; this.btn.state('active'); this.entireScreenLength = true },
+             () => { this.btn.state('inactive'); this.entireScreenLength = false }
+            );
+
   /**
    * Enable the mouseline
    * @function enable
@@ -831,9 +836,37 @@ function MouseLine (Lt) {
           color = '#00838f';
         }
 
-        this.layer.addLayer(L.polyline([latLng, mouseLatLng],
-            {interactive: false, color: color, opacity: '.75',
-              weight: '3'}));
+        if (this.globalMiddleLine) {
+          // y = mx + b
+          var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
+          var b = point.y - (m * point.x);
+          function linearEq (x) {
+            var y = (m * x) + b;
+            return y;
+          };
+          // values from min (0, -308) & max (1920, 355) of leaflet pixel bounds
+          var xOne = 0;
+          var xTwo = 1920;
+          var yOne  = linearEq(xOne) || -308;
+          var yTwo = linearEq(xTwo) || 355
+
+          var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
+          var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
+
+          this.layer.addLayer(L.polyline([latLng, latLngOne],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+          this.layer.addLayer(L.polyline([latLng, latLngTwo],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+        } else {
+          this.layer.addLayer(L.polyline([latLng, mouseLatLng],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+        };
+
         this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
@@ -1417,14 +1450,19 @@ function Button(icon, toolTip, enable, disable) {
   var states = [];
   states.push({
     stateName: 'inactive',
-    icon: '<i class="material-icons md-18">'+icon+'</i>',
+    icon: '<i class="material-icons md-18">' + icon + '</i>',
     title: toolTip,
     onClick: enable
   });
   if (disable !== null) {
+    if (icon == 'expand') { // only used for mouse line toggle
+      var icon = 'compress';
+    } else {
+      var icon = 'clear';
+    }
     states.push({
       stateName: 'active',
-      icon: '<i class="material-icons md-18">clear</i>',
+      icon: '<i class="material-icons md-18">' + icon + '</i>',
       title: 'Cancel',
       onClick: disable
     })
@@ -3326,8 +3364,8 @@ MeasurementOptions.prototype.displayDialog = function () {
        <br><input type="radio" name="increment" id="subannual_radio"> Two increments per year (e.g., earlywood- & latewood-ring width)</input></div> \
      <br> \
      <div><h4>H-Bar Appearance:</h4></div> \
-     <div><input type="radio" name="hbar_appearance" id="hbar_growth_radio"> H-bar legs grow & shrink as mouse moves</input> \
-      <br><input type="radio" name="hbar_appearance" id="hbar_fullscreen_radio"> H-bar legs fill screen width & height</input></div> \
+     <div><input type="radio" name="hbar_appearance" id="hbar_growth_radio"> middle section local</input> \
+      <br><input type="radio" name="hbar_appearance" id="hbar_fullscreen_radio"> middle section global</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
       <div><p style="text-align:right;font-size:20px">&#9831; &#9831; &#9831;  &#9831; &#9831; &#9831; &#9831; &#9831; &#9831; &#9831;<button type="button" id="confirm-button" class="preferences-button"> Save & close </button></p></div> \
       <div><p style="text-align:left;font-size:12px">Please note: Once measurements are initiated, these preferences are set. To modify, delete all existing points for this asset and initiate a new set of measurements.</p></div>').addTo(Lt.viewer);
@@ -3350,7 +3388,7 @@ MeasurementOptions.prototype.displayDialog = function () {
       document.getElementById("annual_radio").checked = true;
     };
 
-    if (Lt.mouseLine.entireScreenLength == true) {
+    if (Lt.mouseLine.globalMiddleLine) {
       document.getElementById("hbar_fullscreen_radio").checked = true;
     } else {
       document.getElementById("hbar_growth_radio").checked = true;
@@ -3391,13 +3429,13 @@ MeasurementOptions.prototype.displayDialog = function () {
 
     document.getElementById("hbar_growth_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        Lt.mouseLine.entireScreenLength = false;
+        Lt.mouseLine.globalMiddleLine = false;
       };
     });
 
     document.getElementById("hbar_fullscreen_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        Lt.mouseLine.entireScreenLength = true;
+        Lt.mouseLine.globalMiddleLine = true;
       };
     });
 
