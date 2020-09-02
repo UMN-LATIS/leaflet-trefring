@@ -847,7 +847,7 @@ function MouseLine (Lt) {
           // pixel bounds change w/ browsers
           var pixelBounds = map.getPixelBounds();
           var xOne = pixelBounds.min.x;
-          var xTwo = pixelBounds.max.x;
+          var xTwo = 2 * pixelBounds.max.x;
           var yOne  = linearEq(xOne) || pixelBounds.min.y;
           var yTwo = linearEq(xTwo) || pixelBounds.max.y;
 
