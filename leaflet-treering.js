@@ -844,14 +844,17 @@ function MouseLine (Lt) {
             var y = (m * x) + b;
             return y;
           };
-          // values from min (0, -308) & max (1920, 355) of leaflet pixel bounds
-          var xOne = 0;
-          var xTwo = 1920;
-          var yOne  = linearEq(xOne) || -308;
-          var yTwo = linearEq(xTwo) || 355
+          // pixel bounds change w/ browsers
+          var pixelBounds = map.getPixelBounds();
+          var xOne = pixelBounds.min.x;
+          var xTwo = pixelBounds.max.x;
+          var yOne  = linearEq(xOne) || pixelBounds.min.y;
+          var yTwo = linearEq(xTwo) || pixelBounds.max.y;
 
           var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
           var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
+
+          // console.log(map.getPixelBounds())
 
           // need 3 polylines so lines cover screen
           this.layer.addLayer(L.polyline([latLng, latLngOne],
