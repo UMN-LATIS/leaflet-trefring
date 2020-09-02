@@ -864,11 +864,11 @@ function MouseLine (Lt) {
 
           // need 3 polylines so lines cover screen
           this.layer.addLayer(L.polyline([latLng, latLngOne],
-              {interactive: false, color: '#ffffff', opacity: '.75',
+              {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
 
           this.layer.addLayer(L.polyline([latLng, latLngTwo],
-              {interactive: false, color: '#ff0000', opacity: '.75',
+              {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
 
         } else {
