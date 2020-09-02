@@ -844,9 +844,15 @@ function MouseLine (Lt) {
             var y = (m * x) + b;
             return y;
           };
-          // pixel bounds change w/ browsers
+
+          // pixel bounds change w/ browsers & zoom levels
           var pixelBounds = map.getPixelBounds();
-          var xOne = pixelBounds.min.x;
+          var xOne = 2 * pixelBounds.min.x;
+
+          if (xOne > 0) { // Must be negative
+            xOne = xOne * -1;
+          };
+
           var xTwo = 2 * pixelBounds.max.x;
           var yOne  = linearEq(xOne) || pixelBounds.min.y;
           var yTwo = linearEq(xTwo) || pixelBounds.max.y;
@@ -858,15 +864,11 @@ function MouseLine (Lt) {
 
           // need 3 polylines so lines cover screen
           this.layer.addLayer(L.polyline([latLng, latLngOne],
-              {interactive: false, color: color, opacity: '.75',
+              {interactive: false, color: '#ffffff', opacity: '.75',
                 weight: '3'}));
 
-          this.layer.addLayer(L.polyline([latLng, mouseLatLng],
-              {interactive: false, color: color, opacity: '.75',
-                weight: '3'}));
-
-          this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
-              {interactive: false, color: color, opacity: '.75',
+          this.layer.addLayer(L.polyline([latLng, latLngTwo],
+              {interactive: false, color: '#ff0000', opacity: '.75',
                 weight: '3'}));
 
         } else {
