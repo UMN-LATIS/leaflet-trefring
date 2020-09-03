@@ -759,9 +759,9 @@ function MouseLine (Lt) {
   this.active = false;
   this.entireScreenLength = false;
 
-  this.btn = new Button ('expand', 'Enable global h-bar',
-             () => { Lt.disableTools; this.btn.state('active'); this.entireScreenLength = true },
-             () => { this.btn.state('inactive'); this.entireScreenLength = false }
+  this.btn = new Button ('expand', 'Enable h-bar path guide',
+             () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
+             () => { this.btn.state('inactive'); this.pathGuide = false }
             );
 
   /**
@@ -791,16 +791,13 @@ function MouseLine (Lt) {
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
 
-    var scalerCoefficient = 1; // h-bar legs will grow & shrink as mouse moves
-    if (this.entireScreenLength) {
-      scalerCoefficient = window.innerHeight; // h-bar legs use entire screen length
-    };
+    var scalerCoefficient = 1.3; // h-bar legs will grow & shrink as mouse moves
 
     // new X or Y = coordinate X or Y + scaler * (h-bar length)
     // h-bar length: difference between (mouse point X or Y) & (point X or Y)
-    // scaler: multiplier to increase h-bar length
+    // scaler: multiplier to increase h-bar leg length
     function newCoordCalc (pointA, pointB, pointC) {
-      return pointA + scalerCoefficient * (pointB - pointC);
+      return pointA + (scalerCoefficient * (pointB - pointC));
     };
 
     $(Lt.viewer._container).mousemove(e => {
@@ -836,10 +833,16 @@ function MouseLine (Lt) {
           color = '#00838f';
         }
 
-        if (this.globalMiddleLine) {
+        if (this.pathGuide) {
           // y = mx + b
           var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
           var b = point.y - (m * point.x);
+
+          function distanceToX (xNaut, distance) {
+            var x = xNaut + (distance / (Math.sqrt(1 + (m ** 2))));
+            return x;
+          };
+
           function linearEq (x) {
             var y = (m * x) + b;
             return y;
@@ -847,35 +850,47 @@ function MouseLine (Lt) {
 
           // pixel bounds change w/ browsers & zoom levels
           var pixelBounds = map.getPixelBounds();
-          var xOne = 2 * pixelBounds.min.x;
 
-          if (xOne > 0) { // Must be negative
-            xOne = xOne * -1;
-          };
+          var pathLength = 100;
+          if (mousePoint.x < point.x) { // mouse left of point
+            var pathLengthOne = pathLength;
+            var pathLengthTwo = -pathLength;
+          } else { // mouse right of point
+            var pathLengthOne = -pathLength;
+            var pathLengthTwo = pathLength;
+          }
 
-          var xTwo = 2 * pixelBounds.max.x;
-          var yOne  = linearEq(xOne) || pixelBounds.min.y;
-          var yTwo = linearEq(xTwo) || pixelBounds.max.y;
+          var xOne = distanceToX(point.x, pathLengthOne);
+          var xTwo = distanceToX(mousePoint.x, pathLengthTwo);
+
+          if (mousePoint.y < point.y) { // mouse below point
+            var verticalFixOne = point.y + pathLength;
+            var verticalFixTwo = mousePoint.y - pathLength;
+          } else { // mouse above point
+            var verticalFixOne = point.y - pathLength;
+            var verticalFixTwo = mousePoint.y + pathLength;
+          }
+          var yOne = linearEq(xOne) || verticalFixOne; // for vertical measurements
+          var yTwo = linearEq(xTwo) || verticalFixTwo; // vertical asymptotes: slope = undefined
 
           var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
           var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
 
-          // console.log(map.getPixelBounds())
-
-          // need 3 polylines so lines cover screen
-          this.layer.addLayer(L.polyline([latLng, latLngOne],
-              {interactive: false, color: color, opacity: '.75',
-                weight: '3'}));
-
-          this.layer.addLayer(L.polyline([latLng, latLngTwo],
-              {interactive: false, color: color, opacity: '.75',
-                weight: '3'}));
-
-        } else {
+          // path guide for point
           this.layer.addLayer(L.polyline([latLng, mouseLatLng],
               {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
+
+          // path guide for mouse
+          this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
         };
+        
+        this.layer.addLayer(L.polyline([latLng, latLngOne],
+            {interactive: false, color: color, opacity: '.75',
+              weight: '3'}));
 
         this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
@@ -1467,7 +1482,7 @@ function Button(icon, toolTip, enable, disable) {
   if (disable !== null) {
     if (icon == 'expand') { // only used for mouse line toggle
       var icon = 'compress';
-      var title = 'Enable proportional h-bar';
+      var title = 'Disable h-bar path guide';
     } else {
       var icon = 'clear';
       var title = 'Cancel';
@@ -3361,7 +3376,7 @@ function MeasurementOptions(Lt) {
   */
 MeasurementOptions.prototype.displayDialog = function () {
   return L.control.dialog({
-     'size': [510, 520],
+     'size': [510, 420],
      'anchor': [50, 5],
      'initOpen': false
    }).setContent(
@@ -3374,10 +3389,6 @@ MeasurementOptions.prototype.displayDialog = function () {
       <div><h4>Measurement Interval:</h4></div> \
       <div><input type="radio" name="increment" id="annual_radio"> One increment per year (e.g., total-ring width)</input> \
        <br><input type="radio" name="increment" id="subannual_radio"> Two increments per year (e.g., earlywood- & latewood-ring width)</input></div> \
-     <br> \
-     <div><h4>H-Bar Appearance:</h4></div> \
-     <div><input type="radio" name="hbar_appearance" id="hbar_growth_radio"> middle section local</input> \
-      <br><input type="radio" name="hbar_appearance" id="hbar_fullscreen_radio"> middle section global</input></div> \
      <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
       <div><p style="text-align:right;font-size:20px">&#9831; &#9831; &#9831;  &#9831; &#9831; &#9831; &#9831; &#9831; &#9831; &#9831;<button type="button" id="confirm-button" class="preferences-button"> Save & close </button></p></div> \
       <div><p style="text-align:left;font-size:12px">Please note: Once measurements are initiated, these preferences are set. To modify, delete all existing points for this asset and initiate a new set of measurements.</p></div>').addTo(Lt.viewer);
@@ -3398,12 +3409,6 @@ MeasurementOptions.prototype.displayDialog = function () {
       document.getElementById("subannual_radio").checked = true;
     } else {
       document.getElementById("annual_radio").checked = true;
-    };
-
-    if (Lt.mouseLine.globalMiddleLine) {
-      document.getElementById("hbar_fullscreen_radio").checked = true;
-    } else {
-      document.getElementById("hbar_growth_radio").checked = true;
     };
 
   };
@@ -3439,18 +3444,6 @@ MeasurementOptions.prototype.displayDialog = function () {
       };
     });
 
-    document.getElementById("hbar_growth_radio").addEventListener('change', (event) => {
-      if (event.target.checked == true) {
-        Lt.mouseLine.globalMiddleLine = false;
-      };
-    });
-
-    document.getElementById("hbar_fullscreen_radio").addEventListener('change', (event) => {
-      if (event.target.checked == true) {
-        Lt.mouseLine.globalMiddleLine = true;
-      };
-    });
-
   };
 
   /**
@@ -3468,8 +3461,6 @@ MeasurementOptions.prototype.displayDialog = function () {
     var backwardRadio = document.getElementById("backward_radio");
     var annualRadio = document.getElementById("annual_radio");
     var subAnnualRadio = document.getElementById("subannual_radio");
-    var hbarGrowthRadio = document.getElementById("hbar_growth_radio");
-    var hbarFullscreenRadio = document.getElementById("hbar_fullscreen_radio");
     if ((Lt.data.points.length === 0 || !Lt.data.points[0]) && window.name.includes('popout')) {
       forwardRadio.disabled = false;
       backwardRadio.disabled = false;
@@ -3482,15 +3473,6 @@ MeasurementOptions.prototype.displayDialog = function () {
       annualRadio.disabled = true;
       subAnnualRadio.disabled = true;
     };
-
-    if (window.name.includes('popout')) {
-      hbarGrowthRadio.disabled = false;
-      hbarFullscreenRadio.disabled = false;
-      this.prefBtnListener();
-    } else { // only change option in measurement mode
-      hbarGrowthRadio.disabled = true;
-      hbarFullscreenRadio.disabled = true;
-    }
 
     this.dialog.lock();
     this.dialog.open();
