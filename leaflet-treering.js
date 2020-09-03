@@ -791,11 +791,7 @@ function MouseLine (Lt) {
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
 
-    var scalerCoefficient = 1.3; // h-bar legs will grow & shrink as mouse moves
-
-    // new X or Y = coordinate X or Y + scaler * (h-bar length)
-    // h-bar length: difference between (mouse point X or Y) & (point X or Y)
-    // scaler: multiplier to increase h-bar leg length
+    var scalerCoefficient = 1.3; // multiplys length between point & mouse
     function newCoordCalc (pointA, pointB, pointC) {
       return pointA + (scalerCoefficient * (pointB - pointC));
     };
@@ -838,6 +834,9 @@ function MouseLine (Lt) {
           var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
           var b = point.y - (m * point.x);
 
+          // find x value along a line some distance away
+          // found by combining linear equation & distance equation
+          // https://math.stackexchange.com/questions/175896/finding-a-point-along-a-line-a-certain-distance-away-from-another-point
           function distanceToX (xNaut, distance) {
             var x = xNaut + (distance / (Math.sqrt(1 + (m ** 2))));
             return x;
@@ -847,9 +846,6 @@ function MouseLine (Lt) {
             var y = (m * x) + b;
             return y;
           };
-
-          // pixel bounds change w/ browsers & zoom levels
-          var pixelBounds = map.getPixelBounds();
 
           var pathLength = 100;
           if (mousePoint.x < point.x) { // mouse left of point
@@ -887,7 +883,7 @@ function MouseLine (Lt) {
                 weight: '3'}));
 
         };
-        
+
         this.layer.addLayer(L.polyline([latLng, latLngOne],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
