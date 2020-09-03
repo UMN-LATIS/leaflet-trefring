@@ -834,7 +834,7 @@ function MouseLine (Lt) {
           var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
           var b = point.y - (m * point.x);
 
-          // find x value along a line some distance away
+          // finds x value along a line some distance away
           // found by combining linear equation & distance equation
           // https://math.stackexchange.com/questions/175896/finding-a-point-along-a-line-a-certain-distance-away-from-another-point
           function distanceToX (xNaut, distance) {
@@ -854,7 +854,7 @@ function MouseLine (Lt) {
           } else { // mouse right of point
             var pathLengthOne = -pathLength;
             var pathLengthTwo = pathLength;
-          }
+          };
 
           var xOne = distanceToX(point.x, pathLengthOne);
           var xTwo = distanceToX(mousePoint.x, pathLengthTwo);
@@ -865,7 +865,8 @@ function MouseLine (Lt) {
           } else { // mouse above point
             var verticalFixOne = point.y - pathLength;
             var verticalFixTwo = mousePoint.y + pathLength;
-          }
+          };
+
           var yOne = linearEq(xOne) || verticalFixOne; // for vertical measurements
           var yTwo = linearEq(xTwo) || verticalFixTwo; // vertical asymptotes: slope = undefined
 
