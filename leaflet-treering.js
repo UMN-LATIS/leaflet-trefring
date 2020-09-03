@@ -874,7 +874,7 @@ function MouseLine (Lt) {
           var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
 
           // path guide for point
-          this.layer.addLayer(L.polyline([latLng, mouseLatLng],
+          this.layer.addLayer(L.polyline([latLng, latLngOne],
               {interactive: false, color: color, opacity: '.75',
                 weight: '3'}));
 
@@ -885,7 +885,7 @@ function MouseLine (Lt) {
 
         };
 
-        this.layer.addLayer(L.polyline([latLng, latLngOne],
+        this.layer.addLayer(L.polyline([latLng, mouseLatLng],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
 
