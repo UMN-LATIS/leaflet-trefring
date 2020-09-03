@@ -23,11 +23,31 @@
 .material-icons.md-18{
 	padding-top: 5px;
 	font-size: 1.7em;
+	
 }
 .mdc-button{
 	margin-right: 10px;
 	margin-bottom: 10px;
 	height: 20px;
+}
+.material-icons.md-18-data-view{
+	padding-right:10px;
+	position: relative;
+	justify-content: center;
+	font-size: 1.7em;
+}
+.icon-button{
+background-color:  #6200ee;
+height: 35px;
+width: 35px;
+color: white;
+text-shadow: 1px 1px 1px #ccc;
+justify-content: center;
+margin-right: 10px;
+margin-bottom: 10px;
+border-color: #A06DEB;
+
+
 }
 
 .mdc-button.mdc-button--unelevated.mdc-button-compact.delete{
@@ -36,7 +56,7 @@ background-color: red;
 
 table{
 	font-family: courier;
-	font-size: 18px;
+	font-size: 16px;
 }
 
 #map .easy-button-button{

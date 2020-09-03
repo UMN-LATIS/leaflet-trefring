@@ -2359,7 +2359,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [300, 350], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [275, 350], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h3>There are no data points to measure</h3>')
     .addTo(Lt.viewer);
 
@@ -2830,17 +2830,17 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
-      stringSetup = '<div><button id="download-ltrr-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      '>download LTRR</button><button id="download-csv-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      '>download csv</button><button id="copy-data-button"' +
-      'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
-      '>copy data</button><button id="refresh-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      '>refresh</button><button id="delete-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact delete"' +
-      '>delete all</button></div><table class = "center"><tr>' +
+      stringSetup = '<div><button id="download-ltrr-button"' + 
+      'class="icon-button" title="Download measurements, LTRR Ring Width Format"' +
+      '><i class="material-icons md-18-data-view">arrow_downward</i></button><button id="download-csv-button"' +
+      'class="icon-button" title="Download Measurements, Common Separated Column Format"' +
+      '><i class="material-icons md-18-data-view">cloud_download</i></button><button id="copy-data-button"' +
+      'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
+      '><i class="material-icons md-18-data-view">content_copy</i></button><button id="refresh-button"' +
+      'class="icon-button" title="Refresh"' +
+      '><i class="material-icons md-18-data-view">refresh</i></button><button id="delete-button"' +
+      'class="icon-button" title="Delete All Measurement Point Data"' +
+      '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
       '<th style="width: 45%;">Year</th>' +
       '<th style="width: 70%;">Length (mm)</th></tr>';
 
@@ -2849,7 +2849,7 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      var copyDataString = Lt.meta.assetName+ "\nYear\t\t"+"Length (mm)"+"\n";
+      var copyDataString = Lt.meta.assetName+ "\nYear\t"+"Length (mm)"+"\n";
       var EWoodcsvDataString = "Year," + Lt.meta.assetName + "_EW (mm)\n";
       var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW (mm)\n";
       var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW (mm)\n";
@@ -2884,6 +2884,13 @@ function ViewData(Lt) {
           lengthAsAString = String(length);
           lengthAsAString = lengthAsAString.padEnd(5,'0');
 
+          if(lengthAsAString.includes('.999'))
+          {
+              lengthAsAString = lengthAsAString.substring(0,lengthAsAString.length-1);
+              lengthAsAString+='8';
+
+          }
+
           if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
@@ -2897,7 +2904,13 @@ function ViewData(Lt) {
             };
             if(e.year%10===0)
             {
-              row_color='red';
+              if(wood === 'E')
+              {
+                row_color='E06F4C';
+              }
+              else{
+                row_color= '#db2314';
+              }
             }
 
             stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
@@ -2909,7 +2922,7 @@ function ViewData(Lt) {
           }
           last_latLng = e.latLng;
           //Copies data to a string that can be copied to the clipboard
-          copyDataString += e.year + wood + "\t\t"+ lengthAsAString +"\n";
+          copyDataString += e.year + wood + "\t"+ lengthAsAString +"\n";
 
           
           //Set up CSV files to download later
@@ -2918,17 +2931,23 @@ function ViewData(Lt) {
           {
           if(wood=='E')
           {
-            EWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+            EWoodcsvDataString += e.year+","+lengthAsAString+"\n";
             totalWidth+=length;
           }
           else
           {
-            LWoodcsvDataString += e.year+wood+","+lengthAsAString+"\n";
+            LWoodcsvDataString += e.year+","+lengthAsAString+"\n";
             //adding two parts of the year together
             totalWidth+=length;
             totalWidth=Math.round(totalWidth * 1000) / 1000;
             totalWidthString = String(totalWidth);
             totalWidthString = totalWidthString.padEnd(5,'0');
+            if(totalWidthString.includes('.999'))
+          {
+              totalWidthString = totalWidthString.substring(0,totalWidthString.length-1);
+              totalWidthString+='8';
+
+          }
             TWoodcsvDataString += e.year+","+totalWidthString+"\n";
             //set to zero only after latewood has been added and totalWidth is in csv
             totalWidth = 0;
