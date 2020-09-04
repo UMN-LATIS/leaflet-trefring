@@ -95,7 +95,7 @@ function LTreering (viewer, basePath, options) {
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
 
@@ -757,6 +757,12 @@ function MarkerIcon(color, imagePath) {
 function MouseLine (Lt) {
   this.layer = L.layerGroup().addTo(Lt.viewer);
   this.active = false;
+  this.pathGuide = false;
+
+  this.btn = new Button ('expand', 'Enable h-bar path guide',
+             () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
+             () => { this.btn.state('inactive'); this.pathGuide = false }
+            );
 
   /**
    * Enable the mouseline
@@ -785,8 +791,9 @@ function MouseLine (Lt) {
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
 
-    function newCoordCalc (pointA, coefficientB, pointB, pointC, coefficientTrig) {
-      return pointA + ((coefficientB * (pointB - pointC)) * Math.sin(coefficientTrig * Math.PI / 2));
+    var scalerCoefficient = 1.3; // multiplys length between point & mouse
+    function newCoordCalc (pointA, pointB, pointC) {
+      return pointA + (scalerCoefficient * (pointB - pointC));
     };
 
     $(Lt.viewer._container).mousemove(e => {
@@ -797,21 +804,21 @@ function MouseLine (Lt) {
         var point = Lt.viewer.latLngToLayerPoint(latLng);
 
         /* Getting the four points for the h bars, this is doing 90 degree rotations on mouse point */
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 1);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 1);
+        newX = newCoordCalc(mousePoint.x, mousePoint.y, point.y);
+        newY = newCoordCalc(mousePoint.y, point.x, mousePoint.x);
         var topRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 3);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 3);
+        newX = newCoordCalc(mousePoint.x, point.y, mousePoint.y);
+        newY = newCoordCalc(mousePoint.y, mousePoint.x, point.x);
         var bottomRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //doing rotations 90 degree rotations on latlng
-        newX = newCoordCalc(point.x, -1, mousePoint.y, point.y, 1);
-        newY = newCoordCalc(point.y, 1, mousePoint.x, point.x, 1);
+        newX = newCoordCalc(point.x, point.y, mousePoint.y);
+        newY = newCoordCalc(point.y, mousePoint.x, point.x);
         var topLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = point.x - (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
-        newY = point.y + (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3);
+        newX = newCoordCalc(point.x, mousePoint.y, point.y);
+        newY = newCoordCalc(point.y, point.x, mousePoint.x);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //color for h-bar
@@ -822,9 +829,66 @@ function MouseLine (Lt) {
           color = '#00838f';
         }
 
+        if (this.pathGuide) {
+          // y = mx + b
+          var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
+          var b = point.y - (m * point.x);
+
+          // finds x value along a line some distance away
+          // found by combining linear equation & distance equation
+          // https://math.stackexchange.com/questions/175896/finding-a-point-along-a-line-a-certain-distance-away-from-another-point
+          function distanceToX (xNaut, distance) {
+            var x = xNaut + (distance / (Math.sqrt(1 + (m ** 2))));
+            return x;
+          };
+
+          function linearEq (x) {
+            var y = (m * x) + b;
+            return y;
+          };
+
+          var pathLength = 100;
+          if (mousePoint.x < point.x) { // mouse left of point
+            var pathLengthOne = pathLength;
+            var pathLengthTwo = -pathLength;
+          } else { // mouse right of point
+            var pathLengthOne = -pathLength;
+            var pathLengthTwo = pathLength;
+          };
+
+          var xOne = distanceToX(point.x, pathLengthOne);
+          var xTwo = distanceToX(mousePoint.x, pathLengthTwo);
+
+          if (mousePoint.y < point.y) { // mouse below point
+            var verticalFixOne = point.y + pathLength;
+            var verticalFixTwo = mousePoint.y - pathLength;
+          } else { // mouse above point
+            var verticalFixOne = point.y - pathLength;
+            var verticalFixTwo = mousePoint.y + pathLength;
+          };
+
+          var yOne = linearEq(xOne) || verticalFixOne; // for vertical measurements
+          var yTwo = linearEq(xTwo) || verticalFixTwo; // vertical asymptotes: slope = undefined
+
+          var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
+          var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
+
+          // path guide for point
+          this.layer.addLayer(L.polyline([latLng, latLngOne],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+          // path guide for mouse
+          this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+        };
+
         this.layer.addLayer(L.polyline([latLng, mouseLatLng],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
+
         this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
@@ -1408,15 +1472,22 @@ function Button(icon, toolTip, enable, disable) {
   var states = [];
   states.push({
     stateName: 'inactive',
-    icon: '<i class="material-icons md-18">'+icon+'</i>',
+    icon: '<i class="material-icons md-18">' + icon + '</i>',
     title: toolTip,
     onClick: enable
   });
   if (disable !== null) {
+    if (icon == 'expand') { // only used for mouse line toggle
+      var icon = 'compress';
+      var title = 'Disable h-bar path guide';
+    } else {
+      var icon = 'clear';
+      var title = 'Cancel';
+    }
     states.push({
       stateName: 'active',
-      icon: '<i class="material-icons md-18">clear</i>',
-      title: 'Cancel',
+      icon: '<i class="material-icons md-18">' + icon + '</i>',
+      title: title,
       onClick: disable
     })
   }
@@ -2879,7 +2950,7 @@ function ViewData(Lt) {
           //Format length number into a string with trailing zeros
           lengthAsAString = String(length);
           lengthAsAString = lengthAsAString.padEnd(5,'0');
-          
+
           if (Lt.measurementOptions.subAnnual) {
             var wood;
             var row_color;
@@ -3336,6 +3407,7 @@ MeasurementOptions.prototype.displayDialog = function () {
     } else {
       document.getElementById("annual_radio").checked = true;
     };
+
   };
 
   /**
@@ -3365,9 +3437,10 @@ MeasurementOptions.prototype.displayDialog = function () {
 
     document.getElementById("subannual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.subAnnual = true
+        this.subAnnual = true;
       };
     });
+
   };
 
   /**
