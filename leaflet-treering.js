@@ -757,7 +757,7 @@ function MarkerIcon(color, imagePath) {
 function MouseLine (Lt) {
   this.layer = L.layerGroup().addTo(Lt.viewer);
   this.active = false;
-  this.entireScreenLength = false;
+  this.pathGuide = false;
 
   this.btn = new Button ('expand', 'Enable h-bar path guide',
              () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
