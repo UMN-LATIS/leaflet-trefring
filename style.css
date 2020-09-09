@@ -28,7 +28,8 @@
 .mdc-button{
 	margin-right: 10px;
 	margin-bottom: 10px;
-	height: 20px;
+	height: 35px;
+	font-size: 15px;
 }
 .material-icons.md-18-data-view{
 	padding-right:10px;
@@ -41,15 +42,30 @@ background-color:  #6200ee;
 height: 35px;
 width: 35px;
 color: white;
-text-shadow: 1px 1px 1px #ccc;
 justify-content: center;
+position: relative;
 margin-right: 10px;
 margin-bottom: 10px;
 border-color: #A06DEB;
-
-
+vertical-align: middle;
 }
 
+.text-button{
+	background-size: 100% 100%;
+	background-color:  #6200ee;
+	border-color: #A06DEB;
+	color: white;
+	height: 35px;
+	width: 35px;
+	font-size: 10px;
+	justify-content: center;
+	position: relative;
+	margin-right: 10px;
+	margin-bottom: 10px;
+	border-radius: 0px;
+	vertical-align: middle;
+	display: inline-block;
+}
 .mdc-button.mdc-button--unelevated.mdc-button-compact.delete{
 background-color: red;
 }

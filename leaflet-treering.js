@@ -2830,11 +2830,12 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
-      stringSetup = '<div><button id="download-ltrr-button"' + 
-      'class="icon-button" title="Download measurements, LTRR Ring Width Format"' +
-      '><i class="material-icons md-18-data-view">arrow_downward</i></button><button id="download-csv-button"' +
-      'class="icon-button" title="Download Measurements, Common Separated Column Format"' +
-      '><i class="material-icons md-18-data-view">cloud_download</i></button><button id="copy-data-button"' +
+      stringSetup = '<div><button id="download-ltrr-button"' +
+      'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
+      '>RWL</button>'+
+      '<button id="download-csv-button"' +
+      'class="text-button" title="Download Measurements, Common Separated Column Format"' +
+      '>CSV</button><button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><button id="refresh-button"' +
       'class="icon-button" title="Refresh"' +
