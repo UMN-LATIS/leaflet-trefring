@@ -2964,17 +2964,16 @@ function ViewData(Lt) {
       this.dialog.setContent(stringSetup + stringContent + '</table>');
     } else {
       stringSetup = '<div><button id="download-ltrr-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      'disabled>download ltrr</button><button id="download-csv-button"' +
-      'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-      'disabled>download csv</button><button id="copy-data-button"' +
-      'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
-      '>copy data</button>' +
-          '<button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact delete"' +
-          '>delete all</button></div>' +
+      'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
+      'disabled>RWL</button><button id="download-csv-button"' +
+      'class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
+      'disabled>CSV</button><button id="copy-data-button"' +
+      'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
+      '><i class="material-icons md-18-data-view">content_copy</i></button><button id="refresh-button"' +
+      'class="icon-button" title="Refresh"' +
+      '><i class="material-icons md-18-data-view">refresh</i></button><button id="delete-button"' +
+      'class="icon-button" title="Delete All Measurement Point Data"' +
+      '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(stringSetup);
     }

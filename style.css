@@ -66,6 +66,11 @@ vertical-align: middle;
 	vertical-align: middle;
 	display: inline-block;
 }
+
+.text-button.disabled{
+	background-color: lightgray;
+	border-color: gray;
+}
 .mdc-button.mdc-button--unelevated.mdc-button-compact.delete{
 background-color: red;
 }
