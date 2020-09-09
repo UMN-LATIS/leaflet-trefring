@@ -53,6 +53,7 @@ function LTreering (viewer, basePath, options) {
   this.panhandler = new Panhandler(this);
 
   this.scaleBarCanvas = new ScaleBarCanvas(this);
+  this.metaDataText = new MetaDataText(this);
 
   this.popout = new Popout(this);
   this.undo = new Undo(this);
@@ -3650,6 +3651,33 @@ function SaveCloud(Lt) {
         .appendChild(saveTimeDiv);
   };
 
+};
+
+/**
+ * Display assets meta data as text
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function MetaDataText (Lt) {
+  var speciesID = Lt.meta.assetName;
+
+  if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
+    var increment = 'sub-annual increments';
+  } else { // otherwise 1 increment per year
+    var increment  = 'annual increments';
+  };
+  if (Lt.measurementOptions.forwardDirection) { // if years counting up
+    var direction = ' &nbsp;|&nbsp; Measuring forward, ';
+  } else { // otherwise years counting down
+    var direction = ' &nbsp;|&nbsp; Measuring backward, ';
+  };
+
+  var branding = ' &nbsp;|&nbsp; Developed at the <a href="z.umn.edu/treerings"> University of Minnesota </a>'
+
+  var metaDataDiv = document.createElement('div');
+  metaDataDiv.innerHTML =
+            '<div><p class="meta-data-text-box">' + speciesID + direction + increment + branding + '</p></div>'
+  document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataDiv);
 }
 
 /**
