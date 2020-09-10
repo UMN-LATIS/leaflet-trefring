@@ -167,7 +167,9 @@ function LTreering (viewer, basePath, options) {
     if ( this.meta.savePermission ) {
       // initialize cloud save
       this.saveCloud.initialize();
-    }
+    };
+
+    this.metaDataText.initialize();
 
     this.loadData();
 
@@ -181,6 +183,7 @@ function LTreering (viewer, basePath, options) {
     this.measurementOptions.preferencesInfo();
     this.visualAsset.reload();
     this.annotationAsset.reload();
+    this.metaDataText.updateText();
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
@@ -276,6 +279,7 @@ function MeasurementData (dataObject, Lt) {
       };
     };
     this.index++;
+    Lt.metaDataText.updateText();
   };
 
   /**
@@ -3574,6 +3578,7 @@ function SaveCloud(Lt) {
     } else { // otherwise 1 increment per year
       var increment  = 'annual increments &nbsp;|&nbsp; ';
     };
+
     if (Lt.measurementOptions.forwardDirection) { // if years counting up
       var direction = 'Measuring forward, ';
     } else { // otherwise years counting down
@@ -3603,8 +3608,9 @@ function SaveCloud(Lt) {
           direction + increment +  'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
     } else {
       document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment + 'No data saved to cloud';
-    }
+          /*direction + increment +*/ 'No data saved to cloud';
+    };
+
     Lt.data.saveDate;
   };
 
@@ -3645,8 +3651,8 @@ function SaveCloud(Lt) {
   SaveCloud.prototype.initialize = function() {
     var saveTimeDiv = document.createElement('div');
     saveTimeDiv.innerHTML =
-        '<div class="leaflet-control-attribution leaflet-control">' +
-        '<p id="leaflet-save-time-tag"></p></div>';
+        // previously had leaflet-control-attribution & leaflet-control as div class
+        '<div><p id="leaflet-save-time-tag"></p></div>';
     document.getElementsByClassName('leaflet-bottom leaflet-left')[0]
         .appendChild(saveTimeDiv);
   };
@@ -3659,26 +3665,69 @@ function SaveCloud(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function MetaDataText (Lt) {
-  var speciesID = Lt.meta.assetName;
+  var speciesID = Lt.meta.assetName; // empty string defaults to N/A
 
-  if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
-    var increment = 'sub-annual increments';
-  } else { // otherwise 1 increment per year
-    var increment  = 'annual increments';
-  };
-  if (Lt.measurementOptions.forwardDirection) { // if years counting up
-    var direction = ' &nbsp;|&nbsp; Measuring forward, ';
-  } else { // otherwise years counting down
-    var direction = ' &nbsp;|&nbsp; Measuring backward, ';
+  MetaDataText.prototype.initialize = function () {
+    var metaDataDiv = document.createElement('div');
+    metaDataDiv.innerHTML =
+              '<div><p id="meta-data-text" class="meta-data-text-box"></p></div>'
+    document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataDiv);
   };
 
-  var branding = ' &nbsp;|&nbsp; Developed at the <a href="z.umn.edu/treerings"> University of Minnesota </a>'
+  MetaDataText.prototype.updateText = function () {
 
-  var metaDataDiv = document.createElement('div');
-  metaDataDiv.innerHTML =
-            '<div><p class="meta-data-text-box">' + speciesID + direction + increment + branding + '</p></div>'
-  document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataDiv);
-}
+      Lt.measurementOptions.preferencesInfo();
+
+      if (Lt.measurementOptions.forwardDirection) { // if years counting up
+        var direction = ' &nbsp;|&nbsp; Measuring forward, ';
+      } else { // otherwise years counting down
+        var direction = ' &nbsp;|&nbsp; Measuring backward, ';
+      };
+
+      if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
+        var increment = 'sub-annual increments';
+      } else { // otherwise 1 increment per year
+        var increment  = 'annual increments';
+      };
+
+
+      var points = Lt.data.points;
+
+      var i;
+      for (i = 0; i < points.length; i++) { // find 1st point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var firstYear = points[i].year;
+          break;
+        };
+      };
+
+      for (i = points.length - 1; i >= 0; i--) { //  find last point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var lastYear = points[i].year;
+          break;
+        };
+      };
+
+      var startYear;
+      var endYear;
+      if (firstYear <= lastYear) { // for measuring forward in time, smallest year value first in points array
+        startYear = firstYear;
+        endYear = lastYear;
+      } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
+        startYear = lastYear;
+        endYear = firstYear;
+      };
+
+      var years = '';
+      if ((startYear || startYear == 0) && (endYear || startYear == 0)) {
+        years = ' &nbsp;|&nbsp; ' + String(startYear) + ' — ' + String(endYear);
+      };
+
+      var branding = ' &nbsp;|&nbsp; DendroElevator developed at the <a href="http://z.umn.edu/treerings"> University of Minnesota </a>'
+
+      document.getElementById("meta-data-text").innerHTML = speciesID + years + direction + increment + branding;
+  };
+};
 
 /**
  * Load a local copy of the measurement data
