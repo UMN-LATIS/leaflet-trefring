@@ -71,8 +71,9 @@ vertical-align: middle;
 	background-color: lightgray;
 	border-color: gray;
 }
-.mdc-button.mdc-button--unelevated.mdc-button-compact.delete{
+.icon-button.delete{
 background-color: red;
+border-color: palevioletred;
 }
 
 table{

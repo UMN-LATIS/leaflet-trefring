@@ -2359,8 +2359,8 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [275, 350], 'anchor': [50, 0], 'initOpen': false})
-    .setContent('<h3>There are no data points to measure</h3>')
+  this.dialog = L.control.dialog({'size': [300, 350], 'anchor': [50, 0], 'initOpen': false})
+    .setContent('<h5>No Measurement Data</h5>')
     .addTo(Lt.viewer);
 
   /**
@@ -2840,7 +2840,7 @@ function ViewData(Lt) {
       '><i class="material-icons md-18-data-view">content_copy</i></button><button id="refresh-button"' +
       'class="icon-button" title="Refresh"' +
       '><i class="material-icons md-18-data-view">refresh</i></button><button id="delete-button"' +
-      'class="icon-button" title="Delete All Measurement Point Data"' +
+      'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
       '<th style="width: 45%;">Year</th>' +
       '<th style="width: 70%;">Length (mm)</th></tr>';
@@ -2922,14 +2922,13 @@ function ViewData(Lt) {
             stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
           }
           last_latLng = e.latLng;
-          //Copies data to a string that can be copied to the clipboard
-          copyDataString += e.year + wood + "\t"+ lengthAsAString +"\n";
-
           
           //Set up CSV files to download later
           //For subannual measurements
           if(Lt.measurementOptions.subAnnual)
           {
+            //Copies data to a string that can be copied to the clipboard
+            copyDataString += String(e.year) + wood + "\t"+ lengthAsAString +"\n";
           if(wood=='E')
           {
             EWoodcsvDataString += e.year+","+lengthAsAString+"\n";
@@ -2957,6 +2956,8 @@ function ViewData(Lt) {
         //For annual measurements
         else{
           TWoodcsvDataString+= e.year+","+lengthAsAString+"\n";
+           //Copies data to a string that can be copied to the clipboard
+          copyDataString += String(e.year) + "\t"+ lengthAsAString +"\n";
         }
           
         }
@@ -2972,9 +2973,9 @@ function ViewData(Lt) {
       '><i class="material-icons md-18-data-view">content_copy</i></button><button id="refresh-button"' +
       'class="icon-button" title="Refresh"' +
       '><i class="material-icons md-18-data-view">refresh</i></button><button id="delete-button"' +
-      'class="icon-button" title="Delete All Measurement Point Data"' +
+      'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
-          '<h3>There are no data points to measure</h3>';
+          '<h5>No Measurement Data</h5>';
       this.dialog.setContent(stringSetup);
     }
     this.dialog.lock();
@@ -3820,7 +3821,7 @@ function Panhandler(La) {
     zip.file((Lt.meta.assetName + '_TW.csv'), TWoodcsvDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
-            saveAs(blob, (Lt.meta.assetName + '.zip'));
+            saveAs(blob, (Lt.meta.assetName + '_csv.zip'));
           });
     }
     
