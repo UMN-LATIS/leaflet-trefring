@@ -3698,7 +3698,7 @@ function MetaDataText (Lt) {
         this.years = ' &nbsp;|&nbsp; ' + String(startYear) + ' — ' + String(endYear);
       };
 
-      var branding = ' &nbsp;|&nbsp; DendroElevator developed at the <a href="http://z.umn.edu/treerings"> University of Minnesota </a>';
+      var branding = ' &nbsp;|&nbsp; DendroElevator developed at the <a href="http://z.umn.edu/treerings" target="_blank"> University of Minnesota </a>';
 
       this.saveText = '';
       if (Lt.meta.savePermission) {
