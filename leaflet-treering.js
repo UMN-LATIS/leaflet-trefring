@@ -53,6 +53,7 @@ function LTreering (viewer, basePath, options) {
   this.panhandler = new Panhandler(this);
 
   this.scaleBarCanvas = new ScaleBarCanvas(this);
+  this.metaDataText = new MetaDataText(this);
 
   this.popout = new Popout(this);
   this.undo = new Undo(this);
@@ -163,10 +164,7 @@ function LTreering (viewer, basePath, options) {
 
     this.scaleBarCanvas.load();
 
-    if ( this.meta.savePermission ) {
-      // initialize cloud save
-      this.saveCloud.initialize();
-    }
+    this.metaDataText.initialize();
 
     this.loadData();
 
@@ -183,7 +181,8 @@ function LTreering (viewer, basePath, options) {
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
-    }
+    };
+    this.metaDataText.updateText();
   };
 
   /**
@@ -275,6 +274,7 @@ function MeasurementData (dataObject, Lt) {
       };
     };
     this.index++;
+    Lt.metaDataText.updateText(); // update every time a point is placed
   };
 
   /**
@@ -354,6 +354,8 @@ function MeasurementData (dataObject, Lt) {
         this.year--;
       }
     }
+
+    Lt.metaDataText.updateText(); // updates after a point is deleted
   };
 
   /**
@@ -381,6 +383,8 @@ function MeasurementData (dataObject, Lt) {
     } else {
       alert('You cannot select the same point');
     }
+
+    Lt.metaDataText.updateText(); // updates after points are cut
   };
 
   /**
@@ -550,6 +554,7 @@ function MeasurementData (dataObject, Lt) {
       this.year++;
     };
 
+    Lt.metaDataText.updateText(); // updates after a single point is inserted
     return tempK;
   };
 
@@ -617,6 +622,7 @@ function MeasurementData (dataObject, Lt) {
       this.year--;
     };
 
+    Lt.metaDataText.updateText(); // updates after a single point is inserted
     return tempK;
   };
 
@@ -1824,6 +1830,8 @@ function Dating(Lt) {
    * @function disable
    */
   Dating.prototype.disable = function() {
+    Lt.metaDataText.updateText(); // updates once user hits enter
+
     this.btn.state('inactive');
     $(Lt.viewer._container).off('click');
     $(document).off('keypress');
@@ -1994,6 +2002,8 @@ function CreateZeroGrowth(Lt) {
       } else if (yearsDecrease){
         Lt.data.year--;
       };
+
+      Lt.metaDataText.updateText(); // updates after point is inserted
 
     } else {
       alert('First year cannot be missing!');
@@ -3418,7 +3428,8 @@ MeasurementOptions.prototype.displayDialog = function () {
     document.getElementById("forward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = true;
-        Lt.data.earlywood = true;
+        Lt.data.earlywood = true; // swap which type of point is plotted first
+        Lt.metaDataText.updateText(); // update text once selected
       };
     });
 
@@ -3426,18 +3437,21 @@ MeasurementOptions.prototype.displayDialog = function () {
       if (event.target.checked == true) {
         this.forwardDirection = false;
         Lt.data.earlywood = false;
+        Lt.metaDataText.updateText();
       };
     });
 
     document.getElementById("annual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.subAnnual = false;
+        Lt.metaDataText.updateText();
       };
     });
 
     document.getElementById("subannual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.subAnnual = true;
+        Lt.metaDataText.updateText();
       };
     });
 
@@ -3568,17 +3582,6 @@ function SaveCloud(Lt) {
    * @function displayDate
    */
   SaveCloud.prototype.displayDate = function() {
-    if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
-      var increment = 'sub-annual increments &nbsp;|&nbsp; ';
-    } else { // otherwise 1 increment per year
-      var increment  = 'annual increments &nbsp;|&nbsp; ';
-    };
-    if (Lt.measurementOptions.forwardDirection) { // if years counting up
-      var direction = 'Measuring forward, ';
-    } else { // otherwise years counting down
-      var direction = 'Measuring backward, '
-    };
-
     var date = Lt.data.saveDate;
     console.log(date);
     if (date.day != undefined && date.hour != undefined) {
@@ -3595,15 +3598,16 @@ function SaveCloud(Lt) {
         minute_string = '0' + date.minute;
       }
 
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment + 'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day + ' ' + date.hour + ':' + minute_string + am_pm;
+      this.saveText =
+          ' &nbsp;|&nbsp; Saved to cloud ' + date.year + '/' + date.month + '/' + date.day + ' ' + date.hour + ':' + minute_string + am_pm;
     } else if (date.day != undefined) {
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment +  'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
+      this.saveText =
+          ' &nbsp;|&nbsp; Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
     } else {
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment + 'No data saved to cloud';
-    }
+      this.saveText =
+          ' &nbsp;|&nbsp; No data saved to cloud';
+    };
+
     Lt.data.saveDate;
   };
 
@@ -3627,6 +3631,7 @@ function SaveCloud(Lt) {
       $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
           .done((msg) => {
             this.displayDate();
+            Lt.metaDataText.updateText();
           })
           .fail((xhr, status, error) => {
             alert('Error: failed to save changes');
@@ -3636,21 +3641,89 @@ function SaveCloud(Lt) {
         'Authentication Error: save to cloud permission not granted');
     }
   };
+};
 
-  /**
-   * Initialize the display date
-   * @function initialize
-   */
-  SaveCloud.prototype.initialize = function() {
-    var saveTimeDiv = document.createElement('div');
-    saveTimeDiv.innerHTML =
-        '<div class="leaflet-control-attribution leaflet-control">' +
-        '<p id="leaflet-save-time-tag"></p></div>';
-    document.getElementsByClassName('leaflet-bottom leaflet-left')[0]
-        .appendChild(saveTimeDiv);
+/**
+ * Display assets meta data as text
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function MetaDataText (Lt) {
+  this.speciesID = Lt.meta.assetName; // empty string defaults to N/A
+
+  MetaDataText.prototype.initialize = function () {
+    if (window.name.includes('popout')) {
+      var metaDataTopDiv = document.createElement('div');
+      metaDataTopDiv.innerHTML =
+                '<div><p id="meta-data-top-text" class="meta-data-text-box"></p></div>'
+      document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataTopDiv);
+    };
+
+    var metaDataBottomDiv = document.createElement('div');
+    metaDataBottomDiv.innerHTML =
+              '<div><p id="meta-data-bottom-text" class="meta-data-text-box"></p></div>'
+    document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataBottomDiv);
   };
 
-}
+  MetaDataText.prototype.updateText = function () {
+      var points = Lt.data.points;
+
+      var i;
+      for (i = 0; i < points.length; i++) { // find 1st point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var firstYear = points[i].year;
+          break;
+        };
+      };
+
+      for (i = points.length - 1; i >= 0; i--) { //  find last point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var lastYear = points[i].year;
+          break;
+        };
+      };
+
+      var startYear;
+      var endYear;
+      if (firstYear <= lastYear) { // for measuring forward in time, smallest year value first in points array
+        startYear = firstYear;
+        endYear = lastYear;
+      } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
+        startYear = lastYear;
+        endYear = firstYear;
+      };
+
+      this.years = '';
+      if ((startYear || startYear == 0) && (endYear || endYear == 0)) {
+        this.years = ' &nbsp;|&nbsp; ' + String(startYear) + ' — ' + String(endYear);
+      };
+
+      var branding = ' &nbsp;|&nbsp; DendroElevator developed at the <a href="http://z.umn.edu/treerings" target="_blank"> University of Minnesota </a>';
+
+      this.saveText = '';
+      if (Lt.meta.savePermission) {
+        this.saveText = Lt.saveCloud.saveText;
+      };
+
+      if (window.name.includes('popout')) {
+        if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
+          this.increment = 'sub-annual increments';
+        } else { // otherwise 1 increment per year
+          this.increment  = 'annual increments';
+        };
+
+        if (Lt.measurementOptions.forwardDirection) { // if years counting up
+          this.direction = 'Measuring forward, ';
+        } else { // otherwise years counting down
+          this.direction = 'Measuring backward, '
+        };
+
+        document.getElementById("meta-data-top-text").innerHTML = this.direction + this.increment + this.saveText;
+      };
+
+      document.getElementById("meta-data-bottom-text").innerHTML = this.speciesID + this.years + branding;
+  };
+};
 
 /**
  * Load a local copy of the measurement data
