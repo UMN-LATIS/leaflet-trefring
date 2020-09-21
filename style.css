@@ -29,18 +29,18 @@
 	margin-right: 10px;
 	margin-bottom: 10px;
 	height: 35px;
-	font-size: 15px;
+	font-size: 12px;
 }
 .material-icons.md-18-data-view{
 	padding-right:10px;
 	position: relative;
 	justify-content: center;
-	font-size: 1.7em;
+	font-size: 1.5em;
 }
 .icon-button{
 background-color:  #6200ee;
-height: 35px;
-width: 35px;
+height: 30px;
+width: 30px;
 color: white;
 justify-content: center;
 position: relative;
@@ -48,6 +48,7 @@ margin-right: 10px;
 margin-bottom: 10px;
 border-color: #A06DEB;
 vertical-align: middle;
+text-align: center;
 }
 
 .text-button{
@@ -55,19 +56,24 @@ vertical-align: middle;
 	background-color:  #6200ee;
 	border-color: #A06DEB;
 	color: white;
-	height: 35px;
-	width: 35px;
+	height: 30px;
+	width: 30px;
 	font-size: 10px;
+	margin: 0 auto;
+    padding: 0;
 	justify-content: center;
-	position: relative;
 	margin-right: 10px;
 	margin-bottom: 10px;
 	border-radius: 0px;
 	vertical-align: middle;
-	display: inline-block;
+	text-align: center;
 }
 
 .text-button.disabled{
+	background-color: lightgray;
+	border-color: gray;
+}
+.icon-button.disabled{
 	background-color: lightgray;
 	border-color: gray;
 }
@@ -78,8 +84,16 @@ border-color: palevioletred;
 
 table{
 	font-family: courier;
-	font-size: 16px;
+	font-size: 10px;
 }
+
+th {
+	position: -webkit-sticky;
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background-color: white;
+  }
 
 #map .easy-button-button{
 	transition-duration: .3s;
