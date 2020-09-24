@@ -3,7 +3,20 @@
 	margin-left: 0px;
 	height: 100%;
 }
-
+::-webkit-scrollbar {
+	-webkit-appearance: none;
+	width: 7px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+	border-radius: 4px;
+	background-color: rgba(0, 0, 0, .5);
+	box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+  }
+  .button-set{
+	  float: left;
+	  position: sticky;
+  }
 #map{
 	height: 100%;
 }
@@ -43,9 +56,10 @@ height: 30px;
 width: 30px;
 color: white;
 justify-content: center;
-position: relative;
-margin-right: 10px;
-margin-bottom: 10px;
+position: sticky;
+left: 10px;
+margin-right: 20px;
+margin-bottom: 11px;
 border-color: #A06DEB;
 vertical-align: middle;
 text-align: center;
@@ -62,11 +76,13 @@ text-align: center;
 	margin: 0 auto;
     padding: 0;
 	justify-content: center;
-	margin-right: 10px;
-	margin-bottom: 10px;
+	margin-right: 20px;
+	margin-bottom: 11px;
 	border-radius: 0px;
 	vertical-align: middle;
 	text-align: center;
+	left: 10px;
+	position: sticky;
 }
 
 .text-button.disabled{
@@ -84,7 +100,7 @@ border-color: palevioletred;
 
 table{
 	font-family: courier;
-	font-size: 10px;
+	font-size: 12px;
 }
 
 th {
@@ -119,6 +135,7 @@ th {
 	font-size: 12px;
 	margin: 4px;
 }
+
 
 textarea{
 	resize: none;

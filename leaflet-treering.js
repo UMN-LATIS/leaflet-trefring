@@ -2359,7 +2359,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [120, 350], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [200, 275], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h5>No Measurement Data</h5>')
     .addTo(Lt.viewer);
 
@@ -2830,24 +2830,25 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
-      stringSetup = '<div><button id="download-ltrr-button"' +
+      stringSetup = '<div class="button-set"><button id="download-ltrr-button"' +
       'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
-      '>RWL</button>'+
+      '>RWL</button><br>  '+
       '<button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      '><i class="material-icons md-18-data-view">content_copy</i></button>' +
+      '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
       '<button id="download-csv-button"' +
       'class="text-button" title="Download Measurements, Common Separated Column Format"' +
-      '>CSV</button>'+
+      '>CSV</button><br>  '+
       '<button id="refresh-button"' +
       'class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button>'+
+      '><i class="material-icons md-18-data-view">refresh</i></button><br>  '+
       '<button id="download-tab-button"' +
       'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
-      '>TAB</button>'+ '<button id="delete-button"' +
+      '>TAB</button><br>  '+ 
+      '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
-      '<th style="width: 45%;">Year</th>' +
+      '<th style="width: 45%;">Year<br><br></th>' +
       '<th style="width: 70%;">Width (mm)</th></tr>';
 
       var break_point = false;
@@ -2979,7 +2980,7 @@ function ViewData(Lt) {
       });
       this.dialog.setContent(stringSetup + stringContent + '</table>');
     } else {
-      stringSetup = '<div><button id="download-ltrr-button"' +
+      stringSetup = '<div class ="button-set"><button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
       'disabled>RWL</button>'+
       '<button id="refresh-button" class="icon-button" title="Refresh"' +
@@ -2991,8 +2992,6 @@ function ViewData(Lt) {
       'disabled>TAB</button>'+
       '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button>'+
-      '<button id="download-ltrr-button" class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
-      'disabled>RWL</button>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
