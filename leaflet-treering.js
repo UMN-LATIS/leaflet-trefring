@@ -2982,16 +2982,16 @@ function ViewData(Lt) {
     } else {
       stringSetup = '<div class ="button-set"><button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
-      'disabled>RWL</button>'+
+      'disabled>RWL</button><br>'+
       '<button id="refresh-button" class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button>' + 
+      '><i class="material-icons md-18-data-view">refresh</i></button><br>' + 
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
-      'disabled>CSV</button>'+
+      'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
       'class ="text-button disabled" title="Download Measurements, Tab Deliminated Format"' +
-      'disabled>TAB</button>'+
+      'disabled>TAB</button><br>'+
       '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      '><i class="material-icons md-18-data-view">content_copy</i></button>'+
+      '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
