@@ -2801,12 +2801,12 @@ function ViewData(Lt) {
         sum_string = sum_string.concat(' -9999');
 
         var zip = new JSZip();
-        zip.file((Lt.meta.assetName + '.raw'), sum_string);
+        zip.file((Lt.meta.assetName + '_rwl.raw'), sum_string);
       }
 
       zip.generateAsync({type: 'blob'})
           .then((blob) => {
-            saveAs(blob, (Lt.meta.assetName + '.zip'));
+            saveAs(blob, (Lt.meta.assetName + '_rwl.zip'));
           });
     } else {
       alert('There is no data to download');
@@ -2830,18 +2830,19 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
-      stringSetup = '<div class="button-set"><button id="download-ltrr-button"' +
-      'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
-      '>RWL</button><br>  '+
-      '<button id="download-csv-button"' +
-      'class="text-button" title="Download Measurements, Common Separated Column Format"' +
-      '>CSV</button><br>  '+
-      '<button id="download-tab-button"' +
-      'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
-      '>TAB</button><br>  '+ 
+      stringSetup = '<div class="button-set">' +
       '<button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
+      '<button id="download-tab-button"' +
+      'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
+      '>TAB</button><br>  '+ 
+      '<button id="download-csv-button"' +
+      'class="text-button" title="Download Measurements, Common Separated Column Format"' +
+      '>CSV</button><br>  '+
+      '<button id="download-ltrr-button"' +
+      'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
+      '>RWL</button><br>  '+
       '<button id="refresh-button"' +
       'class="icon-button" title="Refresh"' +
       '><i class="material-icons md-18-data-view">refresh</i></button><br>  '+
@@ -2856,7 +2857,7 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      var copyDataString = Lt.measurementOptions.subAnnual? "\nYear\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "\nYear\t"+Lt.meta.assetName+"_tw\n";
+      var copyDataString = Lt.measurementOptions.subAnnual? "Year\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "\nYear\t"+Lt.meta.assetName+"_tw\n";
       var EWTabDataString = "Year\t" + Lt.meta.assetName + "_EW\n";
       var LWTabDataString ="Year\t" + Lt.meta.assetName + "_LW\n";
       var TWTabDataString = 'Year\t' + Lt.meta.assetName + "_TW\n";
@@ -3865,7 +3866,7 @@ function Panhandler(La) {
     zip.file((Lt.meta.assetName + '_LW.txt'), LWTabDataString);
     zip.file((Lt.meta.assetName + '_EW.txt'), EWTabDataString);
     }
-    zip.file((Lt.meta.assetName + '_TW.csv'), TWTabDataString)
+    zip.file((Lt.meta.assetName + '_TW.txt'), TWTabDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
