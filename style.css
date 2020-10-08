@@ -29,6 +29,7 @@
 .leaflet-container {
 	background: #d8dfe2;
 }
+
 .leaflet-control {
 	clear: none;
 }
@@ -136,7 +137,6 @@ th {
 	margin: 4px;
 }
 
-
 textarea{
 	resize: none;
 	border: none;
@@ -160,3 +160,4 @@ textarea{
 	margin-left: auto;
 	margin-right: auto;
 }
+

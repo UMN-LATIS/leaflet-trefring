@@ -53,6 +53,7 @@ function LTreering (viewer, basePath, options) {
   this.panhandler = new Panhandler(this);
 
   this.scaleBarCanvas = new ScaleBarCanvas(this);
+  this.metaDataText = new MetaDataText(this);
 
   this.popout = new Popout(this);
   this.undo = new Undo(this);
@@ -95,7 +96,7 @@ function LTreering (viewer, basePath, options) {
   this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
   if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
+    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
   else
     this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
 
@@ -163,10 +164,7 @@ function LTreering (viewer, basePath, options) {
 
     this.scaleBarCanvas.load();
 
-    if ( this.meta.savePermission ) {
-      // initialize cloud save
-      this.saveCloud.initialize();
-    }
+    this.metaDataText.initialize();
 
     this.loadData();
 
@@ -183,7 +181,8 @@ function LTreering (viewer, basePath, options) {
     if ( this.meta.savePermission ) {
       // load the save information in buttom left corner
       this.saveCloud.displayDate();
-    }
+    };
+    this.metaDataText.updateText();
   };
 
   /**
@@ -275,6 +274,7 @@ function MeasurementData (dataObject, Lt) {
       };
     };
     this.index++;
+    Lt.metaDataText.updateText(); // update every time a point is placed
   };
 
   /**
@@ -354,6 +354,8 @@ function MeasurementData (dataObject, Lt) {
         this.year--;
       }
     }
+
+    Lt.metaDataText.updateText(); // updates after a point is deleted
   };
 
   /**
@@ -381,6 +383,8 @@ function MeasurementData (dataObject, Lt) {
     } else {
       alert('You cannot select the same point');
     }
+
+    Lt.metaDataText.updateText(); // updates after points are cut
   };
 
   /**
@@ -550,6 +554,7 @@ function MeasurementData (dataObject, Lt) {
       this.year++;
     };
 
+    Lt.metaDataText.updateText(); // updates after a single point is inserted
     return tempK;
   };
 
@@ -617,6 +622,7 @@ function MeasurementData (dataObject, Lt) {
       this.year--;
     };
 
+    Lt.metaDataText.updateText(); // updates after a single point is inserted
     return tempK;
   };
 
@@ -757,6 +763,12 @@ function MarkerIcon(color, imagePath) {
 function MouseLine (Lt) {
   this.layer = L.layerGroup().addTo(Lt.viewer);
   this.active = false;
+  this.pathGuide = false;
+
+  this.btn = new Button ('expand', 'Enable h-bar path guide',
+             () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
+             () => { this.btn.state('inactive'); this.pathGuide = false }
+            );
 
   /**
    * Enable the mouseline
@@ -785,8 +797,9 @@ function MouseLine (Lt) {
   MouseLine.prototype.from = function(latLng) {
     var newX, newY;
 
-    function newCoordCalc (pointA, coefficientB, pointB, pointC, coefficientTrig) {
-      return pointA + ((coefficientB * (pointB - pointC)) * Math.sin(coefficientTrig * Math.PI / 2));
+    var scalerCoefficient = 1.3; // multiplys length between point & mouse
+    function newCoordCalc (pointA, pointB, pointC) {
+      return pointA + (scalerCoefficient * (pointB - pointC));
     };
 
     $(Lt.viewer._container).mousemove(e => {
@@ -797,21 +810,21 @@ function MouseLine (Lt) {
         var point = Lt.viewer.latLngToLayerPoint(latLng);
 
         /* Getting the four points for the h bars, this is doing 90 degree rotations on mouse point */
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 1);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 1);
+        newX = newCoordCalc(mousePoint.x, mousePoint.y, point.y);
+        newY = newCoordCalc(mousePoint.y, point.x, mousePoint.x);
         var topRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = newCoordCalc(mousePoint.x, -1, point.y, mousePoint.y, 3);
-        newY = newCoordCalc(mousePoint.y, 1, point.x, mousePoint.x, 3);
+        newX = newCoordCalc(mousePoint.x, point.y, mousePoint.y);
+        newY = newCoordCalc(mousePoint.y, mousePoint.x, point.x);
         var bottomRightPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //doing rotations 90 degree rotations on latlng
-        newX = newCoordCalc(point.x, -1, mousePoint.y, point.y, 1);
-        newY = newCoordCalc(point.y, 1, mousePoint.x, point.x, 1);
+        newX = newCoordCalc(point.x, point.y, mousePoint.y);
+        newY = newCoordCalc(point.y, mousePoint.x, point.x);
         var topLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
-        newX = point.x - (mousePoint.y - point.y) * Math.sin(Math.PI / 2 * 3);
-        newY = point.y + (mousePoint.x - point.x) * Math.sin(Math.PI / 2 * 3);
+        newX = newCoordCalc(point.x, mousePoint.y, point.y);
+        newY = newCoordCalc(point.y, point.x, mousePoint.x);
         var bottomLeftPoint = Lt.viewer.layerPointToLatLng([newX, newY]);
 
         //color for h-bar
@@ -822,9 +835,66 @@ function MouseLine (Lt) {
           color = '#00838f';
         }
 
+        if (this.pathGuide) {
+          // y = mx + b
+          var m = (mousePoint.y - point.y) / (mousePoint.x - point.x);
+          var b = point.y - (m * point.x);
+
+          // finds x value along a line some distance away
+          // found by combining linear equation & distance equation
+          // https://math.stackexchange.com/questions/175896/finding-a-point-along-a-line-a-certain-distance-away-from-another-point
+          function distanceToX (xNaut, distance) {
+            var x = xNaut + (distance / (Math.sqrt(1 + (m ** 2))));
+            return x;
+          };
+
+          function linearEq (x) {
+            var y = (m * x) + b;
+            return y;
+          };
+
+          var pathLength = 100;
+          if (mousePoint.x < point.x) { // mouse left of point
+            var pathLengthOne = pathLength;
+            var pathLengthTwo = -pathLength;
+          } else { // mouse right of point
+            var pathLengthOne = -pathLength;
+            var pathLengthTwo = pathLength;
+          };
+
+          var xOne = distanceToX(point.x, pathLengthOne);
+          var xTwo = distanceToX(mousePoint.x, pathLengthTwo);
+
+          if (mousePoint.y < point.y) { // mouse below point
+            var verticalFixOne = point.y + pathLength;
+            var verticalFixTwo = mousePoint.y - pathLength;
+          } else { // mouse above point
+            var verticalFixOne = point.y - pathLength;
+            var verticalFixTwo = mousePoint.y + pathLength;
+          };
+
+          var yOne = linearEq(xOne) || verticalFixOne; // for vertical measurements
+          var yTwo = linearEq(xTwo) || verticalFixTwo; // vertical asymptotes: slope = undefined
+
+          var latLngOne = Lt.viewer.layerPointToLatLng([xOne, yOne]);
+          var latLngTwo = Lt.viewer.layerPointToLatLng([xTwo, yTwo]);
+
+          // path guide for point
+          this.layer.addLayer(L.polyline([latLng, latLngOne],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+          // path guide for mouse
+          this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
+              {interactive: false, color: color, opacity: '.75',
+                weight: '3'}));
+
+        };
+
         this.layer.addLayer(L.polyline([latLng, mouseLatLng],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
+
         this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
               weight: '3'}));
@@ -1408,15 +1478,22 @@ function Button(icon, toolTip, enable, disable) {
   var states = [];
   states.push({
     stateName: 'inactive',
-    icon: '<i class="material-icons md-18">'+icon+'</i>',
+    icon: '<i class="material-icons md-18">' + icon + '</i>',
     title: toolTip,
     onClick: enable
   });
   if (disable !== null) {
+    if (icon == 'expand') { // only used for mouse line toggle
+      var icon = 'compress';
+      var title = 'Disable h-bar path guide';
+    } else {
+      var icon = 'clear';
+      var title = 'Cancel';
+    }
     states.push({
       stateName: 'active',
-      icon: '<i class="material-icons md-18">clear</i>',
-      title: 'Cancel',
+      icon: '<i class="material-icons md-18">' + icon + '</i>',
+      title: title,
       onClick: disable
     })
   }
@@ -1753,6 +1830,8 @@ function Dating(Lt) {
    * @function disable
    */
   Dating.prototype.disable = function() {
+    Lt.metaDataText.updateText(); // updates once user hits enter
+
     this.btn.state('inactive');
     $(Lt.viewer._container).off('click');
     $(document).off('keypress');
@@ -1923,6 +2002,8 @@ function CreateZeroGrowth(Lt) {
       } else if (yearsDecrease){
         Lt.data.year--;
       };
+
+      Lt.metaDataText.updateText(); // updates after point is inserted
 
     } else {
       alert('First year cannot be missing!');
@@ -2361,6 +2442,7 @@ function ViewData(Lt) {
 
   this.dialog = L.control.dialog({'size': [200, 275], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h5>No Measurement Data</h5>')
+
     .addTo(Lt.viewer);
 
   /**
@@ -2819,6 +2901,7 @@ function ViewData(Lt) {
    */
   ViewData.prototype.enable = function() {
     this.btn.state('active');
+
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
 
@@ -2830,6 +2913,7 @@ function ViewData(Lt) {
 
     if (pts[0] != undefined) {
       var y = pts[1].year;
+
       stringSetup = '<div class="button-set">' +
       '<button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
@@ -2867,6 +2951,7 @@ function ViewData(Lt) {
       var lengthAsAString;
       var  totalWidthString = String(totalWidth);
       var totalWidth = 0;
+
       Lt.data.clean();
       pts.map((e, i, a) => {
 
@@ -2976,7 +3061,6 @@ function ViewData(Lt) {
            TWTabDataString += e.year + "\t" + totalWidthString+ "\n";
           copyDataString += String(e.year) + "\t"+ lengthAsAString +"\n";
         }
-          
         }
       });
       this.dialog.setContent(stringSetup + stringContent + '</table>');
@@ -2997,11 +3081,24 @@ function ViewData(Lt) {
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h5>No Measurement Data</h5>';
+      
+      stringSetup = '<div><button id="download-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          'disabled>download</button><button id="copy-data-button"' +
+          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
+          '>copy data</button>' +
+          '<button id="refresh-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>refresh</button><button id="delete-button"' +
+          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
+          '>delete all</button></div>' +
+          '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(stringSetup);
       document.getElementById("copy-data-button").disabled=true;
     }
     this.dialog.lock();
     this.dialog.open();
+
     $('#download-ltrr-button').click(() => this.download());
     $('#copy-data-button').click(()=> copyToClipboard(copyDataString));
     $('#download-csv-button').click(() => {
@@ -3061,6 +3158,18 @@ function ViewData(Lt) {
       });
     });
   },
+  /**
+   * copy text to clipboard
+   * @function enable
+   */
+  copyToClipboard = function(allData){
+    const el = document.createElement('textarea');
+    el.value = allData;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
 
   /**
    * close the data viewer box
@@ -3077,6 +3186,7 @@ function ViewData(Lt) {
     $('#copy-data-button').off('click');
     $('#refresh-button').off('click');
     $('#delete-button').off('click');
+    $('#copy-data-button').off('click');
     this.dialog.close();
   };
 }
@@ -3428,6 +3538,7 @@ MeasurementOptions.prototype.displayDialog = function () {
     } else {
       document.getElementById("annual_radio").checked = true;
     };
+
   };
 
   /**
@@ -3438,7 +3549,8 @@ MeasurementOptions.prototype.displayDialog = function () {
     document.getElementById("forward_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.forwardDirection = true;
-        Lt.data.earlywood = true;
+        Lt.data.earlywood = true; // swap which type of point is plotted first
+        Lt.metaDataText.updateText(); // update text once selected
       };
     });
 
@@ -3446,20 +3558,24 @@ MeasurementOptions.prototype.displayDialog = function () {
       if (event.target.checked == true) {
         this.forwardDirection = false;
         Lt.data.earlywood = false;
+        Lt.metaDataText.updateText();
       };
     });
 
     document.getElementById("annual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
         this.subAnnual = false;
+        Lt.metaDataText.updateText();
       };
     });
 
     document.getElementById("subannual_radio").addEventListener('change', (event) => {
       if (event.target.checked == true) {
-        this.subAnnual = true
+        this.subAnnual = true;
+        Lt.metaDataText.updateText();
       };
     });
+
   };
 
   /**
@@ -3587,17 +3703,6 @@ function SaveCloud(Lt) {
    * @function displayDate
    */
   SaveCloud.prototype.displayDate = function() {
-    if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
-      var increment = 'sub-annual increments &nbsp;|&nbsp; ';
-    } else { // otherwise 1 increment per year
-      var increment  = 'annual increments &nbsp;|&nbsp; ';
-    };
-    if (Lt.measurementOptions.forwardDirection) { // if years counting up
-      var direction = 'Measuring forward, ';
-    } else { // otherwise years counting down
-      var direction = 'Measuring backward, '
-    };
-
     var date = Lt.data.saveDate;
     console.log(date);
     if (date.day != undefined && date.hour != undefined) {
@@ -3614,15 +3719,16 @@ function SaveCloud(Lt) {
         minute_string = '0' + date.minute;
       }
 
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment + 'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day + ' ' + date.hour + ':' + minute_string + am_pm;
+      this.saveText =
+          ' &nbsp;|&nbsp; Saved to cloud ' + date.year + '/' + date.month + '/' + date.day + ' ' + date.hour + ':' + minute_string + am_pm;
     } else if (date.day != undefined) {
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment +  'Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
+      this.saveText =
+          ' &nbsp;|&nbsp; Saved to cloud ' + date.year + '/' + date.month + '/' + date.day;
     } else {
-      document.getElementById('leaflet-save-time-tag').innerHTML =
-          direction + increment + 'No data saved to cloud';
-    }
+      this.saveText =
+          ' &nbsp;|&nbsp; No data saved to cloud';
+    };
+
     Lt.data.saveDate;
   };
 
@@ -3646,6 +3752,7 @@ function SaveCloud(Lt) {
       $.post(Lt.meta.saveURL, {sidecarContent: JSON.stringify(dataJSON)})
           .done((msg) => {
             this.displayDate();
+            Lt.metaDataText.updateText();
           })
           .fail((xhr, status, error) => {
             alert('Error: failed to save changes');
@@ -3655,21 +3762,89 @@ function SaveCloud(Lt) {
         'Authentication Error: save to cloud permission not granted');
     }
   };
+};
 
-  /**
-   * Initialize the display date
-   * @function initialize
-   */
-  SaveCloud.prototype.initialize = function() {
-    var saveTimeDiv = document.createElement('div');
-    saveTimeDiv.innerHTML =
-        '<div class="leaflet-control-attribution leaflet-control">' +
-        '<p id="leaflet-save-time-tag"></p></div>';
-    document.getElementsByClassName('leaflet-bottom leaflet-left')[0]
-        .appendChild(saveTimeDiv);
+/**
+ * Display assets meta data as text
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function MetaDataText (Lt) {
+  this.speciesID = Lt.meta.assetName; // empty string defaults to N/A
+
+  MetaDataText.prototype.initialize = function () {
+    if (window.name.includes('popout')) {
+      var metaDataTopDiv = document.createElement('div');
+      metaDataTopDiv.innerHTML =
+                '<div><p id="meta-data-top-text" class="meta-data-text-box"></p></div>'
+      document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataTopDiv);
+    };
+
+    var metaDataBottomDiv = document.createElement('div');
+    metaDataBottomDiv.innerHTML =
+              '<div><p id="meta-data-bottom-text" class="meta-data-text-box"></p></div>'
+    document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataBottomDiv);
   };
 
-}
+  MetaDataText.prototype.updateText = function () {
+      var points = Lt.data.points;
+
+      var i;
+      for (i = 0; i < points.length; i++) { // find 1st point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var firstYear = points[i].year;
+          break;
+        };
+      };
+
+      for (i = points.length - 1; i >= 0; i--) { //  find last point w/ year value
+        if (points[i] && (points[i].year || points[i].year == 0)) {
+          var lastYear = points[i].year;
+          break;
+        };
+      };
+
+      var startYear;
+      var endYear;
+      if (firstYear <= lastYear) { // for measuring forward in time, smallest year value first in points array
+        startYear = firstYear;
+        endYear = lastYear;
+      } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
+        startYear = lastYear;
+        endYear = firstYear;
+      };
+
+      this.years = '';
+      if ((startYear || startYear == 0) && (endYear || endYear == 0)) {
+        this.years = ' &nbsp;|&nbsp; ' + String(startYear) + ' — ' + String(endYear);
+      };
+
+      var branding = ' &nbsp;|&nbsp; DendroElevator developed at the <a href="http://z.umn.edu/treerings" target="_blank"> University of Minnesota </a>';
+
+      this.saveText = '';
+      if (Lt.meta.savePermission) {
+        this.saveText = Lt.saveCloud.saveText;
+      };
+
+      if (window.name.includes('popout')) {
+        if (Lt.measurementOptions.subAnnual) { // if 2 increments per year
+          this.increment = 'sub-annual increments';
+        } else { // otherwise 1 increment per year
+          this.increment  = 'annual increments';
+        };
+
+        if (Lt.measurementOptions.forwardDirection) { // if years counting up
+          this.direction = 'Measuring forward, ';
+        } else { // otherwise years counting down
+          this.direction = 'Measuring backward, '
+        };
+
+        document.getElementById("meta-data-top-text").innerHTML = this.direction + this.increment + this.saveText;
+      };
+
+      document.getElementById("meta-data-bottom-text").innerHTML = this.speciesID + this.years + branding;
+  };
+};
 
 /**
  * Load a local copy of the measurement data
