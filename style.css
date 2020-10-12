@@ -7,7 +7,7 @@
 	-webkit-appearance: none;
 	width: 7px;
   }
-  
+
   ::-webkit-scrollbar-thumb {
 	border-radius: 4px;
 	background-color: rgba(0, 0, 0, .5);
@@ -37,7 +37,7 @@
 .material-icons.md-18{
 	padding-top: 5px;
 	font-size: 1.7em;
-	
+
 }
 .mdc-button{
 	margin-right: 10px;
@@ -161,3 +161,14 @@ textarea{
 	margin-right: auto;
 }
 
+.meta-data-text-box {
+	font-size: 12px;
+	background-color: rgba(245, 245, 245, .75);
+	display: inline-block;
+	pointer-events: all;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin-bottom: 0px;
+}
