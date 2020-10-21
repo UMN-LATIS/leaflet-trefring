@@ -2905,6 +2905,11 @@ function ViewData(Lt) {
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
 
+    //closes data view if mouse clicks anywhere outside the data viewer box
+    $(Lt.viewer._container).click(e => {
+      this.disable();
+    });
+
     if (Lt.measurementOptions.forwardDirection) { // years ascend in value
       var pts = Lt.data.points;
     } else { // otherwise years descend in value
@@ -2914,7 +2919,7 @@ function ViewData(Lt) {
     if (pts[0] != undefined) {
       var y = pts[1].year;
 
-      stringSetup = '<div class="button-set">' +
+      stringSetup = '<div class ="dataWindow"><div class="button-set">' +
       '<button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
@@ -3063,7 +3068,7 @@ function ViewData(Lt) {
         }
         }
       });
-      this.dialog.setContent(stringSetup + stringContent + '</table>');
+      this.dialog.setContent(stringSetup + stringContent + '</table><div>');
     } else {
       stringSetup = '<div class ="button-set"><button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
@@ -3082,17 +3087,6 @@ function ViewData(Lt) {
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h5>No Measurement Data</h5>';
       
-      stringSetup = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          'disabled>download</button><button id="copy-data-button"' +
-          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
-          '>copy data</button>' +
-          '<button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>refresh</button><button id="delete-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>delete all</button></div>' +
-          '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(stringSetup);
       document.getElementById("copy-data-button").disabled=true;
     }
