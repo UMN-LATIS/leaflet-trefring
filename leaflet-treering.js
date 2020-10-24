@@ -2815,9 +2815,9 @@ function ViewData(Lt) {
         console.log(lw_string);
 
         var zip = new JSZip();
-        zip.file((Lt.meta.assetName + '.raw'), sum_string);
-        zip.file((Lt.meta.assetName + '.lwr'), lw_string);
-        zip.file((Lt.meta.assetName + '.ewr'), ew_string);
+        zip.file((Lt.meta.assetName + '_TW_rwl.txt'), sum_string);
+        zip.file((Lt.meta.assetName + '_LW_rwl.txt'), lw_string);
+        zip.file((Lt.meta.assetName + '_EW_rwl.txt'), ew_string);
 
       } else {
 
@@ -2883,7 +2883,7 @@ function ViewData(Lt) {
         sum_string = sum_string.concat(' -9999');
 
         var zip = new JSZip();
-        zip.file((Lt.meta.assetName + '_rwl.raw'), sum_string);
+        zip.file((Lt.meta.assetName + '_TW_rwl.txt'), sum_string);
       }
 
       zip.generateAsync({type: 'blob'})
@@ -2946,10 +2946,10 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      var copyDataString = Lt.measurementOptions.subAnnual? "Year\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "\nYear\t"+Lt.meta.assetName+"_tw\n";
+      var copyDataString = Lt.measurementOptions.subAnnual? "Year\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "Year\t"+Lt.meta.assetName+"_tw\n";
       var EWTabDataString = "Year\t" + Lt.meta.assetName + "_EW\n";
       var LWTabDataString ="Year\t" + Lt.meta.assetName + "_LW\n";
-      var TWTabDataString = 'Year\t' + Lt.meta.assetName + "_TW\n";
+      var TWTabDataString = "Year\t" + Lt.meta.assetName + "_TW\n";
       var EWoodcsvDataString = "Year," + Lt.meta.assetName + "_EW\n";
       var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW\n";
       var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW\n";
@@ -3028,7 +3028,6 @@ function ViewData(Lt) {
           //For subannual measurements
           if(Lt.measurementOptions.subAnnual)
           {
-            //Copies data to a string that can be copied to the clipboard
             
           if(wood=='E')
           {
@@ -3049,7 +3048,6 @@ function ViewData(Lt) {
           {
               totalWidthString = totalWidthString.substring(0,totalWidthString.length-1);
               totalWidthString+='8';
-
           }
             TWoodcsvDataString += e.year+","+totalWidthString+"\n";
             LWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
@@ -3063,8 +3061,8 @@ function ViewData(Lt) {
         else{
           TWoodcsvDataString+= e.year+","+lengthAsAString+"\n";
            //Copies data to a string that can be copied to the clipboard
-           TWTabDataString += e.year + "\t" + totalWidthString+ "\n";
-          copyDataString += String(e.year) + "\t"+ lengthAsAString +"\n";
+           TWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
+          copyDataString += e.year + "\t"+ lengthAsAString +"\n";
         }
         }
       });
@@ -4018,10 +4016,10 @@ function Panhandler(La) {
     var zip = new JSZip();
     if(Lt.measurementOptions.subAnnual)
     {
-    zip.file((Lt.meta.assetName + '_LW.csv'), LWoodcsvDataString);
-    zip.file((Lt.meta.assetName + '_EW.csv'), EWoodcsvDataString);
+    zip.file((Lt.meta.assetName + '_LW_csv.csv'), LWoodcsvDataString);
+    zip.file((Lt.meta.assetName + '_EW_csv.csv'), EWoodcsvDataString);
     }
-    zip.file((Lt.meta.assetName + '_TW.csv'), TWoodcsvDataString)
+    zip.file((Lt.meta.assetName + '_TW_csv.csv'), TWoodcsvDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '_csv.zip'));
@@ -4032,10 +4030,10 @@ function Panhandler(La) {
     var zip = new JSZip();
     if(Lt.measurementOptions.subAnnual)
     {
-    zip.file((Lt.meta.assetName + '_LW.txt'), LWTabDataString);
-    zip.file((Lt.meta.assetName + '_EW.txt'), EWTabDataString);
+    zip.file((Lt.meta.assetName + '_LW_tab.txt'), LWTabDataString);
+    zip.file((Lt.meta.assetName + '_EW_tab.txt'), EWTabDataString);
     }
-    zip.file((Lt.meta.assetName + '_TW.txt'), TWTabDataString)
+    zip.file((Lt.meta.assetName + '_TW_tab.txt'), TWTabDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
