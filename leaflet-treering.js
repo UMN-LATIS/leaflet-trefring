@@ -1895,21 +1895,24 @@ function CreatePoint(Lt) {
       Lt.undo.push();
 
       if (this.startPoint) {
-        var popup = L.popup({closeButton: false}).setContent(
-            '<input type="number" style="border:none; width:50px;"' +
-            'value="' + Lt.data.year + '" id="year_input"></input>')
-            .setLatLng(latLng)
-            .openOn(Lt.viewer);
+        if (Lt.data.points.length <= 1) {
+          var popup = L.popup({closeButton: false}).setContent(
+              '<input type="number" style="border:none; width:50px;"' +
+              'value="' + Lt.data.year + '" id="year_input"></input>')
+              .setLatLng(latLng)
+              .openOn(Lt.viewer);
 
-        document.getElementById('year_input').select();
+              document.getElementById('year_input').select();
 
-        $(document).keypress(e => {
-          var key = e.which || e.keyCode;
-          if (key === 13) {
-            Lt.data.year = parseInt(document.getElementById('year_input').value);
-            popup.remove(Lt.viewer);
-          }
-        });
+              $(document).keypress(e => {
+                var key = e.which || e.keyCode;
+                if (key === 13) {
+                  Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  popup.remove(Lt.viewer);
+                }
+              });
+        }
+
         Lt.data.newPoint(this.startPoint, latLng);
         this.startPoint = false;
       } else {
