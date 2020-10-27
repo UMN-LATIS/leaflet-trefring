@@ -2440,7 +2440,7 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [200, 275], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [200, 235], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h5>No Measurement Data</h5>')
 
     .addTo(Lt.viewer);
@@ -2932,9 +2932,6 @@ function ViewData(Lt) {
       '<button id="download-ltrr-button"' +
       'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
       '>RWL</button><br>  '+
-      '<button id="refresh-button"' +
-      'class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button><br>  '+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
@@ -3078,8 +3075,6 @@ function ViewData(Lt) {
       'disabled>TAB</button><br>'+
       '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
-      '<button id="refresh-button" class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button><br>' +
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
@@ -3415,6 +3410,12 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
+    
+    //Close view if user clicks anywhere outside of slider window
+    $(Lt.viewer._container).click(e => {
+      this.disable();
+    });
+
     this.btn.state('active');
     $(".imageSlider").change(() => {
       this.updateFilters();
