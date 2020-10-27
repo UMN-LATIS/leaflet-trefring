@@ -3065,7 +3065,9 @@ function ViewData(Lt) {
       });
       this.dialog.setContent(stringSetup + stringContent + '</table><div>');
     } else {
-      stringSetup = '<div class ="button-set"><button id="download-ltrr-button"' +
+      stringSetup = '<div class ="button-set"><button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
+      'disabled><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
+      '<button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
       'disabled>RWL</button><br>'+ 
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
@@ -3073,15 +3075,12 @@ function ViewData(Lt) {
       '<button id="download-tab-button"' +
       'class ="text-button disabled" title="Download Measurements, Tab Deliminated Format"' +
       'disabled>TAB</button><br>'+
-      '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h5>No Measurement Data</h5>';
       
       this.dialog.setContent(stringSetup);
-      document.getElementById("copy-data-button").disabled=true;
     }
     this.dialog.lock();
     this.dialog.open();
