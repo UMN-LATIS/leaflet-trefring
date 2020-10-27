@@ -90,15 +90,12 @@ function LTreering (viewer, basePath, options) {
 
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
-  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
+  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.editAnnotation.btn, this.deleteAnnotation.btn], 'comment', 'Manage annotations');
+  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
-  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
-  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
-  if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
-  else
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
+  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
+  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON file with record of measurements, annotations, etc.');
+  this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
@@ -132,18 +129,18 @@ function LTreering (viewer, basePath, options) {
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
       this.viewData.btn.addTo(this.viewer);
-      this.annotationTools.bar.addTo(this.viewer);
-      this.dating.btn.addTo(this.viewer);
+      this.ioTools.bar.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
-      this.ioTools.bar.addTo(this.viewer);
+      this.annotationTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
     } else {
       this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
-      this.settings.bar.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
       //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
     }
@@ -765,7 +762,7 @@ function MouseLine (Lt) {
   this.active = false;
   this.pathGuide = false;
 
-  this.btn = new Button ('expand', 'Enable h-bar path guide',
+  this.btn = new Button ('expand', 'Toggle measurement h-bar appearance',
              () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
              () => { this.btn.state('inactive'); this.pathGuide = false }
             );
@@ -1564,7 +1561,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  this.btn = new Button('launch', 'Popout to annotate & measure', () => {
+  this.btn = new Button('launch', 'Enter popout mode to create or edit measurements & annotations', () => {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
@@ -1673,7 +1670,7 @@ function Calibration(Lt) {
               'value="10" id="length"></input> mm')
   this.btn = new Button(
     'space_bar',
-    'Calibrate the ppm using a known measurement on the image',
+    'Calibrate pixels per millimeter by measuring a known distance\n(This will override image resolution metadata from Elevator!)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -1849,7 +1846,7 @@ function CreatePoint(Lt) {
   this.startPoint = true;
   this.btn = new Button(
     'linear_scale',
-    'Create measurable points (Control-m)',
+    'Create measurement points (Ctrl-m)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -1951,7 +1948,7 @@ function CreatePoint(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateZeroGrowth(Lt) {
-  this.btn = new Button('exposure_zero', 'Add a zero growth year', () => {
+  this.btn = new Button('exposure_zero', 'Add a year with 0 mm width while measuring\n(Locally absent and missing rings count too!)', () => {
     this.add()
   });
 
@@ -2019,7 +2016,7 @@ function CreateZeroGrowth(Lt) {
 function CreateBreak(Lt) {
   this.btn = new Button(
     'broken_image',
-    'Create a break point',
+    'Create a within-year break in measurement path\n(Avoid measuring physical specimin gaps & cracks!)',
     () => {
       Lt.disableTools();
       this.enable();
@@ -2081,7 +2078,7 @@ function DeletePoint(Lt) {
   this.active = false;
   this.btn = new Button(
     'delete',
-    'Delete a point',
+    'Delete a measurement point',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2131,7 +2128,7 @@ function Cut(Lt) {
   this.point = -1;
   this.btn = new Button(
     'content_cut',
-    'Delete from selected point to beginning or end of series',
+    'Delete measurement path from a selected point to the beginning or end of series',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2193,7 +2190,7 @@ function InsertPoint(Lt) {
   this.active = false;
   this.btn = new Button(
     'add_circle_outline',
-    'Add a point in the middle of the series',
+    'Insert a point between two other points',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2260,7 +2257,7 @@ function InsertZeroGrowth(Lt) {
   this.active = false;
   this.btn = new Button(
     'exposure_zero',
-    'Add a zero growth year in the middle of the series',
+    'Insert a year with 0 mm width between two other points ',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2435,7 +2432,7 @@ function InsertBreak(Lt) {
 function ViewData(Lt) {
   this.btn = new Button(
     'view_list',
-    'Calibrated measurement data',
+    'View & download formatted measurements',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2925,7 +2922,7 @@ function ViewData(Lt) {
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
       '<button id="download-tab-button"' +
       'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
-      '>TAB</button><br>  '+ 
+      '>TAB</button><br>  '+
       '<button id="download-csv-button"' +
       'class="text-button" title="Download Measurements, Common Separated Column Format"' +
       '>CSV</button><br>  '+
@@ -3020,12 +3017,11 @@ function ViewData(Lt) {
             stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
           }
           last_latLng = e.latLng;
-          
+
           //Set up CSV files to download later
           //For subannual measurements
           if(Lt.measurementOptions.subAnnual)
-          {
-            
+          {       
           if(wood=='E')
           {
             EWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
@@ -3069,7 +3065,7 @@ function ViewData(Lt) {
       'disabled><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
       '<button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
-      'disabled>RWL</button><br>'+ 
+      'disabled>RWL</button><br>'+
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
       'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
@@ -3079,7 +3075,6 @@ function ViewData(Lt) {
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h5>No Measurement Data</h5>';
-      
       this.dialog.setContent(stringSetup);
     }
     this.dialog.lock();
@@ -3091,7 +3086,7 @@ function ViewData(Lt) {
      if(Lt.measurementOptions.subAnnual)
      {
        downloadCSVFiles(Lt, TWoodcsvDataString,EWoodcsvDataString, LWoodcsvDataString);
-     } 
+     }
      else{
       downloadCSVFiles(Lt, TWoodcsvDataString);
      }
@@ -3101,7 +3096,7 @@ function ViewData(Lt) {
           if(Lt.measurementOptions.subAnnual)
           {
             downloadTabFiles(Lt, TWTabDataString,EWTabDataString, LWTabDataString);
-          } 
+          }
           else{
            downloadTabFiles(Lt, TWTabDataString);
           }
@@ -3189,7 +3184,7 @@ function CreateAnnotation(Lt) {
       'cols="15"></textarea>', {closeButton: false});
   this.btn = new Button(
     'comment',
-    'Create annotations (Control-a)',
+    'Create annotations (Ctrl-a)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3273,7 +3268,7 @@ function CreateAnnotation(Lt) {
 function DeleteAnnotation(Lt) {
   this.btn = new Button(
     'delete',
-    'Delete annotations',
+    'Delete an annotation',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3322,7 +3317,7 @@ function DeleteAnnotation(Lt) {
 function EditAnnotation(Lt) {
   this.btn = new Button(
     'edit',
-    'Edit annotations',
+    'Edit an annotation',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3358,7 +3353,7 @@ function EditAnnotation(Lt) {
 function ImageAdjustment(Lt) {
   this.btn = new Button(
     'brightness_6',
-    'Adjust the image exposure, color, and contrast',
+    'Adjust image brightness, contrast & color',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3458,8 +3453,8 @@ function ImageAdjustment(Lt) {
 function MeasurementOptions(Lt) {
   this.userSelectedPref = false;
   this.btn = new Button(
-    'timeline',
-    'Change measurement direction and annual/sub-annual mode',
+    'settings',
+    'Measurement preferences',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3634,7 +3629,7 @@ MeasurementOptions.prototype.displayDialog = function () {
 function SaveLocal(Lt) {
   this.btn = new Button(
     'save',
-    'Save a local copy',
+    'Download JSON file of current measurements, annotations, etc.',
     () => { this.action() }
   );
 
@@ -3669,7 +3664,7 @@ function SaveLocal(Lt) {
 function SaveCloud(Lt) {
   this.btn = new Button(
     'cloud_upload',
-    'Save to elevator cloud',
+    'Save current measurements, annotations, etc. to cloud',
     () => { this.action() }
   );
 
@@ -3846,7 +3841,7 @@ function MetaDataText (Lt) {
 function LoadLocal(Lt) {
   this.btn = new Button(
     'file_upload',
-    'Load a local copy',
+    'Upload JSON file with measurements, annotations, etc.',
     () => { this.input() }
   );
 
@@ -4039,4 +4034,3 @@ function Panhandler(La) {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
           });
         }
-    
