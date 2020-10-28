@@ -1895,10 +1895,10 @@ function CreatePoint(Lt) {
       Lt.undo.push();
 
       if (this.startPoint) {
-        if (Lt.data.points.length <= 1) {
+        if (Lt.data.points.length <= 1) { // only pop up for first start point
           var popup = L.popup({closeButton: false}).setContent(
-              '<input type="number" style="border:none; width:50px;"' +
-              'value="' + Lt.data.year + '" id="year_input"></input>')
+              '<input type="number" style="border:none; width:50px;" \
+              value="0" id="year_input"></input>')
               .setLatLng(latLng)
               .openOn(Lt.viewer);
 
