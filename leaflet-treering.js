@@ -94,7 +94,7 @@ function LTreering (viewer, basePath, options) {
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
   this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
-  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON file with record of measurements, annotations, etc.');
+  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
@@ -762,7 +762,7 @@ function MouseLine (Lt) {
   this.active = false;
   this.pathGuide = false;
 
-  this.btn = new Button ('expand', 'Toggle measurement h-bar appearance',
+  this.btn = new Button ('expand', 'Toggle appearance of measurement h-bar',
              () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
              () => { this.btn.state('inactive'); this.pathGuide = false }
             );
@@ -1561,7 +1561,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  this.btn = new Button('launch', 'Enter popout mode to create or edit measurements & annotations', () => {
+  this.btn = new Button('launch', 'Enter Popout Mode to access the full suite\nof measurement and annotation tools', () => {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
@@ -2435,7 +2435,7 @@ function InsertBreak(Lt) {
 function ViewData(Lt) {
   this.btn = new Button(
     'view_list',
-    'View & download formatted measurements',
+    'View & download measurement data',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3632,7 +3632,7 @@ MeasurementOptions.prototype.displayDialog = function () {
 function SaveLocal(Lt) {
   this.btn = new Button(
     'save',
-    'Download JSON file of current measurements, annotations, etc.',
+    'Download .json file of current measurements, annotations, etc.',
     () => { this.action() }
   );
 
@@ -3667,7 +3667,7 @@ function SaveLocal(Lt) {
 function SaveCloud(Lt) {
   this.btn = new Button(
     'cloud_upload',
-    'Save current measurements, annotations, etc. to cloud',
+    'Save the current measurements, annotations, etc.\nto the cloud-hosted .json file',
     () => { this.action() }
   );
 
@@ -3844,7 +3844,7 @@ function MetaDataText (Lt) {
 function LoadLocal(Lt) {
   this.btn = new Button(
     'file_upload',
-    'Upload JSON file with measurements, annotations, etc.',
+    'Upload .json file with measurements, annotations, etc.',
     () => { this.input() }
   );
 
