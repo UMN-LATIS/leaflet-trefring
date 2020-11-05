@@ -2919,7 +2919,7 @@ function ViewData(Lt) {
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
       '<button id="download-tab-button"' +
-      'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
+      'class ="text-button" title="Download Measurements, Tab Delimited Format"' +
       '>TAB</button><br>  '+ 
       '<button id="download-csv-button"' +
       'class="text-button" title="Download Measurements, Common Separated Column Format"' +
@@ -2951,10 +2951,11 @@ function ViewData(Lt) {
       var lengthAsAString;
       var  totalWidthString = String(totalWidth);
       var totalWidth = 0;
+      var wood;
 
       Lt.data.clean();
       pts.map((e, i, a) => {
-
+        wood = Lt.measurementOptions.subAnnual? (e.earlywood? "E": "L") : ""
         if (e.start) {
           last_latLng = e.latLng;
         } else if (e.break) {
@@ -2987,36 +2988,11 @@ function ViewData(Lt) {
               lengthAsAString+='8';
 
           }
+          //assign color to data row
+          var row_color_html = assignRowColor(e,y,Lt,lengthAsAString)
+          stringContent = stringContent.concat(row_color_html);
+          y++;
 
-          if (Lt.measurementOptions.subAnnual) {
-            var wood;
-            var row_color;
-            if (e.earlywood) {
-              wood = 'E';
-              row_color = '#00d2e6';
-            } else {
-              wood = 'L';
-              row_color = '#00838f';
-              y++;
-            };
-            if(e.year%10===0)
-            {
-              if(wood === 'E')
-              {
-                row_color='E06F4C';
-              }
-              else{
-                row_color= '#db2314';
-              }
-            }
-
-            stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
-          } else {
-            y++;
-            row_color = e.year%10===0? 'red':'#00d2e6';
-            stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
-          }
           last_latLng = e.latLng;
           
           //Set up CSV files to download later
@@ -3071,7 +3047,7 @@ function ViewData(Lt) {
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
       'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
-      'class ="text-button disabled" title="Download Measurements, Tab Deliminated Format"' +
+      'class ="text-button disabled" title="Download Measurements, Tab Delimited Format"' +
       'disabled>TAB</button><br>'+
       '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
@@ -4047,4 +4023,37 @@ function Panhandler(La) {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
           });
         }
-    
+function assignRowColor(e,y,Lt, lengthAsAString)
+{
+  var stringContent;
+  if (Lt.measurementOptions.subAnnual) {
+    var wood;
+    var row_color;
+    if (e.earlywood) {
+      wood = 'E';
+      row_color = '#02bfd1';
+    } else {
+      wood = 'L';
+      row_color = '#00838f';
+      y++;
+    };
+    if(e.year%10===0)
+    {
+      if(wood === 'E')
+      {
+        row_color='#d17154';
+      }
+      else{
+        row_color= '#db2314';
+      }
+    }
+
+    stringContent = '<tr style="color:' + row_color + ';">';
+    stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
+  } else {
+    y++;
+    row_color = e.year%10===0? 'red':'#00d2e6';
+    stringContent = ('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
+  }
+  return stringContent;
+}
