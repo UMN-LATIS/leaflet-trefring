@@ -345,6 +345,15 @@ L.TileLayer.GL = L.GridLayer.extend({
 
 		gl.activeTexture(gl.TEXTURE0 + index);
 		gl.bindTexture(gl.TEXTURE_2D, this._textures[index]);
+		if (!this.isPowerOfTwo(imageData.width) || !this.isPowerOfTwo(imageData.height)) {
+			// Scale up the texture to the next highest power of two dimensions.
+			var canvas = document.createElement("canvas");
+			canvas.width = this.nextHighestPowerOfTwo(imageData.width);
+			canvas.height = this.nextHighestPowerOfTwo(imageData.height);
+			var ctx = canvas.getContext("2d");
+			ctx.drawImage(imageData, 0, 0, imageData.width, imageData.height);
+			imageData = canvas;
+		}
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -352,6 +361,19 @@ L.TileLayer.GL = L.GridLayer.extend({
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.generateMipmap(gl.TEXTURE_2D);
 	},
+
+
+isPowerOfTwo: function (x) {
+    return (x & (x - 1)) == 0;
+},
+
+nextHighestPowerOfTwo: function(x) {
+    --x;
+    for (var i = 1; i < 32; i <<= 1) {
+        x = x | x >> i;
+    }
+    return x + 1;
+},
 
 	// Gets called by L.GridLayer before createTile(), just before coord wrapping happens.
 	// Needed to store the context of each <canvas> tile when the tile coords is wrapping.
@@ -362,6 +384,10 @@ L.TileLayer.GL = L.GridLayer.extend({
 	},
 
 	createTile: function(coords, done) {
+		if(coords.y < 0) {
+			coords.y = 0;
+		}
+
 		var tile = L.DomUtil.create("canvas", "leaflet-tile");
 		tile.width = tile.height = this.options.tileSize;
 		tile.onselectstart = tile.onmousemove = L.Util.falseFn;
@@ -389,6 +415,7 @@ L.TileLayer.GL = L.GridLayer.extend({
 
 				var gl = this._gl;
 				for (var i = 0; i < this._tileLayers.length && i < 8; i++) {
+
 					this._bindTexture(i, textureImages[i]);
 				}
 
@@ -412,12 +439,13 @@ L.TileLayer.GL = L.GridLayer.extend({
 		L.TileLayer.prototype._removeTile.call(this, key);
 	},
 
-	onAdd: function() {
+	onAdd: function(map) {
 		// If the shader is time-dependent (i.e. animated), start an animation loop.
 		if (this._uNowPosition) {
 			L.Util.cancelAnimFrame(this._animFrame);
 			this._animFrame = L.Util.requestAnimFrame(this._onFrame, this);
 		}
+		
 		L.TileLayer.prototype.onAdd.call(this);
 	},
 
@@ -482,6 +510,8 @@ L.TileLayer.GL = L.GridLayer.extend({
 		}
 	},
 
+
+
 	// Gets the tile for the Nth `TileLayer` in `this._tileLayers`,
 	// for the given tile coords, returns a promise to the tile.
 	_getNthTile: function(n, coords) {
@@ -495,7 +525,6 @@ L.TileLayer.GL = L.GridLayer.extend({
 			function(resolve, reject) {
 				var tile = document.createElement("img");
 				tile.crossOrigin = "";
-				console.log(coords);
 				tile.src = layer.getTileUrl(coords);
 				L.DomEvent.on(tile, "load", resolve.bind(this, tile));
 				L.DomEvent.on(tile, "error", reject.bind(this, tile));

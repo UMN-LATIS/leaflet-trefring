@@ -82,7 +82,7 @@
         overlap: 1,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
-    })/*.addTo(map);*/
+    }).addTo(map);
 
     var fragmentShader = `
 vec3 rgb2hsv(vec3 c) {                                                                  
@@ -127,7 +127,7 @@ void main(void) {
             crs: L.CRS.Simple,
             noWrap: true,
             infinite: false,
-            tileSize: 255,
+            tileSize: 254,
 			fragmentShader: fragmentShader,
 			tileLayers: [baseLayer],
 		}).addTo(map);
