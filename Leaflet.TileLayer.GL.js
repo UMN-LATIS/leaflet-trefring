@@ -67,6 +67,8 @@ L.TileLayer.GL = L.GridLayer.extend({
 			this._tileLayers.push(L.tileLayer(options.tileUrls[i]));
 		}
 
+		this.options.bounds = this._tileLayers[0].options.bounds;
+
 		this._loadGLProgram();
 
 		// Init textures
@@ -278,7 +280,6 @@ L.TileLayer.GL = L.GridLayer.extend({
 		gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 		gl.clearColor(0.5, 0.5, 0.5, 0);
 		gl.enable(gl.BLEND);
-
 		var tileBounds = this._tileCoordsToBounds(coords);
 		var west = tileBounds.getWest(),
 			east = tileBounds.getEast(),
@@ -351,14 +352,17 @@ L.TileLayer.GL = L.GridLayer.extend({
 			canvas.width = this.options.tileSize;
 			canvas.height = this.options.tileSize;
 			var ctx = canvas.getContext("2d");
+			// ctx.fillStyle = "blue";
+			// ctx.fillRect(0, 0, canvas.width, canvas.height);
 			ctx.drawImage(imageData, 0, 0, imageData.width, imageData.height);
 			imageData = canvas;
 		}
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
-		// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-		// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		// gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		canvas = null;
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.generateMipmap(gl.TEXTURE_2D);
 	},
 
@@ -391,7 +395,7 @@ nextHighestPowerOfTwo: function(x) {
 		var tile = L.DomUtil.create("canvas", "leaflet-tile");
 		tile.width = tile.height = this.options.tileSize;
 		tile.onselectstart = tile.onmousemove = L.Util.falseFn;
-
+		
 		var ctx = tile.getContext("2d");
 		var unwrappedKey = this._unwrappedKey;
 		var texFetches = [];
