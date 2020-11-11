@@ -81,6 +81,7 @@
         maxNativeZoom: 12,
         maxZoom: 14 - 1,
         overlap: 1,
+        detectRetina: false,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
     }).addTo(map);
@@ -129,6 +130,7 @@ void main(void) {
             noWrap: true,
             infinite: false,
             tileSize: 256,
+            detectRetina: false,
 			fragmentShader: fragmentShader,
 			tileLayers: [baseLayer],
 		}).addTo(map);
