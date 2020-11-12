@@ -382,7 +382,7 @@ nextHighestPowerOfTwo: function(x) {
 		this._unwrappedKey = this._tileCoordsToKey(coords);
 		L.GridLayer.prototype._addTile.call(this, coords, container);
 	},
-
+	//createTile Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#tilelayer-createtile
 	createTile: function(coords, done) {
 		if(coords.y < 0) {
 			coords.y = 0;
@@ -438,7 +438,7 @@ nextHighestPowerOfTwo: function(x) {
 		}
 		L.TileLayer.prototype._removeTile.call(this, key);
 	},
-
+	//onAdd Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#layer-onadd
 	onAdd: function(map) {
 		// If the shader is time-dependent (i.e. animated), start an animation loop.
 		if (this._uNowPosition) {
@@ -448,7 +448,7 @@ nextHighestPowerOfTwo: function(x) {
 		
 		L.TileLayer.prototype.onAdd.call(this);
 	},
-
+	//onRemove Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#layer-onremove
 	onRemove: function(map) {
 		// Stop the animation loop, if any.
 		L.Util.cancelAnimFrame(this._animFrame);

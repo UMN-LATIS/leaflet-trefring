@@ -20,38 +20,6 @@ L.TileLayer.Elevator = L.TileLayer.extend({
         this._computeImageAndGridSize();
         this.on('tileload', this._adjustNonSquareTile);
     },
-    createTile: function(coords, done) {
-        var error;
-        var tile = L.DomUtil.create('img', 'elevatorTile');
-        coords.z = coords.z+ this.options.zoomOffset;
-        this._loadFunction(coords, tile, done);
-        return tile;
-    },
-
-    getTileSize: function() {
-        var map = this._map,
-            tileSize = L.GridLayer.prototype.getTileSize.call(this),
-            zoom = this._tileZoom + this.options.zoomOffset,
-            zoomN = this.options.maxNativeZoom;
-
-        tileSize.x = tileSize.x + this.options.overlap; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
-        tileSize.y = tileSize.y + this.options.overlap;
-        // increase tile size when overscaling
-        var outputSize= zoomN !== null && zoom > zoomN ?
-            tileSize.divideBy(map.getZoomScale(zoomN, zoom)).round() :
-            tileSize;
-
-        return outputSize;
-    },
-
-getTileUrl: function(coords){
-    var error;
-    var params = {Bucket: 'elevator-assets', Key: "testasset7/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
-    //var params = {Bucket: 'elevator-assets', Key: "pmc14b_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
-    var src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
-    //tile.src = params.Key;
-    return src;
-},
 
     _calculateConversionFactor: function() {
         var radWidth = (this._map.getBounds().getSouthEast().lng + this._map.getBounds().getSouthWest().lng) * (Math.PI / 180); //difference in width in terms of radians
@@ -113,17 +81,6 @@ getTileUrl: function(coords){
         return (coords.x == 0 && coords.y == 0 && coords.z == 0) ||
             coords.x >= 0 && coords.y >= 0 && coords.z > 0 && coords.z &&
             L.TileLayer.prototype._isValidTile.call(this, coords)
-    },
-
-    onAdd: function (map) {
-        var self = this
-        this.adjustAttribution()
-        map.options.maxBoundsViscosity = 0.8
-        L.TileLayer.prototype.onAdd.call(this, map);
-        this.fitImage()
-        this._calculateConversionFactor();
-
-        map.on('resize', self._mapResized.bind(self))
     },
 
     _getImageBounds: function () {
@@ -201,7 +158,53 @@ getTileUrl: function(coords){
         var self = this
         clearTimeout(self._throttleResize)
         self._throttleResize = setTimeout(L.bind(self.fitBoundsExactly, self), 100)
-    }
+    },
+
+    //Leaflet Methods
+    //CreateTile Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#tilelayer-gettilesize
+    createTile: function(coords, done) {
+        var error;
+        var tile = L.DomUtil.create('img', 'elevatorTile');
+        coords.z = coords.z+ this.options.zoomOffset;
+        this._loadFunction(coords, tile, done);
+        return tile;
+    },
+    //onAdd Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#layer-onadd
+    onAdd: function (map) {
+        var self = this
+        this.adjustAttribution()
+        map.options.maxBoundsViscosity = 0.8
+        L.TileLayer.prototype.onAdd.call(this, map);
+        this.fitImage()
+        this._calculateConversionFactor();
+
+        map.on('resize', self._mapResized.bind(self))
+    },
+    //getTileUrl Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#tilelayer-gettileurl
+getTileUrl: function(coords){
+    var error;
+    var params = {Bucket: 'elevator-assets', Key: "testasset7/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+    //var params = {Bucket: 'elevator-assets', Key: "pmc14b_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+    var src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+    //tile.src = params.Key;
+    return src;
+},
+//getTileSize Leaflet Documentation: https://leafletjs.com/reference-1.7.1.html#tilelayer-gettileurl
+getTileSize: function() {
+    var map = this._map,
+        tileSize = L.GridLayer.prototype.getTileSize.call(this),
+        zoom = this._tileZoom + this.options.zoomOffset,
+        zoomN = this.options.maxNativeZoom;
+
+    tileSize.x = tileSize.x + this.options.overlap; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
+    tileSize.y = tileSize.y + this.options.overlap;
+    // increase tile size when overscaling
+    var outputSize= zoomN !== null && zoom > zoomN ?
+        tileSize.divideBy(map.getZoomScale(zoomN, zoom)).round() :
+        tileSize;
+
+    return outputSize;
+}
 });
 
 L.tileLayer.elevator = function (tileLoadFunction, options) {
