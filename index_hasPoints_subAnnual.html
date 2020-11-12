@@ -81,6 +81,7 @@
         maxNativeZoom: 12,
         maxZoom: 14 - 1,
         overlap: 1,
+        detectRetina: false,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
     }).addTo(map);
@@ -128,7 +129,8 @@ void main(void) {
             crs: L.CRS.Simple,
             noWrap: true,
             infinite: false,
-            tileSize: 254,
+            tileSize: 256,
+            detectRetina: false,
 			fragmentShader: fragmentShader,
 			tileLayers: [baseLayer],
 		}).addTo(map);

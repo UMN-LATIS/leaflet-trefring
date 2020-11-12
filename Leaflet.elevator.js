@@ -20,6 +20,23 @@ L.TileLayer.Elevator = L.TileLayer.extend({
         this._computeImageAndGridSize();
         this.on('tileload', this._adjustNonSquareTile);
     },
+    createTile: function(coords, done) {
+        var error;
+        var tile = L.DomUtil.create('img', 'elevatorTile');
+        coords.z = coords.z+ this.options.zoomOffset;
+        this._loadFunction(coords, tile, done);
+        return tile;
+    },
+
+
+    getTileUrl: function(coords){
+        var error;
+        var params = {Bucket: 'elevator-assets', Key: "testasset7/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+        //var params = {Bucket: 'elevator-assets', Key: "pmc14b_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+        var src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+        //tile.src = params.Key;
+        return src;
+    },
 
     _calculateConversionFactor: function() {
         var radWidth = (this._map.getBounds().getSouthEast().lng + this._map.getBounds().getSouthWest().lng) * (Math.PI / 180); //difference in width in terms of radians

@@ -67,6 +67,10 @@ L.TileLayer.GL = L.GridLayer.extend({
 			this._tileLayers.push(L.tileLayer(options.tileUrls[i]));
 		}
 
+		this.options.bounds = this._tileLayers[0].options.bounds;
+		this.options.maxNativeZoom = this._tileLayers[0].options.maxNativeZoom;
+        this.options.maxZoom =this._tileLayers[0].options.maxZoom;
+
 		this._loadGLProgram();
 
 		// Init textures
@@ -76,6 +80,12 @@ L.TileLayer.GL = L.GridLayer.extend({
 			gl.uniform1i(gl.getUniformLocation(this._glProgram, "uTexture" + i), i);
 		}
 	},
+
+    _isValidTile: function(coords) {
+        return (coords.x == 0 && coords.y == 0 && coords.z == 0) ||
+            coords.x >= 0 && coords.y >= 0 && coords.z > 0 && coords.z &&
+            L.TileLayer.prototype._isValidTile.call(this, coords)
+    },
 
 	// @method getGlError(): String|undefined
 	// If there was any error compiling/linking the shaders, returns a string
@@ -278,7 +288,6 @@ L.TileLayer.GL = L.GridLayer.extend({
 		gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 		gl.clearColor(0.5, 0.5, 0.5, 0);
 		gl.enable(gl.BLEND);
-
 		var tileBounds = this._tileCoordsToBounds(coords);
 		var west = tileBounds.getWest(),
 			east = tileBounds.getEast(),
@@ -345,16 +354,19 @@ L.TileLayer.GL = L.GridLayer.extend({
 
 		gl.activeTexture(gl.TEXTURE0 + index);
 		gl.bindTexture(gl.TEXTURE_2D, this._textures[index]);
-		if (!this.isPowerOfTwo(imageData.width) || !this.isPowerOfTwo(imageData.height)) {
+		if (imageData.width < this.options.tileSize || imageData.height < this.options.tileSize) {
 			// Scale up the texture to the next highest power of two dimensions.
 			var canvas = document.createElement("canvas");
-			canvas.width = this.nextHighestPowerOfTwo(imageData.width);
-			canvas.height = this.nextHighestPowerOfTwo(imageData.height);
+			canvas.width = this.options.tileSize;
+			canvas.height = this.options.tileSize;
 			var ctx = canvas.getContext("2d");
+			// ctx.fillStyle = "blue";
+			// ctx.fillRect(0, 0, canvas.width, canvas.height);
 			ctx.drawImage(imageData, 0, 0, imageData.width, imageData.height);
 			imageData = canvas;
 		}
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imageData);
+		canvas = null;
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -391,7 +403,7 @@ nextHighestPowerOfTwo: function(x) {
 		var tile = L.DomUtil.create("canvas", "leaflet-tile");
 		tile.width = tile.height = this.options.tileSize;
 		tile.onselectstart = tile.onmousemove = L.Util.falseFn;
-
+		
 		var ctx = tile.getContext("2d");
 		var unwrappedKey = this._unwrappedKey;
 		var texFetches = [];
@@ -427,9 +439,51 @@ nextHighestPowerOfTwo: function(x) {
 				L.TileLayer.prototype._tileOnError.call(this, done, tile, err);
 			}.bind(this)
 		);
-
+		tile.width = 255;
+		tile.height = 255;
+		tile.style.width = 256;
+		tile.style.height = 256;
 		return tile;
 	},
+
+	_initTile: function (tile) {
+		L.GridLayer.prototype._initTile(tile);
+		// DomUtil.addClass(tile, 'leaflet-tile');
+
+		var tileSize = this.getTileSize();
+		tile.style.width = tileSize.x + 1 + 'px';
+		tile.style.height = tileSize.y + 1 + 'px';
+
+		// tile.onselectstart = Util.falseFn;
+		// tile.onmousemove = Util.falseFn;
+
+		// // update opacity on tiles in IE7-8 because of filter inheritance problems
+		// if (Browser.ielt9 && this.options.opacity < 1) {
+		// 	DomUtil.setOpacity(tile, this.options.opacity);
+		// }
+
+		// // without this hack, tiles disappear after zoom on Chrome for Android
+		// // https://github.com/Leaflet/Leaflet/issues/2078
+		// if (Browser.android && !Browser.android23) {
+		// 	tile.style.WebkitBackfaceVisibility = 'hidden';
+		// }
+	},
+
+	// getTileSize: function() {
+    //     // var map = this._map,
+    //     //     tileSize = L.GridLayer.prototype.getTileSize.call(this),
+    //     //     zoom = this._tileZoom + this.options.zoomOffset,
+    //     //     zoomN = this.options.maxNativeZoom;
+
+    //     // tileSize.x = tileSize.x + this.options.overlap; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
+    //     // tileSize.y = tileSize.y + this.options.overlap;
+    //     // // increase tile size when overscaling
+    //     // var outputSize= zoomN !== null && zoom > zoomN ?
+    //     //     tileSize.divideBy(map.getZoomScale(zoomN, zoom)).round() :
+    //     //     tileSize;
+
+    //     return L.point([255, 255]);
+    // },
 
 	_removeTile: function(key) {
 		if (this._isReRenderable) {
@@ -509,7 +563,22 @@ nextHighestPowerOfTwo: function(x) {
 				break;
 		}
 	},
+	
+	getTileSize: function() {
+        var map = this._map,
+            tileSize = L.GridLayer.prototype.getTileSize.call(this),
+            zoom = this._tileZoom + this.options.zoomOffset,
+            zoomN = this.options.maxNativeZoom;
 
+        tileSize.x = tileSize.x - 2; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
+        tileSize.y = tileSize.y - 2;
+        // increase tile size when overscaling
+        var outputSize= zoomN !== null && zoom > zoomN ?
+            tileSize.divideBy(map.getZoomScale(zoomN, zoom)).round() :
+            tileSize;
+
+        return outputSize;
+    },
 
 
 	// Gets the tile for the Nth `TileLayer` in `this._tileLayers`,
