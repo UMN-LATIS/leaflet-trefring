@@ -103,7 +103,8 @@ function LTreering (viewer, basePath, options) {
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
-    'Tree Ring': layer
+    'Tree Ring': baseLayer,
+    'GL Layer': layer
   };
 
   this.overlay = {
