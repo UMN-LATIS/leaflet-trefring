@@ -360,8 +360,8 @@ L.TileLayer.GL = L.GridLayer.extend({
 			canvas.width = this.options.tileSize;
 			canvas.height = this.options.tileSize;
 			var ctx = canvas.getContext("2d");
-			// ctx.fillStyle = "blue";
-			// ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = "rgba(0,0,0,0.0)";
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
 			ctx.drawImage(imageData, 0, 0, imageData.width, imageData.height);
 			imageData = canvas;
 		}
@@ -369,8 +369,8 @@ L.TileLayer.GL = L.GridLayer.extend({
 		canvas = null;
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
 		gl.generateMipmap(gl.TEXTURE_2D);
 	},
 
@@ -427,7 +427,6 @@ nextHighestPowerOfTwo: function(x) {
 
 				var gl = this._gl;
 				for (var i = 0; i < this._tileLayers.length && i < 8; i++) {
-
 					this._bindTexture(i, textureImages[i]);
 				}
 

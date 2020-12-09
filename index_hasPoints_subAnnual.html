@@ -35,7 +35,7 @@
 </head>
 
 <body>
-    <div id="map_container"><div id="map"></div></div>
+    <div id="map_container"><div id="map" ></div></div>
 </body>
 </html>
 <script type="application/javascript" src="leaflet-treering.js"></script>
@@ -89,29 +89,46 @@
     var fragmentShader = `
 
 
-
 vec3 texSample(const float x, const float y, in vec2 fragCoord)
 {
 	vec2 uv = fragCoord;
-	uv = (uv + vec2(x/256.0, y/255.0));
+    uv = (uv + vec2((x-1.)/256.0 , (y-1.)/256.0 ));
+    // this also fixed the seam by clamping one pixel from the bottom, but it's super hacky
+    // if(uv.y > 0.996) {
+    //     uv.y = 0.99;
+    // }
 	return texture2D(uTexture0, uv).xyz;
-}                                         
+}                
+
+// emboss
+	// texSample(-1.,-1., fragCoord) *  -2. +                     
+	// texSample( 0.,-1., fragCoord) *  -1. +                    
+	// texSample( 1.,-1., fragCoord) *  0. +                      
+	// texSample(-1., 0., fragCoord) *  -1. +                    
+	// texSample( 0., 0., fragCoord) *   1. +                     
+	// texSample( 1., 0., fragCoord) *  1. +                      
+	// texSample(-1., 1., fragCoord) *  0. +                     
+	// texSample( 0., 1., fragCoord) *  1. +                     
+	// texSample( 1., 1., fragCoord) *  2.
+    
 vec3 sharpenFilter(in vec2 fragCoord, float strength){
 	vec3 f =
-	texSample(-1.,-1., fragCoord) *  -1. +                     
-	texSample( 0.,-1., fragCoord) *  -1. +                    
-	texSample( 1.,-1., fragCoord) *  -1. +                      
-	texSample(-1., 0., fragCoord) *  -1. +                    
-	texSample( 0., 0., fragCoord) *   9. +                     
-	texSample( 1., 0., fragCoord) *  -1. +                      
-	texSample(-1., 1., fragCoord) *  -1. +                     
-	texSample( 0., 1., fragCoord) *  -1. +                     
+	texSample(-1.,-1., fragCoord) *  -1. +
+	texSample( 0.,-1., fragCoord) *  -1. + 
+	texSample( 1.,-1., fragCoord) *  -1. + 
+	texSample(-1., 0., fragCoord) *  -1. + 
+	texSample( 0., 0., fragCoord) *   9. + 
+	texSample( 1., 0., fragCoord) *  -1. + 
+	texSample(-1., 1., fragCoord) *  -1. + 
+	texSample( 0., 1., fragCoord) *  -1. + 
 	texSample( 1., 1., fragCoord) *  -1.
 	;                                              
 	return mix(texSample( 0., 0., fragCoord), f , strength); 
 }
-void main(void){                   
-    gl_FragColor = vec4(sharpenFilter(vec2(vTextureCoords.x, vTextureCoords.y), 0.5),1.0);
+void main(void){
+    vec4 targetTexture = texture2D(uTexture0, vec2(vTextureCoords.x, vTextureCoords.y));
+    // gl_FragColor = targetTexture;
+    gl_FragColor = vec4(sharpenFilter(vec2(vTextureCoords.x, vTextureCoords.y), 0.5),targetTexture.a);
 }
 `;
     var layer = L.tileLayer.gl({
