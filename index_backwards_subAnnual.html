@@ -34,14 +34,14 @@
 </head>
 
 <body>
-    <div id="map_container"><div id="map"></div></div>
+    <div id="map_container"><div id="imageMap"></div></div>
 </body>
 </html>
 <script type="application/javascript" src="leaflet-treering.js"></script>
 
 <script>
     var src;
-    var map = L.map('map', {
+    var map = L.map('imageMap', {
         fullscreenControl: true,
         zoomSnap: 0,
         crs: L.CRS.Simple,
@@ -67,7 +67,7 @@
         return tile.src;
     },
     {
-				width: 161686,
+		width: 161686,
         height: 3922,
 				//testasset5
         //width: 231782,
@@ -76,8 +76,8 @@
         //width: 200521,
         //height: 4196,
         tileSize :254,
-        maxNativeZoom: 12,
-        maxZoom: 14 - 1,
+        maxNativeZoom: 18,
+        maxZoom: 18,
         overlap: 1,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
