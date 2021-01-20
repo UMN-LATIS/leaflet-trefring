@@ -90,15 +90,12 @@ function LTreering (viewer, basePath, options) {
 
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.deleteAnnotation.btn, this.editAnnotation.btn], 'comment', 'Manage annotations');
-  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
+  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.editAnnotation.btn, this.deleteAnnotation.btn], 'comment', 'Manage annotations');
+  this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
-  this.editTools = new ButtonBar(this, [this.deletePoint.btn, this.cut.btn, this.insertPoint.btn, this.insertZeroGrowth.btn], 'edit', 'Edit measurements');
-  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Manage JSON data');
-  if (window.name.includes('popout'))
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn, this.mouseLine.btn, this.calibration.btn], 'settings', 'Change image, measurement, and calibration settings');
-  else
-    this.settings = new ButtonBar(this, [this.imageAdjustment.btn, this.measurementOptions.btn], 'settings', 'Change image and measurement settings');
+  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
+  this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
+  this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
@@ -125,26 +122,26 @@ function LTreering (viewer, basePath, options) {
     this.viewer.on('resize', () => {
       this.autoscroll.reset();
     });
-
-    $('#map').css('cursor', 'default');
+    var map = this.viewer;
+    $(map.getContainer()).css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
       this.viewData.btn.addTo(this.viewer);
-      this.annotationTools.bar.addTo(this.viewer);
-      this.dating.btn.addTo(this.viewer);
+      this.ioTools.bar.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
-      this.ioTools.bar.addTo(this.viewer);
+      this.annotationTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
     } else {
       this.popout.btn.addTo(this.viewer);
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
-      this.settings.bar.addTo(this.viewer);
+      this.imageAdjustment.btn.addTo(this.viewer);
       //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
     }
@@ -766,7 +763,7 @@ function MouseLine (Lt) {
   this.active = false;
   this.pathGuide = false;
 
-  this.btn = new Button ('expand', 'Enable h-bar path guide',
+  this.btn = new Button ('expand', 'Toggle appearance of measurement h-bar',
              () => { Lt.disableTools; this.btn.state('active'); this.pathGuide = true },
              () => { this.btn.state('inactive'); this.pathGuide = false }
             );
@@ -785,7 +782,7 @@ function MouseLine (Lt) {
    */
   MouseLine.prototype.disable = function() {
     this.active = false;
-    $(Lt.viewer._container).off('mousemove');
+    $(Lt.viewer.getContainer()).off('mousemove');
     this.layer.clearLayers();
   }
 
@@ -803,7 +800,7 @@ function MouseLine (Lt) {
       return pointA + (scalerCoefficient * (pointB - pointC));
     };
 
-    $(Lt.viewer._container).mousemove(e => {
+    $(Lt.viewer.getContainer()).mousemove(e => {
       if (this.active) {
         this.layer.clearLayers();
         var mousePoint = Lt.viewer.mouseEventToLayerPoint(e);
@@ -1241,7 +1238,7 @@ function AnnotationAsset(Lt) {
  */
 function ScaleBarCanvas (Lt) {
   var scaleBarDiv = document.createElement('div');
-  var nativeWindowWidth = document.getElementById("map").clientWidth;
+  var nativeWindowWidth = Lt.viewer.getContainer().clientWidth;
 
   scaleBarDiv.innerHTML =
       '<div id="scale-bar-div"> \
@@ -1565,7 +1562,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function Popout(Lt) {
-  this.btn = new Button('launch', 'Popout to annotate & measure', () => {
+  this.btn = new Button('launch', 'Enter Popout Mode to access the full suite\nof measurement and annotation tools', () => {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
@@ -1674,7 +1671,7 @@ function Calibration(Lt) {
               'value="10" id="length"></input> mm')
   this.btn = new Button(
     'space_bar',
-    'Calibrate the ppm using a known measurement on the image',
+    'Calibrate pixels per millimeter by measuring a known distance\n(This will override image resolution metadata from Elevator!)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -1699,7 +1696,7 @@ function Calibration(Lt) {
     Lt.mouseLine.enable();
 
 
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
 
     $(document).keyup(e => {
       var key = e.which || e.keyCode;
@@ -1710,8 +1707,8 @@ function Calibration(Lt) {
 
     var latLng_1 = null;
     var latLng_2 = null;
-    $(Lt.viewer._container).click(e => {
-      document.getElementById('map').style.cursor = 'pointer';
+    $(Lt.viewer.getContainer()).click(e => {
+      Lt.viewer.getContainer().style.cursor = 'pointer';
 
 
       if (latLng_1 === null) {
@@ -1744,11 +1741,11 @@ function Calibration(Lt) {
   Calibration.prototype.disable = function() {
     $(document).off('keyup');
     // turn off the mouse clicks from previous function
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
     Lt.mouseLine.disable();
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     this.popup.remove(Lt.viewer);
   };
 }
@@ -1782,7 +1779,7 @@ function Dating(Lt) {
 
       document.getElementById('year_input').select();
 
-      $(Lt.viewer._container).click(e => {
+      $(Lt.viewer.getContainer()).click(e => {
         popup.remove(Lt.viewer);
         this.disable();
       });
@@ -1834,7 +1831,7 @@ function Dating(Lt) {
     Lt.metaDataText.updateText(); // updates once user hits enter
 
     this.btn.state('inactive');
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     $(document).off('keypress');
     this.active = false;
   };
@@ -1850,7 +1847,7 @@ function CreatePoint(Lt) {
   this.startPoint = true;
   this.btn = new Button(
     'linear_scale',
-    'Create measurable points (Control-m)',
+    'Create measurement points (Ctrl-m)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -1882,7 +1879,7 @@ function CreatePoint(Lt) {
 
     Lt.mouseLine.enable();
 
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
 
     $(document).keyup(e => {
       var key = e.which || e.keyCode;
@@ -1891,29 +1888,32 @@ function CreatePoint(Lt) {
       }
     });
 
-    $(Lt.viewer._container).click(e => {
-      document.getElementById('map').style.cursor = 'pointer';
+    $(Lt.viewer.getContainer()).click(e => {
+      Lt.viewer.getContainer().style.cursor = 'pointer';
 
       var latLng = Lt.viewer.mouseEventToLatLng(e);
 
       Lt.undo.push();
 
       if (this.startPoint) {
-        var popup = L.popup({closeButton: false}).setContent(
-            '<input type="number" style="border:none; width:50px;"' +
-            'value="' + Lt.data.year + '" id="year_input"></input>')
-            .setLatLng(latLng)
-            .openOn(Lt.viewer);
+        if (Lt.data.points.length <= 1) { // only pop up for first start point
+          var popup = L.popup({closeButton: false}).setContent(
+              '<input type="number" style="border:none; width:50px;" \
+              value="0" id="year_input"></input>')
+              .setLatLng(latLng)
+              .openOn(Lt.viewer);
 
-        document.getElementById('year_input').select();
+              document.getElementById('year_input').select();
 
-        $(document).keypress(e => {
-          var key = e.which || e.keyCode;
-          if (key === 13) {
-            Lt.data.year = parseInt(document.getElementById('year_input').value);
-            popup.remove(Lt.viewer);
-          }
-        });
+              $(document).keypress(e => {
+                var key = e.which || e.keyCode;
+                if (key === 13) {
+                  Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  popup.remove(Lt.viewer);
+                }
+              });
+        }
+
         Lt.data.newPoint(this.startPoint, latLng);
         this.startPoint = false;
       } else {
@@ -1937,11 +1937,11 @@ function CreatePoint(Lt) {
   CreatePoint.prototype.disable = function() {
     $(document).off('keyup');
     // turn off the mouse clicks from previous function
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
     Lt.mouseLine.disable();
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     this.startPoint = true;
   };
 }
@@ -1952,7 +1952,7 @@ function CreatePoint(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
 function CreateZeroGrowth(Lt) {
-  this.btn = new Button('exposure_zero', 'Add a zero growth year', () => {
+  this.btn = new Button('exposure_zero', 'Add a year with 0 mm width while measuring\n(Locally absent and missing rings count too!)', () => {
     this.add()
   });
 
@@ -2020,7 +2020,7 @@ function CreateZeroGrowth(Lt) {
 function CreateBreak(Lt) {
   this.btn = new Button(
     'broken_image',
-    'Create a break point',
+    'Create a within-year break in measurement path\n(Avoid measuring physical specimin gaps & cracks!)',
     () => {
       Lt.disableTools();
       this.enable();
@@ -2038,10 +2038,10 @@ function CreateBreak(Lt) {
 
     Lt.mouseLine.enable();
 
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
 
-    $(Lt.viewer._container).click(e => {
-      document.getElementById('map').style.cursor = 'pointer';
+    $(Lt.viewer.getContainer()).click(e => {
+      Lt.viewer.getContainer().style.cursor = 'pointer';
 
       var latLng = Lt.viewer.mouseEventToLatLng(e);
 
@@ -2065,7 +2065,7 @@ function CreateBreak(Lt) {
    * @function disable
    */
   CreateBreak.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     Lt.viewer.dragging.enable();
     Lt.mouseLine.disable();
@@ -2082,7 +2082,7 @@ function DeletePoint(Lt) {
   this.active = false;
   this.btn = new Button(
     'delete',
-    'Delete a point',
+    'Delete a measurement point',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2107,7 +2107,7 @@ function DeletePoint(Lt) {
   DeletePoint.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -2115,10 +2115,10 @@ function DeletePoint(Lt) {
    * @function disable
    */
   DeletePoint.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 }
 
@@ -2132,7 +2132,7 @@ function Cut(Lt) {
   this.point = -1;
   this.btn = new Button(
     'content_cut',
-    'Delete from selected point to beginning or end of series',
+    'Delete measurement path from a selected point to the beginning or end of series',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2167,7 +2167,7 @@ function Cut(Lt) {
   Cut.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
     this.point = -1;
   };
 
@@ -2176,10 +2176,10 @@ function Cut(Lt) {
    * @function disable
    */
   Cut.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     this.point = -1;
   };
 
@@ -2194,7 +2194,7 @@ function InsertPoint(Lt) {
   this.active = false;
   this.btn = new Button(
     'add_circle_outline',
-    'Add a point in the middle of the series',
+    'Insert a point between two other points',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2204,9 +2204,9 @@ function InsertPoint(Lt) {
    * @function action
    */
   InsertPoint.prototype.action = function() {
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
 
-    $(Lt.viewer._container).click(e => {
+    $(Lt.viewer.getContainer()).click(e => {
       var latLng = Lt.viewer.mouseEventToLatLng(e);
 
       Lt.undo.push();
@@ -2245,10 +2245,10 @@ function InsertPoint(Lt) {
           }
         });
 
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 }
 
@@ -2261,7 +2261,7 @@ function InsertZeroGrowth(Lt) {
   this.active = false;
   this.btn = new Button(
     'exposure_zero',
-    'Add a zero growth year in the middle of the series',
+    'Insert a year with 0 mm width between two other points ',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -2293,7 +2293,7 @@ function InsertZeroGrowth(Lt) {
   InsertZeroGrowth.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -2301,9 +2301,9 @@ function InsertZeroGrowth(Lt) {
    * @function disable
    */
   InsertZeroGrowth.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     this.active = false;
     Lt.viewer.dragging.enable();
     Lt.mouseLine.disable();
@@ -2340,7 +2340,7 @@ function InsertBreak(Lt) {
     Lt.mouseLine.enable();
     Lt.mouseLine.from(Lt.data.points[i].latLng);
 
-    $(Lt.viewer._container).click(e => {
+    $(Lt.viewer.getContainer()).click(e => {
       var latLng = Lt.viewer.mouseEventToLatLng(e);
       Lt.viewer.dragging.disable();
 
@@ -2386,7 +2386,7 @@ function InsertBreak(Lt) {
             });
             Lt.data.year += shift;
 
-            $(Lt.viewer._container).off('click');
+            $(Lt.viewer.getContainer()).off('click');
 
             Lt.undo.push();
 
@@ -2411,7 +2411,7 @@ function InsertBreak(Lt) {
   InsertBreak.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -2419,10 +2419,10 @@ function InsertBreak(Lt) {
    * @function disable
    */
   InsertBreak.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     Lt.viewer.dragging.enable();
     Lt.mouseLine.disable();
   };
@@ -2436,12 +2436,12 @@ function InsertBreak(Lt) {
 function ViewData(Lt) {
   this.btn = new Button(
     'view_list',
-    'Calibrated measurement data',
+    'View & download measurement data',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
 
-  this.dialog = L.control.dialog({'size': [200, 275], 'anchor': [50, 0], 'initOpen': false})
+  this.dialog = L.control.dialog({'size': [200, 235], 'anchor': [50, 0], 'initOpen': false})
     .setContent('<h5>No Measurement Data</h5>')
 
     .addTo(Lt.viewer);
@@ -2816,9 +2816,9 @@ function ViewData(Lt) {
         console.log(lw_string);
 
         var zip = new JSZip();
-        zip.file((Lt.meta.assetName + '.raw'), sum_string);
-        zip.file((Lt.meta.assetName + '.lwr'), lw_string);
-        zip.file((Lt.meta.assetName + '.ewr'), ew_string);
+        zip.file((Lt.meta.assetName + '_TW_rwl.txt'), sum_string);
+        zip.file((Lt.meta.assetName + '_LW_rwl.txt'), lw_string);
+        zip.file((Lt.meta.assetName + '_EW_rwl.txt'), ew_string);
 
       } else {
 
@@ -2884,7 +2884,7 @@ function ViewData(Lt) {
         sum_string = sum_string.concat(' -9999');
 
         var zip = new JSZip();
-        zip.file((Lt.meta.assetName + '_rwl.raw'), sum_string);
+        zip.file((Lt.meta.assetName + '_TW_rwl.txt'), sum_string);
       }
 
       zip.generateAsync({type: 'blob'})
@@ -2906,6 +2906,11 @@ function ViewData(Lt) {
     var stringSetup; // buttons & table headers
     var stringContent = ''; // years and lengths
 
+    //closes data view if mouse clicks anywhere outside the data viewer box
+    $(Lt.viewer.getContainer()).click(e => {
+      this.disable();
+    });
+
     if (Lt.measurementOptions.forwardDirection) { // years ascend in value
       var pts = Lt.data.points;
     } else { // otherwise years descend in value
@@ -2915,7 +2920,7 @@ function ViewData(Lt) {
     if (pts[0] != undefined) {
       var y = pts[1].year;
 
-      stringSetup = '<div class="button-set">' +
+      stringSetup = '<div class ="dataWindow"><div class="button-set">' +
       '<button id="copy-data-button"' +
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
@@ -2939,10 +2944,10 @@ function ViewData(Lt) {
       var break_length;
       var break_point;
       var length;
-      var copyDataString = Lt.measurementOptions.subAnnual? "Year\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "\nYear\t"+Lt.meta.assetName+"_tw\n";
+      var copyDataString = Lt.measurementOptions.subAnnual? "Year\t   "+Lt.meta.assetName+"_ew\t"+Lt.meta.assetName+"_lw\t"+Lt.meta.assetName+"_tw\n": "Year\t"+Lt.meta.assetName+"_tw\n";
       var EWTabDataString = "Year\t" + Lt.meta.assetName + "_EW\n";
       var LWTabDataString ="Year\t" + Lt.meta.assetName + "_LW\n";
-      var TWTabDataString = 'Year\t' + Lt.meta.assetName + "_TW\n";
+      var TWTabDataString = "Year\t" + Lt.meta.assetName + "_TW\n";
       var EWoodcsvDataString = "Year," + Lt.meta.assetName + "_EW\n";
       var LWoodcsvDataString ="Year," + Lt.meta.assetName + "_LW\n";
       var TWoodcsvDataString = 'Year,' + Lt.meta.assetName + "_TW\n";
@@ -2992,13 +2997,11 @@ function ViewData(Lt) {
           y++;
 
           last_latLng = e.latLng;
-          
+
           //Set up CSV files to download later
           //For subannual measurements
           if(Lt.measurementOptions.subAnnual)
-          {
-            //Copies data to a string that can be copied to the clipboard
-            
+          {       
           if(wood=='E')
           {
             EWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
@@ -3018,7 +3021,6 @@ function ViewData(Lt) {
           {
               totalWidthString = totalWidthString.substring(0,totalWidthString.length-1);
               totalWidthString+='8';
-
           }
             TWoodcsvDataString += e.year+","+totalWidthString+"\n";
             LWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
@@ -3032,38 +3034,28 @@ function ViewData(Lt) {
         else{
           TWoodcsvDataString+= e.year+","+lengthAsAString+"\n";
            //Copies data to a string that can be copied to the clipboard
-           TWTabDataString += e.year + "\t" + totalWidthString+ "\n";
-          copyDataString += String(e.year) + "\t"+ lengthAsAString +"\n";
+           TWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
+          copyDataString += e.year + "\t"+ lengthAsAString +"\n";
         }
         }
       });
-      this.dialog.setContent(stringSetup + stringContent + '</table>');
+      this.dialog.setContent(stringSetup + stringContent + '</table><div>');
     } else {
-      stringSetup = '<div class ="button-set"><button id="download-ltrr-button"' +
+      stringSetup = '<div class ="button-set"><button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
+      'disabled><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
+      '<button id="download-ltrr-button"' +
       'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
-      'disabled>RWL</button><br>'+ 
+      'disabled>RWL</button><br>'+
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
       'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
       'class ="text-button disabled" title="Download Measurements, Tab Delimited Format"' +
       'disabled>TAB</button><br>'+
-      '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
           '<h5>No Measurement Data</h5>';
-      
-      stringSetup = '<div><button id="download-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          'disabled>download</button><button id="copy-data-button"' +
-          'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
-          '>copy data</button>' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>delete all</button></div>' +
-          '<h3>There are no data points to measure</h3>';
       this.dialog.setContent(stringSetup);
-      document.getElementById("copy-data-button").disabled=true;
     }
     this.dialog.lock();
     this.dialog.open();
@@ -3074,7 +3066,7 @@ function ViewData(Lt) {
      if(Lt.measurementOptions.subAnnual)
      {
        downloadCSVFiles(Lt, TWoodcsvDataString,EWoodcsvDataString, LWoodcsvDataString);
-     } 
+     }
      else{
       downloadCSVFiles(Lt, TWoodcsvDataString);
      }
@@ -3084,7 +3076,7 @@ function ViewData(Lt) {
           if(Lt.measurementOptions.subAnnual)
           {
             downloadTabFiles(Lt, TWTabDataString,EWTabDataString, LWTabDataString);
-          } 
+          }
           else{
            downloadTabFiles(Lt, TWTabDataString);
           }
@@ -3141,7 +3133,7 @@ function ViewData(Lt) {
    * @function disable
    */
   ViewData.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     $('#confirm-delete').off('click');
     $('#cancel-delete').off('click');
@@ -3167,7 +3159,7 @@ function CreateAnnotation(Lt) {
       'cols="15"></textarea>', {closeButton: false});
   this.btn = new Button(
     'comment',
-    'Create annotations (Control-a)',
+    'Create annotations (Ctrl-a)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3191,11 +3183,11 @@ function CreateAnnotation(Lt) {
   CreateAnnotation.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
 
     Lt.viewer.doubleClickZoom.disable();
-    $(Lt.viewer._container).click(e => {
-      $(Lt.viewer._container).click(e => {
+    $(Lt.viewer.getContainer()).click(e => {
+      $(Lt.viewer.getContainer()).click(e => {
         this.disable();
         this.enable();
       });
@@ -3233,10 +3225,10 @@ function CreateAnnotation(Lt) {
   CreateAnnotation.prototype.disable = function() {
     this.btn.state('inactive');
     Lt.viewer.doubleClickZoom.enable();
-    $(Lt.viewer._container).off('dblclick');
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('dblclick');
+    $(Lt.viewer.getContainer()).off('click');
     $(document).off('keypress');
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
     this.input.remove();
     this.active = false;
   };
@@ -3251,7 +3243,7 @@ function CreateAnnotation(Lt) {
 function DeleteAnnotation(Lt) {
   this.btn = new Button(
     'delete',
-    'Delete annotations',
+    'Delete an annotation',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3277,7 +3269,7 @@ function DeleteAnnotation(Lt) {
   DeleteAnnotation.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -3285,10 +3277,10 @@ function DeleteAnnotation(Lt) {
    * @function disable
    */
   DeleteAnnotation.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 }
 
@@ -3300,7 +3292,7 @@ function DeleteAnnotation(Lt) {
 function EditAnnotation(Lt) {
   this.btn = new Button(
     'edit',
-    'Edit annotations',
+    'Edit an annotation',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3313,7 +3305,7 @@ function EditAnnotation(Lt) {
   EditAnnotation.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
-    document.getElementById('map').style.cursor = 'pointer';
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -3321,10 +3313,10 @@ function EditAnnotation(Lt) {
    * @function disable
    */
   EditAnnotation.prototype.disable = function() {
-    $(Lt.viewer._container).off('click');
+    $(Lt.viewer.getContainer()).off('click');
     this.btn.state('inactive');
     this.active = false;
-    document.getElementById('map').style.cursor = 'default';
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 }
 
@@ -3336,7 +3328,7 @@ function EditAnnotation(Lt) {
 function ImageAdjustment(Lt) {
   this.btn = new Button(
     'brightness_6',
-    'Adjust the image exposure, color, and contrast',
+    'Adjust image brightness, contrast & color',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3387,6 +3379,12 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
+    
+    //Close view if user clicks anywhere outside of slider window
+    $(Lt.viewer.getContainer()).click(e => {
+      this.disable();
+    });
+
     this.btn.state('active');
     $(".imageSlider").change(() => {
       this.updateFilters();
@@ -3430,8 +3428,8 @@ function ImageAdjustment(Lt) {
 function MeasurementOptions(Lt) {
   this.userSelectedPref = false;
   this.btn = new Button(
-    'timeline',
-    'Change measurement direction and annual/sub-annual mode',
+    'settings',
+    'Measurement preferences',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -3606,7 +3604,7 @@ MeasurementOptions.prototype.displayDialog = function () {
 function SaveLocal(Lt) {
   this.btn = new Button(
     'save',
-    'Save a local copy',
+    'Download .json file of current measurements, annotations, etc.',
     () => { this.action() }
   );
 
@@ -3641,7 +3639,7 @@ function SaveLocal(Lt) {
 function SaveCloud(Lt) {
   this.btn = new Button(
     'cloud_upload',
-    'Save to elevator cloud',
+    'Save the current measurements, annotations, etc.\nto the cloud-hosted .json file',
     () => { this.action() }
   );
 
@@ -3818,7 +3816,7 @@ function MetaDataText (Lt) {
 function LoadLocal(Lt) {
   this.btn = new Button(
     'file_upload',
-    'Load a local copy',
+    'Upload .json file with measurements, annotations, etc.',
     () => { this.input() }
   );
 
@@ -3988,10 +3986,10 @@ function Panhandler(La) {
     var zip = new JSZip();
     if(Lt.measurementOptions.subAnnual)
     {
-    zip.file((Lt.meta.assetName + '_LW.csv'), LWoodcsvDataString);
-    zip.file((Lt.meta.assetName + '_EW.csv'), EWoodcsvDataString);
+    zip.file((Lt.meta.assetName + '_LW_csv.csv'), LWoodcsvDataString);
+    zip.file((Lt.meta.assetName + '_EW_csv.csv'), EWoodcsvDataString);
     }
-    zip.file((Lt.meta.assetName + '_TW.csv'), TWoodcsvDataString)
+    zip.file((Lt.meta.assetName + '_TW_csv.csv'), TWoodcsvDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '_csv.zip'));
@@ -4002,10 +4000,10 @@ function Panhandler(La) {
     var zip = new JSZip();
     if(Lt.measurementOptions.subAnnual)
     {
-    zip.file((Lt.meta.assetName + '_LW.txt'), LWTabDataString);
-    zip.file((Lt.meta.assetName + '_EW.txt'), EWTabDataString);
+    zip.file((Lt.meta.assetName + '_LW_tab.txt'), LWTabDataString);
+    zip.file((Lt.meta.assetName + '_EW_tab.txt'), EWTabDataString);
     }
-    zip.file((Lt.meta.assetName + '_TW.txt'), TWTabDataString)
+    zip.file((Lt.meta.assetName + '_TW_tab.txt'), TWTabDataString)
     zip.generateAsync({type: 'blob'})
           .then((blob) => {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));

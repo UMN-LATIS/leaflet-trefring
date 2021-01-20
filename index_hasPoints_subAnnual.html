@@ -35,14 +35,14 @@
 </head>
 
 <body>
-    <div id="map_container"><div id="map" ></div></div>
+    <div id="map_container"><div id="imageMap"></div></div>
 </body>
 </html>
 <script type="application/javascript" src="leaflet-treering.js"></script>
 
 <script>
     var src;
-    var map = L.map('map', {
+    var map = L.map('imageMap', {
         fullscreenControl: true,
         zoomSnap: 0,
         crs: L.CRS.Simple,
@@ -78,8 +78,8 @@
         //width: 200521,
         //height: 4196,
         tileSize :254,
-        maxNativeZoom: 12,
-        maxZoom: 14 - 1,
+        maxNativeZoom: 18,
+        maxZoom: 18,
         overlap: 1,
         detectRetina: false,
         pixelsPerMillimeter: 480, //(NEW)
@@ -100,17 +100,22 @@ vec3 texSample(const float x, const float y, in vec2 fragCoord)
 	return texture2D(uTexture0, uv).xyz;
 }                
 
-// emboss
-	// texSample(-1.,-1., fragCoord) *  -2. +                     
-	// texSample( 0.,-1., fragCoord) *  -1. +                    
-	// texSample( 1.,-1., fragCoord) *  0. +                      
-	// texSample(-1., 0., fragCoord) *  -1. +                    
-	// texSample( 0., 0., fragCoord) *   1. +                     
-	// texSample( 1., 0., fragCoord) *  1. +                      
-	// texSample(-1., 1., fragCoord) *  0. +                     
-	// texSample( 0., 1., fragCoord) *  1. +                     
-	// texSample( 1., 1., fragCoord) *  2.
-    
+
+vec3 embossFilter(in vec2 fragCoord, float strength){
+	vec3 f =
+	texSample(-1.,-1., fragCoord) *  -2. +                     
+	texSample( 0.,-1., fragCoord) *  -1. +                    
+	texSample( 1.,-1., fragCoord) *  0. +                      
+	texSample(-1., 0., fragCoord) *  -1. +                    
+	texSample( 0., 0., fragCoord) *   1. +                     
+	texSample( 1., 0., fragCoord) *  1. +                      
+	texSample(-1., 1., fragCoord) *  0. +                     
+	texSample( 0., 1., fragCoord) *  1. +                     
+	texSample( 1., 1., fragCoord) *  2.
+	;                                              
+	return mix(texSample( 0., 0., fragCoord), f , strength); 
+}    
+
 vec3 sharpenFilter(in vec2 fragCoord, float strength){
 	vec3 f =
 	texSample(-1.,-1., fragCoord) *  -1. +
@@ -128,7 +133,7 @@ vec3 sharpenFilter(in vec2 fragCoord, float strength){
 void main(void){
     vec4 targetTexture = texture2D(uTexture0, vec2(vTextureCoords.x, vTextureCoords.y));
     // gl_FragColor = targetTexture;
-    gl_FragColor = vec4(sharpenFilter(vec2(vTextureCoords.x, vTextureCoords.y), 0.5),targetTexture.a);
+    gl_FragColor = vec4(sharpenFilter(vec2(vTextureCoords.x, vTextureCoords.y), 0.4),targetTexture.a);
 }
 `;
     var layer = L.tileLayer.gl({
