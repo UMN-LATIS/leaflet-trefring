@@ -2928,9 +2928,6 @@ function ViewData(Lt) {
       '<button id="download-ltrr-button"' +
       'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
       '>RWL</button><br>  '+
-      '<button id="refresh-button"' +
-      'class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button><br>  '+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
@@ -3052,8 +3049,6 @@ function ViewData(Lt) {
       'disabled>TAB</button><br>'+
       '<button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
-      '<button id="refresh-button" class="icon-button" title="Refresh"' +
-      '><i class="material-icons md-18-data-view">refresh</i></button><br>' +
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
       '><i class="material-icons md-18-data-view">delete</i></button></div>' +
@@ -3064,9 +3059,6 @@ function ViewData(Lt) {
           'disabled>download</button><button id="copy-data-button"' +
           'class= "mdc-button mdc-button--unelevated mdc-button-compact"'+
           '>copy data</button>' +
-          '<button id="refresh-button"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>refresh</button><button id="delete-button"' +
           'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
           '>delete all</button></div>' +
           '<h3>There are no data points to measure</h3>';
@@ -3098,10 +3090,6 @@ function ViewData(Lt) {
           }
          }
        );
-    $('#refresh-button').click(() => {
-      this.disable();
-      this.enable();
-    });
     $('#delete-button').click(() => {
       this.dialog.setContent(
           '<p>This action will delete all data points.' +
@@ -3161,7 +3149,6 @@ function ViewData(Lt) {
     $('#download-csv-button').off('click');
     $('#download-tab-button').off('click');
     $('#copy-data-button').off('click');
-    $('#refresh-button').off('click');
     $('#delete-button').off('click');
     $('#copy-data-button').off('click');
     this.dialog.close();
