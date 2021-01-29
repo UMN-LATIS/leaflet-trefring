@@ -3082,10 +3082,6 @@ function ViewData(Lt) {
           }
          }
        );
-    $('#refresh-button').click(() => {
-      this.disable();
-      this.enable();
-    });
     $('#delete-button').click(() => {
       this.dialog.setContent(
           '<p>This action will delete all data points.' +
@@ -3145,7 +3141,6 @@ function ViewData(Lt) {
     $('#download-csv-button').off('click');
     $('#download-tab-button').off('click');
     $('#copy-data-button').off('click');
-    $('#refresh-button').off('click');
     $('#delete-button').off('click');
     $('#copy-data-button').off('click');
     this.dialog.close();
