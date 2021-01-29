@@ -62,6 +62,7 @@ function LTreering (viewer, basePath, options) {
   this.viewData = new ViewData(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
+  this.PixelAdjustment = new PixelAdjustment(this);
   this.calibration = new Calibration(this);
 
   this.createAnnotation = new CreateAnnotation(this);
@@ -97,7 +98,7 @@ function LTreering (viewer, basePath, options) {
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.PixelAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': baseLayer,
@@ -132,6 +133,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      this.PixelAdjustment.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
@@ -142,6 +144,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      this.PixelAdjustment.btn.addTo(this.viewer);
       //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
     }
@@ -381,7 +384,8 @@ function MeasurementData (dataObject, Lt) {
     } else {
       alert('You cannot select the same point');
     }
-
+    k = this.points[this.points]
+  console.log("next year:",this.year);
     Lt.metaDataText.updateText(); // updates after points are cut
   };
 
@@ -3413,6 +3417,98 @@ function ImageAdjustment(Lt) {
    * @function disable
    */
   ImageAdjustment.prototype.disable = function() {
+    this.dialog.unlock();
+    this.dialog.close();
+    this.btn.state('inactive');
+  };
+
+}
+ 
+/**
+ * Change GL Filter
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function PixelAdjustment(Lt) {
+  this.btn = new Button(
+    'brush',
+    'Edit the pixel composition',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+
+  this.dialog = L.control.dialog({
+    'size': [340, 280],
+    'anchor': [50, 5],
+    'initOpen': false
+  }).setContent(
+    '<div><label style="text-align:center;display:block;">Sharpness</label> \
+    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=2 step=0.05 type=range> \
+    </div>').addTo(Lt.viewer);
+
+ 
+/**
+ * Get Slider Value
+ * @function getSliderVal
+ */
+PixelAdjustment.prototype.getSliderVal = function() {
+var sharpnessSlider = document.getElementById("sharpness-slider");
+if(sharpnessSlider.val !== null)
+{
+  return sharpnessSlider.val;
+}
+else{
+  return -1;
+}
+};
+  /**
+   * Update the image filter to reflect slider values
+   * @function updateFilters
+   */
+  PixelAdjustment.prototype.updateFilters = function() {
+    var sharpnessSlider = document.getElementById("sharpness-slider").value;
+    Lt.baseLayer['GL Layer'].setUniform('uSharpenStrength', sharpnessSlider);
+    Lt.baseLayer['GL Layer'].reRender();
+
+  };
+
+
+  /**
+   * Open the filter sliders dialog
+   * @function enable
+   */
+  PixelAdjustment.prototype.enable = function() {
+    this.dialog.lock();
+    this.dialog.open();
+    var sharpnessSlider = document.getElementById("sharpness-slider");
+    
+    //Close view if user clicks anywhere outside of slider window
+    $(Lt.viewer.getContainer()).click(e => {
+      this.disable();
+    });
+
+    this.btn.state('active');
+    $(".imageSlider").change(() => {
+      this.updateFilters();
+    });
+    $("#invert-checkbox").change(() => {
+      this.updateFilters();
+    });
+    $("#reset-button").click(() => {
+      $(sharpnessSlider).val(-1);
+      this.updateFilters();
+    });
+    $("#invert-button").click(() => {
+      $(sharpnessSlider).val(-1);
+      this.updateFilters();
+    });
+  };
+
+  /**
+   * Close the filter sliders dialog
+   * @function disable
+   */
+  PixelAdjustment.prototype.disable = function() {
     this.dialog.unlock();
     this.dialog.close();
     this.btn.state('inactive');

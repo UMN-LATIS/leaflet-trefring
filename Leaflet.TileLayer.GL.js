@@ -81,6 +81,11 @@ L.TileLayer.GL = L.GridLayer.extend({
 		}
 	},
 
+	_setFragment: function(fragment){
+		this.options.fragmentShader = fragment;
+		this._loadGLProgram();
+	},
+
     _isValidTile: function(coords) {
         return (coords.x == 0 && coords.y == 0 && coords.z == 0) ||
             coords.x >= 0 && coords.y >= 0 && coords.z > 0 && coords.z &&
