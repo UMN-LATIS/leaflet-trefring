@@ -569,8 +569,8 @@ nextHighestPowerOfTwo: function(x) {
             zoom = this._tileZoom + this.options.zoomOffset,
             zoomN = this.options.maxNativeZoom;
 
-        tileSize.x = tileSize.x - 2; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
-        tileSize.y = tileSize.y - 2;
+        tileSize.x = tileSize.x - 1; // with deepzoom, our tile size removes the overlap, but leaflet needs it.
+        tileSize.y = tileSize.y - 1;
         // increase tile size when overscaling
         var outputSize= zoomN !== null && zoom > zoomN ?
             tileSize.divideBy(map.getZoomScale(zoomN, zoom)).round() :
