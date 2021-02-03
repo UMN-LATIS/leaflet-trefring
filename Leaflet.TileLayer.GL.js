@@ -16,6 +16,129 @@
  *
  */
 
+ var kernels = {
+    normal: [
+      0, 0, 0,
+      0, 1, 0,
+      0, 0, 0
+    ],
+    gaussianBlur: [
+      0.045, 0.122, 0.045,
+      0.122, 0.332, 0.122,
+      0.045, 0.122, 0.045
+    ],
+    gaussianBlur2: [
+      1, 2, 1,
+      2, 4, 2,
+      1, 2, 1
+    ],
+    gaussianBlur3: [
+      0, 1, 0,
+      1, 1, 1,
+      0, 1, 0
+    ],
+    unsharpen: [
+      -1, -1, -1,
+      -1,  9, -1,
+      -1, -1, -1
+    ],
+    sharpness: [
+       0,-1, 0,
+      -1, 5,-1,
+       0,-1, 0
+    ],
+    sharpen: [
+       -1, -1, -1,
+       -1, 16, -1,
+       -1, -1, -1
+    ],
+    edgeDetect: [
+       -0.125, -0.125, -0.125,
+       -0.125,  1,     -0.125,
+       -0.125, -0.125, -0.125
+    ],
+    edgeDetect2: [
+       -1, -1, -1,
+       -1,  8, -1,
+       -1, -1, -1
+    ],
+    edgeDetect3: [
+       -5, 0, 0,
+        0, 0, 0,
+        0, 0, 5
+    ],
+    edgeDetect4: [
+       -1, -1, -1,
+        0,  0,  0,
+        1,  1,  1
+    ],
+    edgeDetect5: [
+       -1, -1, -1,
+        2,  2,  2,
+       -1, -1, -1
+    ],
+    edgeDetect6: [
+       -5, -5, -5,
+       -5, 39, -5,
+       -5, -5, -5
+    ],
+    sobelHorizontal: [
+        1,  2,  1,
+        0,  0,  0,
+       -1, -2, -1
+    ],
+    sobelVertical: [
+        1,  0, -1,
+        2,  0, -2,
+        1,  0, -1
+    ],
+    previtHorizontal: [
+        1,  1,  1,
+        0,  0,  0,
+       -1, -1, -1
+    ],
+    previtVertical: [
+        1,  0, -1,
+        1,  0, -1,
+        1,  0, -1
+    ],
+    boxBlur: [
+        0.111, 0.111, 0.111,
+        0.111, 0.111, 0.111,
+        0.111, 0.111, 0.111
+    ],
+    triangleBlur: [
+        0.0625, 0.125, 0.0625,
+        0.125,  0.25,  0.125,
+        0.0625, 0.125, 0.0625
+    ],
+    emboss: [
+       -2, -1,  0,
+       -1,  1,  1,
+        0,  1,  2
+    ]
+  };
+
+  var effects = [
+    { name: "gaussianBlur3", on: true },
+    { name: "gaussianBlur3", on: true },
+    { name: "gaussianBlur3", on: true },
+    { name: "sharpness", },
+    { name: "sharpness", },
+    { name: "sharpness", },
+    { name: "sharpen", },
+    { name: "sharpen", },
+    { name: "sharpen", },
+    { name: "unsharpen", },
+    { name: "unsharpen", },
+    { name: "unsharpen", },
+    { name: "emboss", on: true },
+    { name: "edgeDetect", },
+    { name: "edgeDetect", },
+    { name: "edgeDetect3", },
+    { name: "edgeDetect3", },
+  ];
+
 L.TileLayer.GL = L.GridLayer.extend({
 	options: {
 		// @option tileUrls: Array
@@ -79,8 +202,42 @@ L.TileLayer.GL = L.GridLayer.extend({
 			this._textures[i] = gl.createTexture();
 			gl.uniform1i(gl.getUniformLocation(this._glProgram, "uTexture" + i), i);
 		}
-	},
 
+		this.textures = [];
+		this.framebuffers = [];
+		for (var ii = 0; ii < 2; ++ii) {
+			this.texture = this.createAndSetupTexture(gl);
+			this.textures.push(this.texture);
+		
+			// make the texture the same size as the image
+			gl.texImage2D(
+				gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0,
+				gl.RGBA, gl.UNSIGNED_BYTE, null);
+		
+			// Create a framebuffer
+			var fbo = gl.createFramebuffer();
+			this.framebuffers.push(fbo);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		
+			// Attach a texture to it.
+			gl.framebufferTexture2D(
+				gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
+		}
+	},
+  createAndSetupTexture: function(gl) {
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+ 
+    // Set up texture so we can render any size image and so we are
+    // working with pixels.
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+ 
+ 
+    return texture;
+  },
 	_setFragment: function(fragment){
 		this.options.fragmentShader = fragment;
 		this._loadGLProgram();
@@ -269,6 +426,9 @@ L.TileLayer.GL = L.GridLayer.extend({
 		var gl = this._gl;
 		this._uTileCoordsPosition = gl.getUniformLocation(program, "uTileCoords");
 		this._uNowPosition = gl.getUniformLocation(program, "uNow");
+		this._currentKernel = gl.getUniformLocation(program, "u_kernel[0]");
+		this._flipYLocation = gl.getUniformLocation(program, "u_flipY");
+		this.kernelWeightLocation = gl.getUniformLocation(program, "u_kernelWeight");
 		this._isReRenderable = false;
 
 		if (this._uNowPosition) {
@@ -290,6 +450,10 @@ L.TileLayer.GL = L.GridLayer.extend({
 	// Every pixel will be opaque, so there is no need to clear the scene.
 	_render: function(coords) {
 		var gl = this._gl;
+
+		// this._currentKernel = kernels["unsharpen"];
+		
+		
 		gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 		gl.clearColor(0.5, 0.5, 0.5, 0);
 		gl.enable(gl.BLEND);
@@ -344,11 +508,55 @@ L.TileLayer.GL = L.GridLayer.extend({
 		gl.bindBuffer(gl.ARRAY_BUFFER, this._CRSBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(crsData), gl.STATIC_DRAW);
 
+
 		// ...and also set the uTileCoords uniform for this tile
 		gl.uniform3f(this._uTileCoordsPosition, coords.x, coords.y, coords.z);
 
+	
+		 gl.uniform1f(this._flipYLocation, 1);
+ 
+
+		gl.uniform1fv(this._currentKernel, kernels["sharpen"]);
+
 		// ... and then the magic happens.
+		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["sharpen"]));
+		// should be rendering into this.tetures[0]
+		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[0]);
+ 
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		
+		// source texture is now textures[0]
+		gl.bindTexture(gl.TEXTURE_2D, this.textures[0]);
+		gl.uniform1fv(this._currentKernel, kernels["emboss"]);
+		this.setUniform("uSharpenStrength", 1.0);
+		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["emboss"]));
+		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[1]);
+ 
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		gl.bindTexture(gl.TEXTURE_2D, this.textures[1]);
+		gl.uniform1fv(this._currentKernel, kernels["normal"]);
+		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["normal"]));
+		 gl.uniform1f(this._flipYLocation, -1);
+ 
+		// clear the framebuffer
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		
+		// // Tell the shader the resolution of the framebuffer.
+		// gl.uniform2f(resolutionLocation, width, height);
+	
+		// Tell webgl the viewport setting needed for framebuffer.
+		// gl.viewport(0, 0, width, height);
+		
+
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		
+	},
+
+	computeKernelWeight: function(kernel) {
+		var weight = kernel.reduce(function(prev, curr) {
+			return prev + curr;
+		});
+		return weight <= 0 ? 1 : weight;
 	},
 
 	_bindTexture: function(index, imageData) {
