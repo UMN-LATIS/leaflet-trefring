@@ -90,14 +90,14 @@ function LTreering (viewer, basePath, options) {
 
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.editAnnotation.btn, this.deleteAnnotation.btn], 'comment', 'Manage annotations');
+  this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.editBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
   this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.annotationAsset, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': layer
@@ -1133,20 +1133,123 @@ function AnnotationAsset(Lt) {
   this.markers = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
-  AnnotationAsset.prototype.reload = function() {
-    this.markerLayer.clearLayers();
-    this.markers = new Array();
-    Lt.aData.index = 0;
-    if (Lt.aData.annotations != undefined) {
-      var reduced = Object.values(Lt.aData.annotations).filter(e => e != undefined);
-      Lt.aData.annotations = {};
-      reduced.map((e, i) => Lt.aData.annotations[i] = e);
+  this.createBtn = new Button (
+    'comment',
+    'Create annotations (Ctrl-a)',
+    () => { Lt.disableTools(); this.enable(this.createBtn) },
+    () => { this.disable(this.createBtn) }
+  );
+  this.createBtn.active = false;
 
-      Object.values(Lt.aData.annotations).map((e, i) => {
-        this.newAnnotation(Lt.aData.annotations, i);
-        Lt.aData.index++;
-      });
+  // crtl-a to activate createBtn
+  L.DomEvent.on(window, 'keydown', (e) => {
+    if (e.keyCode == 65 && e.getModifierState("Control")) {
+      if(!this.active) {
+        Lt.disableTools();
+        this.enable(this.createBtn);
+      }
+      else {
+        this.disable(this.createBtn);
+      }
     }
+  }, this);
+
+  this.editBtn = new Button (
+    'edit',
+    'Edit an annotation',
+    () => { Lt.disableTools(); this.enable(this.editBtn) },
+    () => {this.disable(this.editBtn) }
+  );
+  this.editBtn.active = false;
+
+  this.deleteBtn = new Button (
+    'delete',
+    'Delete an annotation',
+    () => { Lt.disableTools(); this.enable(this.deleteBtn) },
+    () => { this.disable(this.deleteBtn) }
+  );
+  this.deleteBtn.active = false;
+
+  this.dialogWindow = L.control.dialog({
+    'size': [400, 400],
+    'anchor': [50, 5],
+    'initOpen': false
+  }).setContent(
+    '<div class="tab"> \
+      <button class="tabLinks" id="summary-btn">Summary</button> \
+      <button class="tabLinks" id="edit-summary-btn">Edit Summary</button> \
+    </div> \
+    <div id="summary-tab" class="tabContent"></div> \
+    <div id="edit-summary-tab" class="tabContent"></div>',
+  ).addTo(Lt.viewer);
+
+  AnnotationAsset.prototype.openTab = function (btnName, tabName) {
+    var i;
+    var tabContent;
+    var tabLinks;
+
+    tabContent = document.getElementsByClassName("tabContent");
+    for (i = 0; i < tabContent.length; i++) {
+      tabContent[i].style.display = "none";
+    };
+
+    tabLinks = document.getElementsByClassName("tabLinks");
+    for (i = 0; i < tabLinks.length; i++) {
+      tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    };
+
+    if (tabName && btnName) {
+      document.getElementById(tabName).style.display = "block";
+      document.getElementById(btnName).className += " active";
+    };
+  }
+
+  // Only creating an annotation is tied to button enabling. Editing & deleting
+  // are connected to newElement through event listeners.
+  AnnotationAsset.prototype.enable = function (btn) {
+    btn.state('active');
+    btn.active = true;
+    Lt.viewer.getContainer().style.cursor = 'pointer';
+
+    if (btn === this.createBtn) {
+      Lt.viewer.doubleClickZoom.disable();
+      $(Lt.viewer.getContainer()).click(e => {
+        var latLng = Lt.viewer.mouseEventToLatLng(e);
+
+        var summaryBtn = document.getElementById('summary-btn');
+        summaryBtn.onclick = this.openTab.bind(null, 'summary-btn', 'summary-tab');
+        summaryBtn.click();
+        var editSummaryBtn = document.getElementById('edit-summary-btn');
+        editSummaryBtn.onclick = this.openTab.bind(null, 'edit-summary-btn', 'edit-summary-tab');
+
+        var summaryDiv = document.getElementById('summary-tab');
+        var testSummary = document.createElement("p")
+        testSummary.innerHTML = 'summary'
+        summaryDiv.appendChild(testSummary)
+        var editSummaryDiv = document.getElementById('edit-summary-tab');
+        var testEdit = document.createElement('p')
+        testEdit.innerHTML = 'edit'
+        editSummaryDiv.appendChild(testEdit)
+
+        //this.dialogWindow.hideResize();
+        this.dialogWindow.open();
+
+      });
+    };
+  };
+
+  AnnotationAsset.prototype.disable = function (btn) {
+    if (!btn) { // for Lt.disableTools()
+      this.disable(this.createBtn);
+      this.disable(this.editBtn);
+      this.disable(this.deleteBtn);
+      return
+    };
+
+    $(Lt.viewer.getContainer()).off('click');
+    btn.state('inactive');
+    btn.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 
   AnnotationAsset.prototype.popupMouseover = function(e) {
@@ -1157,13 +1260,8 @@ function AnnotationAsset(Lt) {
     this.closePopup();
   };
 
-  AnnotationAsset.prototype.newAnnotation = function(ants, i) {
+  AnnotationAsset.prototype.newElement = function(ants, i) {
     var ref = ants[i];
-
-    if (ref.text == '') {
-      Lt.aData.deleteAnnotation(i);
-      return;
-    }
 
     var draggable = false;
     if (window.name.includes('popout')) {
@@ -1184,11 +1282,13 @@ function AnnotationAsset(Lt) {
       ants[i].latLng = e.target._latlng;
     });
 
+    // how annotations respond when click depends on what is active
     $(this.markers[i]).click(e => {
-      if (Lt.editAnnotation.active) {
+      if (this.editBtn.active) {
         this.editAnnotation(i);
-      } else if (Lt.deleteAnnotation.active) {
-        Lt.deleteAnnotation.action(i);
+      } else if (this.deleteBtn.active) {
+        Lt.aData.deleteAnnotation(i);
+        this.reload();
       }
     });
 
@@ -1196,6 +1296,22 @@ function AnnotationAsset(Lt) {
     $(this.markers[i]).mouseout(this.popupMouseout);
 
     this.markerLayer.addLayer(this.markers[i]);
+  };
+
+  AnnotationAsset.prototype.reload = function() {
+    this.markerLayer.clearLayers();
+    this.markers = new Array();
+    Lt.aData.index = 0;
+    if (Lt.aData.annotations != undefined) {
+      var reduced = Object.values(Lt.aData.annotations).filter(e => e != undefined);
+      Lt.aData.annotations = {};
+      reduced.map((e, i) => Lt.aData.annotations[i] = e);
+
+      Object.values(Lt.aData.annotations).map((e, i) => {
+        this.newElement(Lt.aData.annotations, i);
+        Lt.aData.index++;
+      });
+    }
   };
 
   AnnotationAsset.prototype.editAnnotation = function(i) {
@@ -3024,7 +3140,7 @@ function ViewData(Lt) {
           //Set up CSV files to download later
           //For subannual measurements
           if(Lt.measurementOptions.subAnnual)
-          {       
+          {
           if(wood=='E')
           {
             EWTabDataString += e.year + "\t" + lengthAsAString+ "\n";
@@ -3407,7 +3523,7 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
-    
+
     //Close view if user clicks anywhere outside of slider window
     $(Lt.viewer.getContainer()).click(e => {
       this.disable();
