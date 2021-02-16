@@ -361,7 +361,9 @@ function MeasurementData (dataObject, Lt) {
    */
   MeasurementData.prototype.cut = function(i, j) {
     if (i > j) {
-      var trimmed_points = this.points.slice().splice(i, this.index - 1);
+      //var trimmed_points = this.points.slice().splice(i, this.index - 1);
+      this.points.splice(j,i-j);
+      var trimmed_points= this.points;
       var k = 0;
       this.points = {};
       trimmed_points.map(e => {
@@ -375,8 +377,11 @@ function MeasurementData (dataObject, Lt) {
       });
       this.index = k;
     } else if (i < j) {
-      this.points = this.points.slice().splice(0, i);
-      this.index = i;
+      this.points.splice(i,j-i);
+      //this.points = this.points.slice().splice(0, i);
+       console.log(this.points);
+      // this.year = this.points[this.index-1].earlywood? this.points[this.index-1].year : this.points[this.index-1].year + 1;
+      // this.earlywood = this.year === this.points[this.index-1].year? false : true;
     } else {
       alert('You cannot select the same point');
     }
