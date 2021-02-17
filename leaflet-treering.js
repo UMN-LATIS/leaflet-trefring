@@ -1133,6 +1133,8 @@ function AnnotationAsset(Lt) {
   this.markers = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
+  this.tempText = '';
+
   this.createBtn = new Button (
     'comment',
     'Create annotations (Ctrl-a)',
@@ -1170,18 +1172,21 @@ function AnnotationAsset(Lt) {
   );
   this.deleteBtn.active = false;
 
-  this.dialogWindow = L.control.dialog({
-    'size': [400, 400],
-    'anchor': [50, 5],
-    'initOpen': false
-  }).setContent(
-    '<div class="tab"> \
-      <button class="tabLinks" id="summary-btn">Summary</button> \
-      <button class="tabLinks" id="edit-summary-btn">Edit Summary</button> \
-    </div> \
-    <div id="summary-tab" class="tabContent"></div> \
-    <div id="edit-summary-tab" class="tabContent"></div>',
-  ).addTo(Lt.viewer);
+  AnnotationAsset.prototype.createDialog = function () {
+    this.dialogWindow = L.control.dialog({
+      'size': [400, 400],
+      'anchor': [50, 5],
+      'initOpen': false
+    }).setContent(
+      '<div class="tab"> \
+        <button class="tabLinks" id="summary-btn">Summary</button> \
+        <button class="tabLinks" id="edit-summary-btn">Edit Summary</button> \
+        <button class="tabLinks" id="exit-btn">Exit</button> \
+      </div> \
+      <div id="summary-tab" class="tabContent"></div> \
+      <div id="edit-summary-tab" class="tabContent"></div>',
+    ).addTo(Lt.viewer);
+  }
 
   AnnotationAsset.prototype.openTab = function (btnName, tabName) {
     var i;
@@ -1202,7 +1207,79 @@ function AnnotationAsset(Lt) {
       document.getElementById(tabName).style.display = "block";
       document.getElementById(btnName).className += " active";
     };
-  }
+  };
+
+  AnnotationAsset.prototype.summaryContent = function (ants, i) {
+    var summaryDiv = document.getElementById('summary-tab');
+    summaryDiv.innerHTML = '';
+
+    var textTitle = document.createElement('h4');
+    textTitle.innerHTML = "Text:";
+    summaryDiv.appendChild(textTitle);
+
+    var textContent = document.createElement('p');
+    textContent.innerHTML = 'N/A';
+    if (ants) { // if existing annotation inputted
+      textContent.innerHTML = ants[i].text || '';
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      if (Lt.aData.annotations[Lt.aData.index].text != '') {
+        textContent.innerHTML = Lt.aData.annotations[Lt.aData.index].text;
+      } else {
+        textContent.innerHTML = 'N/A';
+      }
+    };
+
+    if (Lt.aData.annotations[Lt.aData.index]) {
+      console.log(Lt.aData.annotations[Lt.aData.index].text)
+    };
+
+    summaryDiv.appendChild(textContent);
+  };
+
+  AnnotationAsset.prototype.editSummaryContent = function (ants, i) {
+    var editSummaryDiv = document.getElementById('edit-summary-tab');
+    editSummaryDiv.innerHTML = '';
+
+    var textTitle = document.createElement('h4');
+    textTitle.innerHTML = "Text:";
+    editSummaryDiv.appendChild(textTitle);
+
+    var textBox = document.createElement('TEXTAREA');
+    if (ants) { // if existing annotation inputted
+      textBox.value = ants[i].text || 'N/A';
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      if (Lt.aData.annotations[Lt.aData.index].text == 'N/A') {
+        textBox.value = '';
+      } else {
+        textBox.value = Lt.aData.annotations[Lt.aData.index].text;
+      };
+    } else {
+      textBox.value = '';
+    };
+
+    $(textBox).change(() => {
+      this.tempText = textBox.value;
+      this.saveContent();
+    });
+
+    editSummaryDiv.appendChild(textBox);
+  };
+
+  AnnotationAsset.prototype.saveContent = function (ants, i) {
+    if (ants) {
+      ants[i] = {
+        'latLng': this.latLng,
+        'text': this.tempText,
+      };
+    } else {
+      Lt.aData.annotations[Lt.aData.index] = {
+        'latLng': this.latLng,
+        'text': this.tempText,
+      };
+
+      this.tempText = '' // reset temporary text
+    };
+  };
 
   // Only creating an annotation is tied to button enabling. Editing & deleting
   // are connected to newElement through event listeners.
@@ -1211,28 +1288,46 @@ function AnnotationAsset(Lt) {
     btn.active = true;
     Lt.viewer.getContainer().style.cursor = 'pointer';
 
+    this.latLng = '';
     if (btn === this.createBtn) {
       Lt.viewer.doubleClickZoom.disable();
       $(Lt.viewer.getContainer()).click(e => {
-        var latLng = Lt.viewer.mouseEventToLatLng(e);
+        Lt.disableTools();
+        Lt.collapseTools();
 
+        this.latLng = Lt.viewer.mouseEventToLatLng(e);
+
+        this.createDialog();
+        var exitBtn = document.getElementById('exit-btn');
+        $(exitBtn).click(e => {
+          this.dialogWindow.destroy();
+          this.dialogWindow.close();
+        });
+
+        // move between tabs & save edits
         var summaryBtn = document.getElementById('summary-btn');
-        summaryBtn.onclick = this.openTab.bind(null, 'summary-btn', 'summary-tab');
-        summaryBtn.click();
+        $(() => {
+          $(summaryBtn).click(() => {
+            this.summaryContent();
+            this.openTab('summary-btn', 'summary-tab');
+          });
+        });
+
         var editSummaryBtn = document.getElementById('edit-summary-btn');
-        editSummaryBtn.onclick = this.openTab.bind(null, 'edit-summary-btn', 'edit-summary-tab');
+        $(() => {
+          $(editSummaryBtn).click(() => {
+            this.editSummaryContent();
+            this.openTab('edit-summary-btn', 'edit-summary-tab');
+          });
+        });
 
-        var summaryDiv = document.getElementById('summary-tab');
-        var testSummary = document.createElement("p")
-        testSummary.innerHTML = 'summary'
-        summaryDiv.appendChild(testSummary)
-        var editSummaryDiv = document.getElementById('edit-summary-tab');
-        var testEdit = document.createElement('p')
-        testEdit.innerHTML = 'edit'
-        editSummaryDiv.appendChild(testEdit)
-
-        //this.dialogWindow.hideResize();
+        this.dialogWindow.hideResize();
+        this.dialogWindow.hideClose();
         this.dialogWindow.open();
+
+        $(document).ready(() => {
+          editSummaryBtn.click();
+        });
 
       });
     };
