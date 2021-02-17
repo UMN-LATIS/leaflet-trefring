@@ -25,6 +25,7 @@ function LTreering (viewer, basePath, options) {
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
+    'attributes': options.attributes || {},
   }
 
   this.preferences = { // catch for if forwardDirection or subAnnual are undefined/null on line ~2830
@@ -1174,14 +1175,14 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.createDialog = function () {
     this.dialogWindow = L.control.dialog({
-      'size': [400, 400],
+      'size': [350, 400],
       'anchor': [50, 5],
       'initOpen': false
     }).setContent(
       '<div class="tab"> \
         <button class="tabLinks" id="summary-btn">Summary</button> \
-        <button class="tabLinks" id="edit-summary-btn">Edit Summary</button> \
-        <button class="tabLinks" id="exit-btn">Exit</button> \
+        <button class="tabLinks" id="edit-summary-btn">Edit</button> \
+        <button class="tabLinks" id="exit-btn">Save & Close</button> \
       </div> \
       <div id="summary-tab" class="tabContent"></div> \
       <div id="edit-summary-tab" class="tabContent"></div>',
@@ -1213,9 +1214,14 @@ function AnnotationAsset(Lt) {
     var summaryDiv = document.getElementById('summary-tab');
     summaryDiv.innerHTML = '';
 
+    // Start: text
+    var summaryTextDiv = document.createElement('div');
+    summaryTextDiv.className = 'summaryTextDiv';
+
     var textTitle = document.createElement('h4');
+    textTitle.id = 'text-title';
     textTitle.innerHTML = "Text:";
-    summaryDiv.appendChild(textTitle);
+    summaryTextDiv.appendChild(textTitle);
 
     var textContent = document.createElement('p');
     textContent.innerHTML = 'N/A';
@@ -1233,16 +1239,68 @@ function AnnotationAsset(Lt) {
       console.log(Lt.aData.annotations[Lt.aData.index].text)
     };
 
-    summaryDiv.appendChild(textContent);
+    summaryTextDiv.appendChild(textContent);
+    summaryDiv.appendChild(summaryTextDiv);
+    // End: text
+
+    // Start: attributes
+    var summaryAttributesDiv = document.createElement('div');
+    summaryAttributesDiv.className = 'summaryAttributesDiv';
+
+    var attributesTitle = document.createElement('h4');
+    attributesTitle.id = 'attributes-title'
+    attributesTitle.innerHTML = "Attributes:";
+    summaryAttributesDiv.appendChild(attributesTitle);
+
+    var attributeCode = document.createElement('p');
+    if (ants) {
+      var code = ants[i].attributesCode || 'N/A';
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      var code = Lt.aData.annotations[Lt.aData.index].attributesCode || 'N/A';
+    } else {
+      var code = 'N/A';
+    };
+    attributeCode.innerHTML = 'Attributes Code: ' + code;
+    summaryAttributesDiv.appendChild(attributeCode);
+
+    var attributesDescription = document.createElement('p');
+    attributesDescription.innerHTML = 'Attributes Description:';
+    summaryAttributesDiv.appendChild(attributesDescription);
+
+    var attributesList = document.createElement('ul');
+    summaryAttributesDiv.appendChild(attributesList);
+    if (ants && ants[i].attributesDescription) {
+      var descriptionList = ants[i].attributesDescription;
+    } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) {
+      var descriptionList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
+    } else {
+      var descriptionList = [];
+      var descriptorElm = document.createElement('li');
+      descriptorElm.innerHTML = 'N/A';
+      attributesList.appendChild(descriptorElm);
+    };
+    for (var descriptor in descriptionList) {
+      var descriptorElm = document.createElement('li')
+      descriptorElm.innerHTML = descriptionList[descriptor];
+      attributesList.appendChild(descriptorElm);
+    };
+
+    summaryDiv.appendChild(summaryAttributesDiv);
+    // End: attributes
   };
 
   AnnotationAsset.prototype.editSummaryContent = function (ants, i) {
     var editSummaryDiv = document.getElementById('edit-summary-tab');
-    editSummaryDiv.innerHTML = '';
+    editSummaryDiv.innerHTML = ''; // reset div so elements do not duplicate
+
+    // Start: text
+    var editTextDiv = document.createElement('div');
+    editTextDiv.className = 'editTextDiv';
 
     var textTitle = document.createElement('h4');
+    textTitle.id = 'text-title';
     textTitle.innerHTML = "Text:";
-    editSummaryDiv.appendChild(textTitle);
+    editTextDiv.appendChild(textTitle);
 
     var textBox = document.createElement('TEXTAREA');
     if (ants) { // if existing annotation inputted
@@ -1257,27 +1315,91 @@ function AnnotationAsset(Lt) {
       textBox.value = '';
     };
 
-    $(textBox).change(() => {
+    $(textBox).change(() => { //  any text changes are saved
+      this.tempText = '' // reset temporary text
       this.tempText = textBox.value;
       this.saveContent();
     });
 
-    editSummaryDiv.appendChild(textBox);
+    editTextDiv.appendChild(textBox);
+    editSummaryDiv.appendChild(editTextDiv);
+    // End: text
+
+    // Start: attributes
+    var editAttributesDiv = document.createElement('div');
+    editAttributesDiv.className = 'editAttributesDiv';
+
+    var attributesTitle = document.createElement('h4');
+    attributesTitle.id = 'attributes-title'
+    attributesTitle.innerHTML = "Attributes:";
+    editAttributesDiv.appendChild(attributesTitle);
+
+    var attributesObject = JSON.parse(Lt.meta.attributes);
+    for (var attribute in attributesObject) {
+      var title = document.createElement('p');
+      title.innerHTML = attribute;
+      editAttributesDiv.appendChild(title);
+
+      var optionsObject = attributesObject[attribute];
+      for (var option in optionsObject) {
+        var checkbox = document.createElement('input');
+        checkbox.className += 'checkboxes';
+        checkbox.type = 'checkbox';
+        checkbox.id = option; // attribute descriptor
+        checkbox.value = optionsObject[option]; // code associated w/ option
+
+        var attributesList = [];
+        if (ants && ants[i].attributesDescription) {
+          attributesList = ants[i].attributesDescription;
+        } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) { // check pre selected attributes
+          attributesList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
+        };
+        if (attributesList.includes(option)) {
+          checkbox.checked = true;
+        };
+
+        $(checkbox).change(() => { // any checkbox changes are saved
+          this.tempCode = '';
+          this.tempDescription = [];
+
+          checkboxClass = document.getElementsByClassName('checkboxes')
+          for (checkboxIndex in checkboxClass) {
+            if (checkboxClass[checkboxIndex].checked) {
+              this.tempCode += checkboxClass[checkboxIndex].value;
+              this.tempDescription.push(checkboxClass[checkboxIndex].id);
+            };
+          };
+
+          this.saveContent();
+        })
+        editAttributesDiv.appendChild(checkbox);
+
+        var label = document.createElement('label');
+        label.innerHTML = option;
+        editAttributesDiv.appendChild(label);
+
+        editAttributesDiv.appendChild(document.createElement('br'));
+      };
+    };
+
+    editSummaryDiv.appendChild(editAttributesDiv);
+    // END: attributes
+
+
   };
 
   AnnotationAsset.prototype.saveContent = function (ants, i) {
-    if (ants) {
-      ants[i] = {
-        'latLng': this.latLng,
-        'text': this.tempText,
-      };
-    } else {
-      Lt.aData.annotations[Lt.aData.index] = {
-        'latLng': this.latLng,
-        'text': this.tempText,
-      };
+    var content = {
+      'latLng': this.latLng,
+      'text': this.tempText,
+      'attributesCode': this.tempCode,
+      'attributesDescription': this.tempDescription,
+    };
 
-      this.tempText = '' // reset temporary text
+    if (ants) {
+      ants[i] = content;
+    } else {
+      Lt.aData.annotations[Lt.aData.index] = content;
     };
   };
 
@@ -1301,7 +1423,6 @@ function AnnotationAsset(Lt) {
         var exitBtn = document.getElementById('exit-btn');
         $(exitBtn).click(e => {
           this.dialogWindow.destroy();
-          this.dialogWindow.close();
         });
 
         // move between tabs & save edits

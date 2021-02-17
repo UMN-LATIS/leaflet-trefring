@@ -168,12 +168,12 @@ th {
 	margin-bottom: 0px;
 }
 
-/* tabs */
+/* annotations */
 .tab {
 	border: 3px solid #ccc;
 	background-color: #f1f1f1;
 	position: fixed;
-	width: 360;
+	width: 306;
 }
 
 .tab button {
@@ -182,9 +182,11 @@ th {
 	border: none;
 	outline: none;
 	cursor: pointer;
-	padding: 8px 16px;
+	padding: 8px auto;
 	transition: 0.3s;
 	font-size: 16px;
+	font-weight: bold;
+	color: #636363;
 }
 
 .tab button:hover {
@@ -201,7 +203,7 @@ th {
 	border: none;
 	border-top: none;
 	font-size: 12px;
-	margin-top: 50px;
+	margin-top: 10%;
 	width: 100%;
 }
 
@@ -214,4 +216,43 @@ textarea {
 	height: 100px;
 	resize: none;
 	border: 2px solid #ddd;
+}
+
+#text-title {
+	margin-bottom: 0;
+	font-weight: bold;
+}
+
+#attributes-title {
+	margin-top: 7%;
+	margin-bottom: 0;
+	font-weight: bold;
+}
+
+.summaryTextDiv p {
+	font-size: 14px;
+}
+
+.summaryAttributesDiv p {
+	font-size: 16px;
+	margin: 0;
+}
+
+.summaryAttributesDiv li {
+	font-size: 14px;
+}
+
+.editAttributesDiv p {
+	font-size: 16px;
+	margin: 0;
+}
+
+.editAttributesDiv input {
+	margin-left: 5%;
+}
+
+.editAttributesDiv label {
+	font-weight: normal;
+	font-size: 14px;
+	margin-left: 2%;
 }
