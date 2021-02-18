@@ -154,7 +154,6 @@ L.TileLayer.GL = L.GridLayer.extend({
 		// This must NOT include defining the variants, nor the texture uniforms,
 		// nor user-defined uniforms.
 		fragmentShader: "void main(void) {gl_FragColor = vec4(0.2,0.2,0.2,1.0);}",
-
 		// @option uniforms: Object
 		// A map of names and initial values for the user-defined uniforms.
 		// Values must be `Number` or an `Array` of up to four `Number`s.
@@ -211,7 +210,7 @@ L.TileLayer.GL = L.GridLayer.extend({
 		
 			// make the texture the same size as the image
 			gl.texImage2D(
-				gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0,
+				gl.TEXTURE_2D, 0, gl.RGBA, 254, 254, 0,
 				gl.RGBA, gl.UNSIGNED_BYTE, null);
 		
 			// Create a framebuffer
@@ -266,11 +265,12 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			"attribute vec2 aTextureCoords;  " +
 			"attribute vec2 aCRSCoords;  " +
 			"attribute vec2 aLatLngCoords;  " +
+			"uniform float u_flipY;  " +
 			"varying vec2 vTextureCoords;  " +
 			"varying vec2 vCRSCoords;  " +
 			"varying vec2 vLatLngCoords;  " +
 			"void main(void) {  " +
-			"	gl_Position = vec4(aVertexCoords , 1.0, 1.0);  " +
+			"	gl_Position = vec4(aVertexCoords  * vec2(1, u_flipY), 1.0, 1.0);  " +
 			"	vTextureCoords = aTextureCoords;  " +
 			"	vCRSCoords = aCRSCoords;  " +
 			"	vLatLngCoords = aLatLngCoords;  " +
@@ -322,10 +322,11 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		// aVertexCoords (always from -1 to +1), aTextureCoords (always from 0 to +1),
 		// aLatLngCoords and aCRSCoords (both geographical and per-tile).
 		this._aVertexPosition = gl.getAttribLocation(program, "aVertexCoords");
+		this._uFlipPosition = gl.getUniformLocation(program, "u_flipY");
 		this._aTexPosition = gl.getAttribLocation(program, "aTextureCoords");
 		this._aCRSPosition = gl.getAttribLocation(program, "aCRSCoords");
 		this._aLatLngPosition = gl.getAttribLocation(program, "aLatLngCoords");
-
+		console.log("hey",  gl.getAttribLocation(program, "u_flipY"));
 		this._initUniforms(program);
 
 		// If the shader is time-dependent (i.e. animated), or has custom uniforms,
@@ -516,23 +517,27 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		 gl.uniform1f(this._flipYLocation, 1);
  
 
-		gl.uniform1fv(this._currentKernel, kernels["sharpen"]);
+		gl.uniform1fv(this._currentKernel, kernels["unsharpen"]);
 
 		// ... and then the magic happens.
-		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["sharpen"]));
+		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["unsharpen"]));
 		// should be rendering into this.tetures[0]
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[0]);
- 
+		this.setUniform("uSharpenStrength", 0.6);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-		
+;
 		// source texture is now textures[0]
 		gl.bindTexture(gl.TEXTURE_2D, this.textures[0]);
-		gl.uniform1fv(this._currentKernel, kernels["emboss"]);
+		
+		
+		gl.uniform1f(this._uFlipPosition, -1);
+		gl.uniform1fv(this._currentKernel, kernels["previtHorizontal"]);
 		this.setUniform("uSharpenStrength", 1.0);
-		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["emboss"]));
+		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["previtHorizontal"]));
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[1]);
  
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		  
 		gl.bindTexture(gl.TEXTURE_2D, this.textures[1]);
 		gl.uniform1fv(this._currentKernel, kernels["normal"]);
 		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["normal"]));
