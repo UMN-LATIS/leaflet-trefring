@@ -162,7 +162,9 @@ L.TileLayer.GL = L.GridLayer.extend({
 
 		subdomains: ["a", "b", "c", "d"],
 	},
-
+	kernelSettings: [
+		
+	],
 	// On instantiating the layer, it will initialize all the GL context
 	//   and upload the shaders to the GPU, along with the vertex buffer
 	//   (the vertices will stay the same for all tiles).
@@ -204,7 +206,8 @@ L.TileLayer.GL = L.GridLayer.extend({
 
 		this.textures = [];
 		this.framebuffers = [];
-		for (var ii = 0; ii < 2; ++ii) {
+
+		for (var ii = 0; ii < 6; ++ii) {
 			this.texture = this.createAndSetupTexture(gl);
 			this.textures.push(this.texture);
 		
@@ -326,7 +329,7 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		this._aTexPosition = gl.getAttribLocation(program, "aTextureCoords");
 		this._aCRSPosition = gl.getAttribLocation(program, "aCRSCoords");
 		this._aLatLngPosition = gl.getAttribLocation(program, "aLatLngCoords");
-		console.log("hey",  gl.getAttribLocation(program, "u_flipY"));
+
 		this._initUniforms(program);
 
 		// If the shader is time-dependent (i.e. animated), or has custom uniforms,
@@ -428,7 +431,6 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		this._uTileCoordsPosition = gl.getUniformLocation(program, "uTileCoords");
 		this._uNowPosition = gl.getUniformLocation(program, "uNow");
 		this._currentKernel = gl.getUniformLocation(program, "u_kernel[0]");
-		this._flipYLocation = gl.getUniformLocation(program, "u_flipY");
 		this.kernelWeightLocation = gl.getUniformLocation(program, "u_kernelWeight");
 		this._isReRenderable = false;
 
@@ -513,35 +515,36 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		// ...and also set the uTileCoords uniform for this tile
 		gl.uniform3f(this._uTileCoordsPosition, coords.x, coords.y, coords.z);
 
-	
-		 gl.uniform1f(this._flipYLocation, 1);
- 
-
-		gl.uniform1fv(this._currentKernel, kernels["unsharpen"]);
-
-		// ... and then the magic happens.
-		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["unsharpen"]));
-		// should be rendering into this.tetures[0]
-		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[0]);
-		this.setUniform("uSharpenStrength", 0.6);
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-;
-		// source texture is now textures[0]
-		gl.bindTexture(gl.TEXTURE_2D, this.textures[0]);
-		
-		
 		gl.uniform1f(this._uFlipPosition, -1);
-		gl.uniform1fv(this._currentKernel, kernels["previtHorizontal"]);
-		this.setUniform("uSharpenStrength", 1.0);
-		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["previtHorizontal"]));
-		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[1]);
- 
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-		  
-		gl.bindTexture(gl.TEXTURE_2D, this.textures[1]);
+
+		var frameBufferNumber = 0;
+
+		for (let index = 0; index < this.kernelSettings.length; index++) {
+			const kernel = this.kernelSettings[index];
+			if(kernel.strength === 0) {
+				continue;
+			}
+
+			gl.uniform1fv(this._currentKernel, kernels[kernel.name]);
+			// ... and then the magic happens.
+			gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels[kernel.name]));
+			// should be rendering into this.tetures[0]
+			gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[frameBufferNumber]);
+			this.setUniform("uSharpenStrength", kernel.strength);
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+			// source texture is now textures[0]
+			gl.bindTexture(gl.TEXTURE_2D, this.textures[frameBufferNumber]);
+			frameBufferNumber++;
+		}
+	
+		
+		gl.uniform1f(this._uFlipPosition, 1);
+
+
+		// gl.bindTexture(gl.TEXTURE_2D, this.textures[1]);
 		gl.uniform1fv(this._currentKernel, kernels["normal"]);
 		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["normal"]));
-		 gl.uniform1f(this._flipYLocation, -1);
+		//  gl.uniform1f(this._flipYLocation, -1);
  
 		// clear the framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -781,6 +784,11 @@ nextHighestPowerOfTwo: function(x) {
 		}
 	},
 	
+	setKernelsAndStrength(kernelArray) {
+		this.kernelSettings = kernelArray;
+		this.reRender();
+	},
+
 	getTileSize: function() {
         var map = this._map,
             tileSize = L.GridLayer.prototype.getTileSize.call(this),

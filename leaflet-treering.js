@@ -3467,9 +3467,22 @@ else{
    */
   PixelAdjustment.prototype.updateFilters = function() {
     var sharpnessSlider = document.getElementById("sharpness-slider").value;
-    Lt.baseLayer['GL Layer'].setUniform('uSharpenStrength', sharpnessSlider);
-    Lt.baseLayer['GL Layer'].reRender();
-
+    // Lt.baseLayer['GL Layer'].setUniform('uSharpenStrength', sharpnessSlider);
+    // Lt.baseLayer['GL Layer'].reRender();
+    Lt.baseLayer['GL Layer'].setKernelsAndStrength([
+      {
+			"name":"emboss",
+			"strength": 0.6,
+      },
+      {
+        "name":"edgeDetect3",
+        "strength": 0.0
+      },
+      {
+        "name":"unsharpen",
+        "strength": sharpnessSlider
+      },
+    ]);
   };
 
 
