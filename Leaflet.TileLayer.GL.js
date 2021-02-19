@@ -524,15 +524,11 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			if(kernel.strength === 0) {
 				continue;
 			}
-
 			gl.uniform1fv(this._currentKernel, kernels[kernel.name]);
-			// ... and then the magic happens.
 			gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels[kernel.name]));
-			// should be rendering into this.tetures[0]
 			gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffers[frameBufferNumber]);
 			this.setUniform("uSharpenStrength", kernel.strength);
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-			// source texture is now textures[0]
 			gl.bindTexture(gl.TEXTURE_2D, this.textures[frameBufferNumber]);
 			frameBufferNumber++;
 		}
@@ -540,20 +536,11 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		
 		gl.uniform1f(this._uFlipPosition, 1);
 
-
-		// gl.bindTexture(gl.TEXTURE_2D, this.textures[1]);
 		gl.uniform1fv(this._currentKernel, kernels["normal"]);
 		gl.uniform1f(this.kernelWeightLocation, this.computeKernelWeight(kernels["normal"]));
-		//  gl.uniform1f(this._flipYLocation, -1);
  
 		// clear the framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-		
-		// // Tell the shader the resolution of the framebuffer.
-		// gl.uniform2f(resolutionLocation, width, height);
-	
-		// Tell webgl the viewport setting needed for framebuffer.
-		// gl.viewport(0, 0, width, height);
 		
 
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
