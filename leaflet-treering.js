@@ -4042,3 +4042,124 @@ function Panhandler(La) {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
           });
         }
+        
+/**
+ * Hosts all global helper functions
+ * @function
+ */
+function Helper(Lt) {
+
+  /**
+   * Finds closest points for connection
+   * @function
+   * @param {leaflet object} - Lt
+   */
+  Helper.prototype.closestPointIndex = function (latLng) {
+    var ptsData = Lt.data
+    var disList = [];
+
+    /**
+    * calculate the distance between 2 points
+    * @function distanceCalc
+    * @param {first point.latLng} pointA
+    * @param {second point.latLng} pointB
+    */
+    function distanceCalc (pointA, pointB) {
+      return Math.sqrt(Math.pow((pointB.lng - pointA.lng), 2) +
+                       Math.pow((pointB.lat - pointA.lat), 2));
+    };
+
+    // finds point with smallest abs. distance
+    for (i = 0; i <= ptsData.points.length; i++) {
+      var distance = Number.MAX_SAFE_INTEGER;
+      if (ptsData.points[i] && ptsData.points[i].latLng) {
+         var currentPoint = ptsData.points[i].latLng;
+         distance = distanceCalc(currentPoint, latLng);
+      disList.push(distance);
+      }
+    };
+
+    var minDistance = Math.min(...disList);
+    i = disList.indexOf(minDistance)
+
+    if (ptsData.points[i] == null) {
+      return;
+    };
+
+    // catch if points are stacked on top of each other
+    var stackedPointsCount = -1; // while loop will always repeat once
+    while (!dis_i_to_plus || dis_i_to_plus == 0) {
+      // define 4 points: points[i], points[i - 1], points[i + 1], & inserted point
+      var pt_i = ptsData.points[i].latLng;
+
+      if (ptsData.points[i - 1]) {
+        var pt_i_minus = ptsData.points[i - 1].latLng;
+      } else {
+        var pt_i_minus = L.latLng(-2 * (pt_i.lat), -2 * (pt_i.lng));
+      };
+
+      if (ptsData.points[i + 1]) {
+        var pt_i_plus = ptsData.points[i + 1].latLng;
+      } else {
+        var pt_i_plus = L.latLng(2 * (pt_i.lat), 2 * (pt_i.lng));
+      };
+
+      var pt_insert = latLng;
+
+      // distance: point[i] to point[i + 1]
+      var dis_i_to_plus = distanceCalc(pt_i, pt_i_plus);
+      // distance: point[i} to point[i - 1]
+      var dis_i_to_minus = distanceCalc(pt_i, pt_i_minus);
+      // distance: point[i] to inserted point
+      var dis_i_to_insert= distanceCalc(pt_i, pt_insert);
+      // distance: point[i + 1] to inserted point
+      var dis_plus_to_insert = distanceCalc(pt_i_plus, pt_insert);
+      // distance: point[i - 1] to inserted point
+      var dis_minus_to_insert = distanceCalc(pt_i_minus, pt_insert);
+
+      stackedPointsCount++;
+      i++;
+    };
+
+    i--; // need to subtract due to while loop
+
+    // if denominator = 0, set denominator = ~0
+    if (dis_i_to_minus == 0) {
+      dis_i_to_minus = 0.000000000001;
+    };
+    if (dis_i_to_plus == 0) {
+      dis_i_to_plus = 0.000000000001;
+    }
+    if (dis_i_to_insert == 0) {
+      dis_i_to_insert = 0.000000000001;
+    };
+
+    /* Law of cosines:
+       * c = distance between inserted point and points[i + 1] or points[i - 1]
+       * b = distance between points[i] and points[i + 1] or points[i - 1]
+       * a = distance between inserted points and points[i]
+       Purpose is to find angle C for triangles formed:
+       * Triangle [i + 1] = points[i], points[i + 1], inserted point
+       * Triangle [i - 1] = points[i], points[i - 1], inserted point
+       Based off diagram from: https://www2.clarku.edu/faculty/djoyce/trig/formulas.html#:~:text=The%20law%20of%20cosines%20generalizes,cosine%20of%20the%20opposite%20angle.
+    */
+    // numerator and denominator for calculating angle C using Law of cosines (rearranged original equation)
+    var numeratorPlus = (dis_plus_to_insert ** 2) - ((dis_i_to_insert ** 2) + (dis_i_to_plus ** 2));
+    var denominatorPlus = -2 * dis_i_to_insert * dis_i_to_plus;
+    var numeratorMinus = (dis_minus_to_insert ** 2) - ((dis_i_to_insert ** 2) + (dis_i_to_minus ** 2));
+    var denominatorMinus = -2 * dis_i_to_insert * dis_i_to_minus;
+    var anglePlus = Math.acos(numeratorPlus/denominatorPlus);
+    var angleMinus = Math.acos(numeratorMinus/denominatorMinus);
+
+    // smaller angle determines connecting lines
+    if (stackedPointsCount > 0) { // special case for stacked points
+      if (anglePlus > angleMinus) {
+        i -= stackedPointsCount + 1; // go to first stacked point
+      };
+    } else if (anglePlus < angleMinus) {
+      i++;
+    };
+
+    return i;
+  }
+};
