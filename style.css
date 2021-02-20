@@ -216,6 +216,8 @@ textarea {
 	height: 100px;
 	resize: none;
 	border: 2px solid #ddd;
+	border-radius: 6px;
+	margin-bottom: 2%;
 }
 
 #text-title {
@@ -226,7 +228,9 @@ textarea {
 #attributes-title {
 	margin-top: 7%;
 	margin-bottom: 0;
+	margin-right: 0;
 	font-weight: bold;
+	display: inline;
 }
 
 .summaryTextDiv p {
@@ -255,4 +259,36 @@ textarea {
 	font-weight: normal;
 	font-size: 14px;
 	margin-left: 2%;
+}
+
+.attribute-label {
+	margin-bottom: 0;
+	font-size: 14px;
+}
+
+.attribute-textbox {
+	height: 16%;
+	width: 90%;
+	margin-bottom: 2%;
+	margin-top: 0;
+}
+
+.attribute-option {
+	width: 42%;
+	margin-right: 6%;
+	display: inline-block;
+}
+
+.attribute-btn {
+	float: right;
+	border: 2px solid #ddd;
+	border-radius: 6px;
+	background-color: white;
+	width: 24px;
+	height: 24px;
+	text-align: center;
+}
+
+#save-options {
+	width: auto;
 }

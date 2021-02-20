@@ -112,22 +112,10 @@
         overlap: 1,
     });
 
-		var attributes = '{ \
-		  "Location:":{"Earlywood": "1", \
-									"Latewood": "2", \
-									"Unknown": "3"}, \
-		  "Anomaly:":{"Lunate vessel": "L", \
-								 "False latewood": "F", \
-								 "Callus tissue": "C"}, \
-		  "Confidence:":{"Very": "1", \
-										 "Somewhat": "2", \
-										 "None": "3"} \
-		}';
-
     //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
 		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
 		var treering = new LTreering(map, "", {'savePermission': true, 'saveURL': '/test', 'ppm':
-    468, 'popoutUrl': "index_noPoints.html", 'assetName': "noPts", 'hasLatewood': true, 'attributes': attributes,
+    468, 'popoutUrl': "index_noPoints.html", 'assetName': "noPts", 'hasLatewood': true, 'attributes': {},
     'initialData': {}});
 treering.loadInterface();
 </script>

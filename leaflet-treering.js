@@ -1135,6 +1135,9 @@ function AnnotationAsset(Lt) {
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
   this.tempText = '';
+  this.tempCode = '';
+  this.tempDescription = [];
+  this.attributesObject = Lt.meta.attributes || {};
 
   this.createBtn = new Button (
     'comment',
@@ -1173,8 +1176,8 @@ function AnnotationAsset(Lt) {
   );
   this.deleteBtn.active = false;
 
-  AnnotationAsset.prototype.createDialog = function () {
-    this.dialogWindow = L.control.dialog({
+  AnnotationAsset.prototype.createAnnotationDialog = function () {
+    this.dialogAnnotationWindow = L.control.dialog({
       'size': [350, 400],
       'anchor': [50, 5],
       'initOpen': false
@@ -1187,7 +1190,98 @@ function AnnotationAsset(Lt) {
       <div id="summary-tab" class="tabContent"></div> \
       <div id="edit-summary-tab" class="tabContent"></div>',
     ).addTo(Lt.viewer);
-  }
+  };
+
+  AnnotationAsset.prototype.createAttributesDialog = function () {
+    this.dialogAttributesWindow = L.control.dialog({
+      'size': [350, 200],
+      'anchor': [50, 370],
+      'initOpen': false
+    }).setContent(
+      '<div id="attributes-options"> \
+        <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
+        <button class="attribute-btn" id="submit-options"><i class="fa fa-plus" aria-hidden="true"></i></button> \
+        <textarea class="attribute-textbox" id="title-input" placeholder="Enter title to edit or create a new attribute."></textarea> \
+      </div> \
+      <div id="attributes-options-save">\
+        <button class="attribute-btn" id="save-options">Save <i class="fa fa-floppy-o" aria-hidden="true"></i></button \
+      </div>'
+    ).addTo(Lt.viewer);
+  };
+
+  AnnotationAsset.prototype.createCheckboxes = function (ants, i, attributesOptionsDiv) {
+    attributesOptionsDiv.innerHTML = '';
+    buttonList = [];
+    divList = [];
+
+    for (var attribute in this.attributesObject) {
+      var individualOptionDiv = document.createElement('div');
+      individualOptionDiv.className = attribute;
+      divList.push(individualOptionDiv);
+      console.log(divList);
+
+      var title = document.createElement('p');
+      title.innerHTML = attribute;
+      individualOptionDiv.appendChild(title);
+
+      var deleteOptionBtn = document.createElement('button');
+      deleteOptionBtn.className = 'attribute-btn';
+      deleteOptionBtn.id = attribute;
+      deleteOptionBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
+      $(deleteOptionBtn).click((e) => {
+        delete this.attributesObject[e.target.id];
+        $(document.getElementsByClassName(e.target.id)).remove();
+        console.log(buttonList);
+      });
+      buttonList.push(deleteOptionBtn);
+      console.log(buttonList);
+      individualOptionDiv.appendChild(deleteOptionBtn);
+
+      var optionsObject = this.attributesObject[attribute];
+      for (var option in optionsObject) {
+        var checkbox = document.createElement('input');
+        checkbox.className += 'checkboxes';
+        checkbox.type = 'checkbox';
+        checkbox.id = option; // attribute descriptor
+        checkbox.value = optionsObject[option]; // code associated w/ option
+
+        var attributesList = [];
+        if (ants && ants[i].attributesDescription) {
+          attributesList = ants[i].attributesDescription;
+        } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) { // check pre selected attributes
+          attributesList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
+        };
+
+        if (attributesList.includes(option)) {
+          checkbox.checked = true;
+        };
+
+        $(checkbox).change(() => { // any checkbox changes are saved
+          this.tempCode = '';
+          this.tempDescription = [];
+
+          checkboxClass = document.getElementsByClassName('checkboxes')
+          for (checkboxIndex in checkboxClass) {
+            if (checkboxClass[checkboxIndex].checked) {
+              this.tempCode += checkboxClass[checkboxIndex].value;
+              this.tempDescription.push(checkboxClass[checkboxIndex].id);
+            };
+          };
+
+          this.saveContent();
+        });
+        individualOptionDiv.appendChild(checkbox);
+
+        var label = document.createElement('label');
+        label.innerHTML = option;
+        individualOptionDiv.appendChild(label);
+
+        individualOptionDiv.appendChild(document.createElement('br'));
+
+        attributesOptionsDiv.appendChild(individualOptionDiv);
+      };
+    };
+  };
 
   AnnotationAsset.prototype.openTab = function (btnName, tabName) {
     var i;
@@ -1334,54 +1428,94 @@ function AnnotationAsset(Lt) {
     attributesTitle.innerHTML = "Attributes:";
     editAttributesDiv.appendChild(attributesTitle);
 
-    var attributesObject = JSON.parse(Lt.meta.attributes);
-    for (var attribute in attributesObject) {
-      var title = document.createElement('p');
-      title.innerHTML = attribute;
-      editAttributesDiv.appendChild(title);
-
-      var optionsObject = attributesObject[attribute];
-      for (var option in optionsObject) {
-        var checkbox = document.createElement('input');
-        checkbox.className += 'checkboxes';
-        checkbox.type = 'checkbox';
-        checkbox.id = option; // attribute descriptor
-        checkbox.value = optionsObject[option]; // code associated w/ option
-
-        var attributesList = [];
-        if (ants && ants[i].attributesDescription) {
-          attributesList = ants[i].attributesDescription;
-        } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) { // check pre selected attributes
-          attributesList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
-        };
-        if (attributesList.includes(option)) {
-          checkbox.checked = true;
-        };
-
-        $(checkbox).change(() => { // any checkbox changes are saved
-          this.tempCode = '';
-          this.tempDescription = [];
-
-          checkboxClass = document.getElementsByClassName('checkboxes')
-          for (checkboxIndex in checkboxClass) {
-            if (checkboxClass[checkboxIndex].checked) {
-              this.tempCode += checkboxClass[checkboxIndex].value;
-              this.tempDescription.push(checkboxClass[checkboxIndex].id);
-            };
-          };
-
-          this.saveContent();
-        })
-        editAttributesDiv.appendChild(checkbox);
-
-        var label = document.createElement('label');
-        label.innerHTML = option;
-        editAttributesDiv.appendChild(label);
-
-        editAttributesDiv.appendChild(document.createElement('br'));
+    // add a new attribute options
+    var openAttributeEditButton = document.createElement('button');
+    openAttributeEditButton.className = 'attribute-btn';
+    openAttributeEditButton.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+    $(openAttributeEditButton).click(() => {
+      if (this.dialogAttributesWindow) {
+        this.dialogAttributesWindow.destroy();
       };
-    };
+      this.createAttributesDialog();
 
+      var addAttributeOption = document.getElementById('submit-options');
+      $(addAttributeOption).click(() => {
+        var newOptionDiv = document.createElement('div');
+
+        var optionTitle = document.createElement('label');
+        optionTitle.className = 'attribute-label';
+        optionTitle.innerHTML = 'Option: '
+        newOptionDiv.appendChild(optionTitle);
+
+        var optionDeleteBtn = document.createElement('button');
+        optionDeleteBtn.className = 'attribute-btn';
+        optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+        $(optionDeleteBtn).click(() => {
+          $(newOptionDiv).remove();
+        });
+        newOptionDiv.appendChild(optionDeleteBtn);
+
+        var optionTextDiv = document.createElement('div');
+        optionTextDiv.style.width = '100%';
+        optionTextDiv.style.display = 'inline-block';
+
+        var optionTextbox = document.createElement('textarea');
+        optionTextbox.className += 'attribute-option';
+        optionTextbox.className += ' attribute-textbox';
+        optionTextbox.placeholder = 'Attribute description.';
+        optionTextDiv.appendChild(optionTextbox);
+
+        var optionTextCode = document.createElement('textarea');
+        optionTextCode.className += 'attribute-option';
+        optionTextCode.className += ' attribute-textbox';
+        optionTextCode.placeholder = 'Attribute code.';
+        optionTextDiv.appendChild(optionTextCode);
+
+        newOptionDiv.appendChild(optionTextDiv)
+
+        var fullOptionDiv = document.getElementById('attributes-options');
+        fullOptionDiv.appendChild(newOptionDiv);
+      });
+      addAttributeOption.click(); // add one option by default;
+
+      /* Model for saving attributes:
+      var attributesObject = {
+        "title 1": { "option 1": "code 1",
+                   "option 2": "code 2",
+                 },
+        "title 2": { "option 1": "code 1",
+                  "option 2": "code 2",
+                },
+      };
+      */
+      var saveOptionsBtn = document.getElementById('save-options');
+      $(saveOptionsBtn).click(() => {
+        var titleText = document.getElementById('title-input').value;
+        var optionsElmList = document.getElementsByClassName('attribute-option');
+
+        var optionsObject = {};
+        for (var i = 0; i < optionsElmList.length; i += 2) {
+          // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
+          // based on their order creation above
+          optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+        };
+
+        this.attributesObject[titleText] = optionsObject;
+        this.dialogAttributesWindow.destroy();
+
+        this.createCheckboxes(null, null, attributesOptionsDiv);
+      });
+
+      this.dialogAttributesWindow.hideResize();
+      this.dialogAttributesWindow.hideClose();
+      this.dialogAttributesWindow.open();
+    });
+    editAttributesDiv.appendChild(openAttributeEditButton);
+
+    var attributesOptionsDiv = document.createElement('div');
+    this.createCheckboxes(null, null, attributesOptionsDiv);
+
+    editAttributesDiv.appendChild(attributesOptionsDiv);
     editSummaryDiv.appendChild(editAttributesDiv);
     // END: attributes
 
@@ -1419,10 +1553,10 @@ function AnnotationAsset(Lt) {
 
         this.latLng = Lt.viewer.mouseEventToLatLng(e);
 
-        this.createDialog();
+        this.createAnnotationDialog();
         var exitBtn = document.getElementById('exit-btn');
         $(exitBtn).click(e => {
-          this.dialogWindow.destroy();
+          this.dialogAnnotationWindow.destroy();
         });
 
         // move between tabs & save edits
@@ -1442,9 +1576,9 @@ function AnnotationAsset(Lt) {
           });
         });
 
-        this.dialogWindow.hideResize();
-        this.dialogWindow.hideClose();
-        this.dialogWindow.open();
+        this.dialogAnnotationWindow.hideResize();
+        this.dialogAnnotationWindow.hideClose();
+        this.dialogAnnotationWindow.open();
 
         $(document).ready(() => {
           editSummaryBtn.click();
