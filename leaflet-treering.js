@@ -3443,45 +3443,43 @@ function PixelAdjustment(Lt) {
     'initOpen': false
   }).setContent(
     '<div><label style="text-align:center;display:block;">Sharpness</label> \
-    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=2 step=0.05 type=range> \
+    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">Emboss</label> \
+    <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">edgeDetect</label> \
+    <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">unsharpen</label> \
+    <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
     </div>').addTo(Lt.viewer);
 
- 
-/**
- * Get Slider Value
- * @function getSliderVal
- */
-PixelAdjustment.prototype.getSliderVal = function() {
-var sharpnessSlider = document.getElementById("sharpness-slider");
-if(sharpnessSlider.val !== null)
-{
-  return sharpnessSlider.val;
-}
-else{
-  return -1;
-}
-};
   /**
    * Update the image filter to reflect slider values
    * @function updateFilters
    */
   PixelAdjustment.prototype.updateFilters = function() {
     var sharpnessSlider = document.getElementById("sharpness-slider").value;
+    var embossSlider = document.getElementById("emboss-slider").value;
+    var edgeDetect = document.getElementById("edgeDetect-slider").value;
+    var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     // Lt.baseLayer['GL Layer'].setUniform('uSharpenStrength', sharpnessSlider);
     // Lt.baseLayer['GL Layer'].reRender();
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
       {
 			"name":"emboss",
-			"strength": 0.6,
+			"strength": embossSlider
       },
       {
         "name":"edgeDetect3",
-        "strength": 0.0
+        "strength": edgeDetect
+      },
+      {
+        "name":"sharpness",
+        "strength": sharpnessSlider
       },
       {
         "name":"unsharpen",
-        "strength": sharpnessSlider
-      },
+        "strength": unsharpnessSlider
+      }
     ]);
   };
 
