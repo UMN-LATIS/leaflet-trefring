@@ -213,7 +213,7 @@ L.TileLayer.GL = L.GridLayer.extend({
 		
 			// make the texture the same size as the image
 			gl.texImage2D(
-				gl.TEXTURE_2D, 0, gl.RGBA, 254, 254, 0,
+				gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0,
 				gl.RGBA, gl.UNSIGNED_BYTE, null);
 		
 			// Create a framebuffer
