@@ -1490,20 +1490,31 @@ function AnnotationAsset(Lt) {
       */
       var saveOptionsBtn = document.getElementById('save-options');
       $(saveOptionsBtn).click(() => {
+        var allOptionsTitled = true;
+
         var titleText = document.getElementById('title-input').value;
         var optionsElmList = document.getElementsByClassName('attribute-option');
 
         var optionsObject = {};
         for (var i = 0; i < optionsElmList.length; i += 2) {
           // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
-          // based on their order creation above
-          optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+          // based on the order they are created above
+          if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
+            alert("Attribute must have a title and all options must be named and given a code.");
+            allOptionsTitled = false;
+            break;
+          } else {
+            optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+            allOptionsTitled = true;
+          };
         };
 
-        this.attributesObject[titleText] = optionsObject;
-        this.dialogAttributesWindow.destroy();
+        if (allOptionsTitled === true) {
+          this.attributesObject[titleText] = optionsObject;
+          this.dialogAttributesWindow.destroy();
 
-        this.createCheckboxes(null, null, attributesOptionsDiv);
+          this.createCheckboxes(null, null, attributesOptionsDiv);
+        };
       });
 
       this.dialogAttributesWindow.hideResize();
@@ -1518,6 +1529,22 @@ function AnnotationAsset(Lt) {
     editAttributesDiv.appendChild(attributesOptionsDiv);
     editSummaryDiv.appendChild(editAttributesDiv);
     // END: attributes
+
+    // START: associated year
+    var editAssociatedYearDiv = document.createElement('div');
+    editAssociatedYearDiv.className = 'editAssociatedYearDiv';
+
+    var associatedYearTitle = document.createElement('h4');
+    associatedYearTitle.innerHTML = 'Associated Year: ';
+    associatedYearTitle.id = 'associated-year-title';
+    editAssociatedYearDiv.appendChild(associatedYearTitle);
+
+    editSummaryDiv.appendChild(editAssociatedYearDiv);
+    // END: associated year
+
+    // START: color selection
+
+    // END: color selection
 
 
   };
