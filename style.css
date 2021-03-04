@@ -226,8 +226,11 @@ textarea {
 	font-weight: bold;
 }
 
+#summary-text-content {
+	font-size: 16px;
+}
+
 #attributes-title {
-	margin-top: 7%;
 	margin-bottom: 0;
 	margin-right: 0;
 	font-weight: bold;
@@ -235,10 +238,10 @@ textarea {
 }
 
 #associated-year-title {
-	margin-top: 2%;
 	margin-bottom: 0;
 	margin-right: 0;
 	font-weight: bold;
+	display: inline;
 }
 
 .summaryTextDiv p {
@@ -252,6 +255,10 @@ textarea {
 
 .summaryAttributesDiv li {
 	font-size: 14px;
+}
+
+.editAttributesDiv {
+	margin-top: 10px;
 }
 
 .editAttributesDiv p {
@@ -299,4 +306,17 @@ textarea {
 
 #save-options {
 	width: auto;
+}
+
+.summaryAssociatedYearDiv span {
+	font-size: 16px;
+}
+
+.editAssociatedYearDiv {
+	margin-top: 10px;
+}
+
+.editAssociatedYearDiv input {
+	width: 30%;
+	float: right;
 }

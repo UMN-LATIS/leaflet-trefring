@@ -1071,6 +1071,9 @@ function AnnotationAsset(Lt) {
   this.tempCode = '';
   this.tempDescription = [];
   this.attributesObject = Lt.meta.attributes || {};
+  this.tempCalculatedYear = 0;
+  this.tempYearAdjustment = 0;
+  this.tempYear = 0;
 
   this.createBtn = new Button (
     'comment',
@@ -1142,7 +1145,7 @@ function AnnotationAsset(Lt) {
     ).addTo(Lt.viewer);
   };
 
-  AnnotationAsset.prototype.createCheckboxes = function (ants, i, attributesOptionsDiv) {
+  AnnotationAsset.prototype.createCheckboxes = function (annotations, i, attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
     buttonList = [];
     divList = [];
@@ -1179,8 +1182,8 @@ function AnnotationAsset(Lt) {
         checkbox.value = optionsObject[option]; // code associated w/ option
 
         var attributesList = [];
-        if (ants && ants[i].attributesDescription) {
-          attributesList = ants[i].attributesDescription;
+        if (annotations && annotations[i].attributesDescription) {
+          attributesList = annotations[i].attributesDescription;
         } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) { // check pre selected attributes
           attributesList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
         };
@@ -1216,6 +1219,37 @@ function AnnotationAsset(Lt) {
     };
   };
 
+  AnnotationAsset.prototype.nearestYear = function (latLng) {
+    var closestI = Lt.helper.closestPointIndex(latLng)
+    var closestPt = Lt.data.points[closestI];
+
+    if (!closestPt) {
+      return 0;
+    } else if (!closestPt.year && closestPt.year != 0) { // case 1: start or break point
+      var previousPt = Lt.data.points[closestI - 1];
+      var nextPt = Lt.data.points[closestI + 1];
+
+      if (!previousPt) { // case 2: inital start point
+        return nextPt.year
+      } else if (!nextPt.year) { // case 3: break point & next point is a start point
+        return Lt.data.points[closestI + 2].year;
+      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+        return Lt.data.points[closestI + 1].year;
+      } else { // case 5: start point in middle of point path
+        var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
+        var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
+
+        if (distanceToNextPt > distanceToPreviousPt) {
+          return previousPt.year;
+        } else {
+          return nextPt.year;
+        };
+      };
+    } else {
+      return closestPt.year;
+    };
+  };
+
   AnnotationAsset.prototype.openTab = function (btnName, tabName) {
     var i;
     var tabContent;
@@ -1237,7 +1271,7 @@ function AnnotationAsset(Lt) {
     };
   };
 
-  AnnotationAsset.prototype.summaryContent = function (ants, i) {
+  AnnotationAsset.prototype.summaryContent = function (annotations, i) {
     var summaryDiv = document.getElementById('summary-tab');
     summaryDiv.innerHTML = '';
 
@@ -1251,9 +1285,10 @@ function AnnotationAsset(Lt) {
     summaryTextDiv.appendChild(textTitle);
 
     var textContent = document.createElement('p');
+    textContent.id = 'summary-text-content';
     textContent.innerHTML = 'N/A';
-    if (ants) { // if existing annotation inputted
-      textContent.innerHTML = ants[i].text || '';
+    if (annotations) { // if existing annotation inputted
+      textContent.innerHTML = annotations[i].text || '';
     } else if (Lt.aData.annotations[Lt.aData.index]) {
       if (Lt.aData.annotations[Lt.aData.index].text != '') {
         textContent.innerHTML = Lt.aData.annotations[Lt.aData.index].text;
@@ -1280,8 +1315,8 @@ function AnnotationAsset(Lt) {
     summaryAttributesDiv.appendChild(attributesTitle);
 
     var attributeCode = document.createElement('p');
-    if (ants) {
-      var code = ants[i].attributesCode || 'N/A';
+    if (annotations) {
+      var code = annotations[i].attributesCode || 'N/A';
     } else if (Lt.aData.annotations[Lt.aData.index]) {
       var code = Lt.aData.annotations[Lt.aData.index].attributesCode || 'N/A';
     } else {
@@ -1296,8 +1331,8 @@ function AnnotationAsset(Lt) {
 
     var attributesList = document.createElement('ul');
     summaryAttributesDiv.appendChild(attributesList);
-    if (ants && ants[i].attributesDescription) {
-      var descriptionList = ants[i].attributesDescription;
+    if (annotations && annotations[i].attributesDescription) {
+      var descriptionList = annotations[i].attributesDescription;
     } else if (Lt.aData.annotations[Lt.aData.index] && Lt.aData.annotations[Lt.aData.index].attributesDescription) {
       var descriptionList = Lt.aData.annotations[Lt.aData.index].attributesDescription;
     } else {
@@ -1314,9 +1349,31 @@ function AnnotationAsset(Lt) {
 
     summaryDiv.appendChild(summaryAttributesDiv);
     // End: attributes
+
+    // START: associated year
+    var summaryAssociatedYearDiv = document.createElement('div');
+    summaryAssociatedYearDiv.className = 'summaryAssociatedYearDiv';
+
+    var associatedYearTitle = document.createElement('h4');
+    associatedYearTitle.innerHTML = 'Associated Year: ';
+    associatedYearTitle.id = 'associated-year-title';
+    summaryAssociatedYearDiv.appendChild(associatedYearTitle);
+
+    var associatedYearSpan = document.createElement('span');
+    if (annotations) {
+      associatedYearSpan.innerHTML = annotations[i].year || 0;
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      associatedYearSpan.innerHTML = Lt.aData.annotations[Lt.aData.index].year || 0;
+    } else {
+      associatedYearSpan.innerHTML = 0;
+    };
+    summaryAssociatedYearDiv.appendChild(associatedYearSpan);
+
+    summaryDiv.appendChild(summaryAssociatedYearDiv);
+    // END: associated year
   };
 
-  AnnotationAsset.prototype.editSummaryContent = function (ants, i) {
+  AnnotationAsset.prototype.editSummaryContent = function (annotations, i) {
     var editSummaryDiv = document.getElementById('edit-summary-tab');
     editSummaryDiv.innerHTML = ''; // reset div so elements do not duplicate
 
@@ -1330,8 +1387,8 @@ function AnnotationAsset(Lt) {
     editTextDiv.appendChild(textTitle);
 
     var textBox = document.createElement('TEXTAREA');
-    if (ants) { // if existing annotation inputted
-      textBox.value = ants[i].text || 'N/A';
+    if (annotations) { // if existing annotation inputted
+      textBox.value = annotations[i].text || 'N/A';
     } else if (Lt.aData.annotations[Lt.aData.index]) {
       if (Lt.aData.annotations[Lt.aData.index].text == 'N/A') {
         textBox.value = '';
@@ -1472,6 +1529,30 @@ function AnnotationAsset(Lt) {
     associatedYearTitle.id = 'associated-year-title';
     editAssociatedYearDiv.appendChild(associatedYearTitle);
 
+    this.tempCalculatedYear = this.nearestYear(this.latLng) || 0;
+    if (annotations) {
+      this.tempYearAdjustment = annotations[i].yearAdjustment;
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      this.tempYearAdjustment = Lt.aData.annotations[Lt.aData.index].yearAdjustment;
+    } else {
+      this.tempYearAdjustment = 0;
+    };
+    this.tempYear = this.tempCalculatedYear + this.tempYearAdjustment;
+
+    var associatedYearInput = document.createElement('input');
+    associatedYearInput.type = 'number';
+    associatedYearInput.value = this.tempYear;
+    $(associatedYearInput).change(() => {
+      this.tempYear = associatedYearInput.value;
+      this.tempYearAdjustment = associatedYearInput.value - this.tempCalculatedYear;
+      this.saveContent();
+      // reset temporary values
+      this.tempCalculatedYear = 0;
+      this.tempYearAdjustment = 0;
+      this.tempYear = 0;
+    });
+    editAssociatedYearDiv.appendChild(associatedYearInput);
+
     editSummaryDiv.appendChild(editAssociatedYearDiv);
     // END: associated year
 
@@ -1479,19 +1560,21 @@ function AnnotationAsset(Lt) {
 
     // END: color selection
 
-
   };
 
-  AnnotationAsset.prototype.saveContent = function (ants, i) {
+  AnnotationAsset.prototype.saveContent = function (annotations, i) {
     var content = {
       'latLng': this.latLng,
       'text': this.tempText,
       'attributesCode': this.tempCode,
       'attributesDescription': this.tempDescription,
+      'calculatedYear': this.tempCalculatedYear,
+      'yearAdjustment': this.tempYearAdjustment,
+      'year': this.tempYear,
     };
 
-    if (ants) {
-      ants[i] = content;
+    if (annotations) {
+      annotations[i] = content;
     } else {
       Lt.aData.annotations[Lt.aData.index] = content;
     };
@@ -1570,8 +1653,8 @@ function AnnotationAsset(Lt) {
     this.closePopup();
   };
 
-  AnnotationAsset.prototype.newElement = function(ants, i) {
-    var ref = ants[i];
+  AnnotationAsset.prototype.newElement = function(annotations, i) {
+    var ref = annotations[i];
 
     var draggable = false;
     if (window.name.includes('popout')) {
@@ -1589,7 +1672,7 @@ function AnnotationAsset(Lt) {
     this.markers[i].clicked = false;
 
     this.markers[i].on('dragend', (e) => {
-      ants[i].latLng = e.target._latlng;
+      annotations[i].latLng = e.target._latlng;
     });
 
     // how annotations respond when click depends on what is active
@@ -4546,13 +4629,13 @@ function Helper(Lt) {
 
     // if denominator = 0, set denominator = ~0
     if (dis_i_to_minus == 0) {
-      dis_i_to_minus = 0.000000000001;
+      dis_i_to_minus = Number.MIN_VALUE;
     };
     if (dis_i_to_plus == 0) {
-      dis_i_to_plus = 0.000000000001;
-    }
+      dis_i_to_plus = Number.MIN_VALUE;
+    };
     if (dis_i_to_insert == 0) {
-      dis_i_to_insert = 0.000000000001;
+      dis_i_to_insert = Number.MIN_VALUE;
     };
 
     /* Law of cosines:
