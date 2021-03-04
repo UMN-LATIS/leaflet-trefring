@@ -230,14 +230,7 @@ textarea {
 	font-size: 16px;
 }
 
-#attributes-title {
-	margin-bottom: 0;
-	margin-right: 0;
-	font-weight: bold;
-	display: inline;
-}
-
-#associated-year-title {
+.annotation-title {
 	margin-bottom: 0;
 	margin-right: 0;
 	font-weight: bold;
@@ -319,4 +312,47 @@ textarea {
 .editAssociatedYearDiv input {
 	width: 30%;
 	float: right;
+}
+
+/* annotation colors */
+
+.color-btn {
+	border-radius: 12px;
+	border-width: 0pc;
+	margin: 2% 3%;
+	display: inline-block;
+	height: 28px;
+	width: 48px;
+}
+
+.\#ff1c22 { /* red */
+	height: 20px;
+	width: 20px;
+	background-color: #ff1c22;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.\#17b341 { /* green */
+	height: 20px;
+	width: 20px;
+	background-color: #32c964;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.\#1395d1 { /* blue */
+	height: 20px;
+	width: 20px;
+	background-color: #2aa5de;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.\#db029f { /* purple */
+	height: 20px;
+	width: 20px;
+	background-color: #db029f;
+	border-radius: 50%;
+	display: inline-block;
 }

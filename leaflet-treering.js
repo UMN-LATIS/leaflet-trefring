@@ -1067,6 +1067,8 @@ function AnnotationAsset(Lt) {
   this.markers = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
+  this.colorDivIcon = L.divIcon( {className: '#ff1c22'} ); // default red color
+
   this.tempText = '';
   this.tempCode = '';
   this.tempDescription = [];
@@ -1310,7 +1312,7 @@ function AnnotationAsset(Lt) {
     summaryAttributesDiv.className = 'summaryAttributesDiv';
 
     var attributesTitle = document.createElement('h4');
-    attributesTitle.id = 'attributes-title'
+    attributesTitle.className = 'annotation-title'
     attributesTitle.innerHTML = "Attributes:";
     summaryAttributesDiv.appendChild(attributesTitle);
 
@@ -1356,7 +1358,7 @@ function AnnotationAsset(Lt) {
 
     var associatedYearTitle = document.createElement('h4');
     associatedYearTitle.innerHTML = 'Associated Year: ';
-    associatedYearTitle.id = 'associated-year-title';
+    associatedYearTitle.className = 'annotation-title';
     summaryAssociatedYearDiv.appendChild(associatedYearTitle);
 
     var associatedYearSpan = document.createElement('span');
@@ -1414,7 +1416,7 @@ function AnnotationAsset(Lt) {
     editAttributesDiv.className = 'editAttributesDiv';
 
     var attributesTitle = document.createElement('h4');
-    attributesTitle.id = 'attributes-title'
+    attributesTitle.className = 'annotation-title'
     attributesTitle.innerHTML = "Attributes:";
     editAttributesDiv.appendChild(attributesTitle);
 
@@ -1526,7 +1528,7 @@ function AnnotationAsset(Lt) {
 
     var associatedYearTitle = document.createElement('h4');
     associatedYearTitle.innerHTML = 'Associated Year: ';
-    associatedYearTitle.id = 'associated-year-title';
+    associatedYearTitle.className = 'annotation-title';
     editAssociatedYearDiv.appendChild(associatedYearTitle);
 
     this.tempCalculatedYear = this.nearestYear(this.latLng) || 0;
@@ -1557,7 +1559,51 @@ function AnnotationAsset(Lt) {
     // END: associated year
 
     // START: color selection
+    var editColorDiv = document.createElement('div');
+    editColorDiv.className = 'editColorDiv';
 
+    var colorTitle = document.createElement('h4');
+    colorTitle.className = 'annotation-title';
+    colorTitle.innerHTML = 'Color: '
+    colorTitle.style.display = 'block';
+    editColorDiv.appendChild(colorTitle);
+
+    var colorPalette = {
+      'red': '#ff1c22',
+      'green': '#17b341',
+      'blue': '#1395d1',
+      'purple': '#db029f',
+    };
+
+    for (color in colorPalette) { // create color buttons
+      var colorBtn = document.createElement('button');
+      var hexCode = colorPalette[color];
+      colorBtn.className = 'color-btn';
+      colorBtn.style.backgroundColor = hexCode;
+      colorBtn.id = hexCode;
+      $(colorBtn).click((e) => {
+        this.colorDivIcon = L.divIcon( {className: e.currentTarget.id} );
+        this.annotationIcon.setIcon(this.colorDivIcon);
+
+        var colorBtnList = document.getElementsByClassName('color-btn');
+        for (var i = 0; i < colorBtnList.length; i++) { // deselect other buttons
+          colorBtnList[i].style.boxShadow = "0 0 0 0";
+        };
+        e.currentTarget.style.boxShadow = "0 0 0 4px #b8b8b8";
+      });
+
+      editColorDiv.appendChild(colorBtn);
+    };
+
+    for (var j = 0; j < editColorDiv.childNodes.length; j++) {
+      var iconColor = this.colorDivIcon.options.className;
+      var buttonColor = editColorDiv.childNodes[j].id;
+      if (iconColor == buttonColor) {
+        editColorDiv.childNodes[j].click();
+      };
+    };
+
+    editSummaryDiv.appendChild(editColorDiv);
     // END: color selection
 
   };
@@ -1595,6 +1641,17 @@ function AnnotationAsset(Lt) {
         Lt.collapseTools();
 
         this.latLng = Lt.viewer.mouseEventToLatLng(e);
+
+        // display icon
+        this.annotationIcon = L.marker([0, 0], {
+          icon: this.colorDivIcon,
+          draggable: true,
+          riseOnHover: true,
+        });
+
+        this.annotationIcon.setLatLng(this.latLng);
+
+        this.annotationIcon.addTo(Lt.viewer);
 
         this.createAnnotationDialog();
         var exitBtn = document.getElementById('exit-btn');
