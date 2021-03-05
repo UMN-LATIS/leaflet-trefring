@@ -1116,7 +1116,7 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.createAnnotationDialog = function () {
     this.dialogAnnotationWindow = L.control.dialog({
-      'size': [350, 400],
+      'size': [300, 250],
       'anchor': [50, 5],
       'initOpen': false
     }).setContent(
@@ -1132,17 +1132,18 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.createAttributesDialog = function () {
     this.dialogAttributesWindow = L.control.dialog({
-      'size': [350, 200],
-      'anchor': [50, 370],
+      'size': [300, 185],
+      'anchor': [50, 310],
       'initOpen': false
     }).setContent(
       '<div id="attributes-options"> \
         <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
-        <button class="attribute-btn" id="submit-options"><i class="fa fa-plus" aria-hidden="true"></i></button> \
+        <button class="annotation-btn" id="submit-options"><i class="fa fa-plus" aria-hidden="true"></i></button> \
         <textarea class="attribute-textbox" id="title-input" placeholder="Enter title to edit or create a new attribute."></textarea> \
       </div> \
       <div id="attributes-options-save">\
-        <button class="attribute-btn" id="save-options">Save <i class="fa fa-floppy-o" aria-hidden="true"></i></button \
+        <hr id="attributes-hr"> \
+        <button class="annotation-btn" id="save-exit-options"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save & Exit </button \
       </div>'
     ).addTo(Lt.viewer);
   };
@@ -1163,7 +1164,7 @@ function AnnotationAsset(Lt) {
       individualOptionDiv.appendChild(title);
 
       var deleteOptionBtn = document.createElement('button');
-      deleteOptionBtn.className = 'attribute-btn';
+      deleteOptionBtn.className = 'annotation-btn';
       deleteOptionBtn.id = attribute;
       deleteOptionBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
       $(deleteOptionBtn).click((e) => {
@@ -1373,11 +1374,56 @@ function AnnotationAsset(Lt) {
 
     summaryDiv.appendChild(summaryAssociatedYearDiv);
     // END: associated year
+
+    // START: link to annotation
+    var summaryLinkDiv = document.createElement('div');
+    summaryLinkDiv.className = 'summaryLinkDiv';
+
+    var getURL = window.location.href;
+    var parsedURL = new URL(getURL);
+
+    if (annotations) {
+      var lat = annotations[i].latLng.lat;
+      var lng = annotations[i].latLng.lng;
+    } else if (Lt.aData.annotations[Lt.aData.index]) {
+      var lat = Lt.aData.annotations[Lt.aData.index].latLng.lat;
+      var lng = Lt.aData.annotations[Lt.aData.index].latLng.lng;
+    } else {
+      var lat = this.latLng.lat;
+      var lng = this.latLng.lng;
+    };
+
+    var existingLatParam = parsedURL.searchParams.get("lat");
+    var existingLngParam = parsedURL.searchParams.get("lng");
+    if (!existingLatParam || !existingLngParam) { // url parameters don't exist
+      parsedURL.searchParams.append("lat", lat);
+      parsedURL.searchParams.append("lng", lng);
+    } else { // url parameters already exist
+      parsedURL.searchParams.set("lat", lat);
+      parsedURL.searchParams.set("lng", lng);
+    };
+
+    var linkTitle = document.createElement('h4');
+    linkTitle.innerHTML = '<a href=' + String(parsedURL) + '> Annotation GeoLink</a>';
+    linkTitle.className = 'annotation-title';
+    linkTitle.id = 'link-title';
+    summaryLinkDiv.appendChild(linkTitle)
+
+    var copyLinkBtn = document.createElement('button');
+    copyLinkBtn.className = 'annotation-link-btn';
+    copyLinkBtn.innerHTML = '<i class="fa fa-clone" aria-hidden="true"></i>';
+    $(copyLinkBtn).click(() => {
+      window.copyToClipboard(parsedURL);
+    });
+    summaryLinkDiv.appendChild(copyLinkBtn);
+
+    summaryDiv.appendChild(summaryLinkDiv);
+    // END : link to annotation
   };
 
-  AnnotationAsset.prototype.editSummaryContent = function (annotations, i) {
-    var editSummaryDiv = document.getElementById('edit-summary-tab');
-    editSummaryDiv.innerHTML = ''; // reset div so elements do not duplicate
+  AnnotationAsset.prototype.editContent = function (annotations, i) {
+    var editDiv = document.getElementById('edit-summary-tab');
+    editDiv.innerHTML = ''; // reset div so elements do not duplicate
 
     // Start: text
     var editTextDiv = document.createElement('div');
@@ -1408,7 +1454,7 @@ function AnnotationAsset(Lt) {
     });
 
     editTextDiv.appendChild(textBox);
-    editSummaryDiv.appendChild(editTextDiv);
+    editDiv.appendChild(editTextDiv);
     // End: text
 
     // Start: attributes
@@ -1422,7 +1468,7 @@ function AnnotationAsset(Lt) {
 
     // add a new attribute options
     var openAttributeEditButton = document.createElement('button');
-    openAttributeEditButton.className = 'attribute-btn';
+    openAttributeEditButton.className = 'annotation-btn';
     openAttributeEditButton.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
     $(openAttributeEditButton).click(() => {
       if (this.dialogAttributesWindow) {
@@ -1440,7 +1486,7 @@ function AnnotationAsset(Lt) {
         newOptionDiv.appendChild(optionTitle);
 
         var optionDeleteBtn = document.createElement('button');
-        optionDeleteBtn.className = 'attribute-btn';
+        optionDeleteBtn.className = 'annotation-btn';
         optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
         $(optionDeleteBtn).click(() => {
           $(newOptionDiv).remove();
@@ -1454,13 +1500,13 @@ function AnnotationAsset(Lt) {
         var optionTextbox = document.createElement('textarea');
         optionTextbox.className += 'attribute-option';
         optionTextbox.className += ' attribute-textbox';
-        optionTextbox.placeholder = 'Attribute description.';
+        optionTextbox.placeholder = 'Description.';
         optionTextDiv.appendChild(optionTextbox);
 
         var optionTextCode = document.createElement('textarea');
         optionTextCode.className += 'attribute-option';
         optionTextCode.className += ' attribute-textbox';
-        optionTextCode.placeholder = 'Attribute code.';
+        optionTextCode.placeholder = 'Code.';
         optionTextDiv.appendChild(optionTextCode);
 
         newOptionDiv.appendChild(optionTextDiv)
@@ -1480,7 +1526,17 @@ function AnnotationAsset(Lt) {
                 },
       };
       */
-      var saveOptionsBtn = document.getElementById('save-options');
+      var exitOptionsBtn = document.createElement('button');
+      exitOptionsBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i> Exit Only';
+      exitOptionsBtn.className = 'annotation-btn';
+      $(exitOptionsBtn).click (() => {
+        this.dialogAttributesWindow.destroy();
+      });
+
+      var saveOptionsDiv = document.getElementById('attributes-options-save');
+      saveOptionsDiv.appendChild(exitOptionsBtn);
+
+      var saveOptionsBtn = document.getElementById('save-exit-options');
       $(saveOptionsBtn).click(() => {
         var allOptionsTitled = true;
 
@@ -1519,7 +1575,7 @@ function AnnotationAsset(Lt) {
     this.createCheckboxes(null, null, attributesOptionsDiv);
 
     editAttributesDiv.appendChild(attributesOptionsDiv);
-    editSummaryDiv.appendChild(editAttributesDiv);
+    editDiv.appendChild(editAttributesDiv);
     // END: attributes
 
     // START: associated year
@@ -1555,7 +1611,7 @@ function AnnotationAsset(Lt) {
     });
     editAssociatedYearDiv.appendChild(associatedYearInput);
 
-    editSummaryDiv.appendChild(editAssociatedYearDiv);
+    editDiv.appendChild(editAssociatedYearDiv);
     // END: associated year
 
     // START: color selection
@@ -1603,7 +1659,7 @@ function AnnotationAsset(Lt) {
       };
     };
 
-    editSummaryDiv.appendChild(editColorDiv);
+    editDiv.appendChild(editColorDiv);
     // END: color selection
 
   };
@@ -1668,10 +1724,10 @@ function AnnotationAsset(Lt) {
           });
         });
 
-        var editSummaryBtn = document.getElementById('edit-summary-btn');
+        var editBtn = document.getElementById('edit-summary-btn');
         $(() => {
-          $(editSummaryBtn).click(() => {
-            this.editSummaryContent();
+          $(editBtn).click(() => {
+            this.editContent();
             this.openTab('edit-summary-btn', 'edit-summary-tab');
           });
         });
@@ -1681,7 +1737,7 @@ function AnnotationAsset(Lt) {
         this.dialogAnnotationWindow.open();
 
         $(document).ready(() => {
-          editSummaryBtn.click();
+          editBtn.click();
         });
 
       });
