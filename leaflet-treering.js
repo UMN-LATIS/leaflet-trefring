@@ -70,10 +70,6 @@ function LTreering (viewer, basePath, options) {
   this.imageAdjustment = new ImageAdjustment(this);
   this.calibration = new Calibration(this);
 
-  this.createAnnotation = new CreateAnnotation(this);
-  this.deleteAnnotation = new DeleteAnnotation(this);
-  this.editAnnotation = new EditAnnotation(this);
-
   this.dating = new Dating(this);
 
   this.createPoint = new CreatePoint(this);
@@ -1125,8 +1121,10 @@ function AnnotationAsset(Lt) {
       this.yearAdjustment = 0;
       this.year = 0;
     };
-
     this.attributesObject = Lt.meta.attributesObject;
+    if (this.createBtn.active == false) {
+      this.annotationIcon = this.markers[index];
+    };
 
     this.dialogAnnotationWindow = L.control.dialog({
       'size': [300, 250],
@@ -1168,6 +1166,7 @@ function AnnotationAsset(Lt) {
       };
 
       this.dialogAnnotationWindow.destroy();
+      delete this.dialogAnnotationWindow;
     });
 
     this.dialogAnnotationWindow.hideResize();
@@ -1683,6 +1682,7 @@ function AnnotationAsset(Lt) {
         } else { // viewing or editing
           if (this.dialogAnnotationWindow) {
             this.dialogAnnotationWindow.destroy();
+            delete this.dialogAnnotationWindow
           };
           this.createAnnotationDialog(Lt.aData.annotations[index], index);
         };
@@ -1758,6 +1758,9 @@ function AnnotationAsset(Lt) {
           draggable = true;
         };
 
+        e.calculatedYear = e.calculatedYear || this.nearestYear(e.latLng);
+        e.yearAdjustment = e.yearAdjustment || 0;
+        e.year = e.calculatedYear + e.yearAdjustment;
         e.color = e.color || '#ff1c22';
 
         this.annotationIcon = L.marker([0, 0], {
@@ -1782,9 +1785,10 @@ function AnnotationAsset(Lt) {
           } else { // viewing or editing
             if (this.dialogAnnotationWindow) {
               this.dialogAnnotationWindow.destroy();
+              delete this.dialogAnnotationWindow
             };
             Lt.collapseTools();
-            this.createAnnotationDialog(Lt.aData.annotations[i], i);
+            this.createAnnotationDialog(e, i);
           };
         });
 
@@ -3740,180 +3744,7 @@ function ViewData(Lt) {
     $('#copy-data-button').off('click');
     this.dialog.close();
   };
-}
-
-/**
- * Create annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function CreateAnnotation(Lt) {
-  this.active = false;
-  this.input = L.circle([0, 0], {radius: .0001, color: 'red', weight: '6'})
-      .bindPopup('<textarea class="comment_input" name="message" rows="2"' +
-      'cols="15"></textarea>', {closeButton: false});
-  this.btn = new Button(
-    'comment',
-    'Create annotations (Ctrl-a)',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-
-  L.DomEvent.on(window, 'keydown', (e) => {
-    if (e.keyCode == 65 && e.getModifierState("Control")) {
-      if(!this.active) {
-        Lt.disableTools();
-        this.enable();
-      }
-      else {
-        this.disable();
-      }
-    }
-  }, this);
-
-  /**
-   * Enable creating annotations on click
-   * @function enable
-   */
-  CreateAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-
-    Lt.viewer.doubleClickZoom.disable();
-    $(Lt.viewer.getContainer()).click(e => {
-      $(Lt.viewer.getContainer()).click(e => {
-        this.disable();
-        this.enable();
-      });
-      var latLng = Lt.viewer.mouseEventToLatLng(e);
-      this.input.setLatLng(latLng);
-      this.input.addTo(Lt.viewer);
-      this.input.openPopup();
-
-      document.getElementsByClassName('comment_input')[0].select();
-
-      $(document).keypress(e => {
-        var key = e.which || e.keyCode;
-        if (key === 13) {
-          var string = ($('.comment_input').val()).slice(0);
-
-          this.input.remove();
-
-          if (string != '') {
-            Lt.aData.annotations[Lt.aData.index] = {'latLng': latLng, 'text': string};
-            Lt.annotationAsset.newAnnotation(Lt.aData.annotations, Lt.aData.index);
-            Lt.aData.index++;
-          }
-
-          this.disable();
-          this.enable();
-        }
-      });
-    });
-  };
-
-  /**
-   * Disable creating annotations on click
-   * @function enable
-   */
-  CreateAnnotation.prototype.disable = function() {
-    this.btn.state('inactive');
-    Lt.viewer.doubleClickZoom.enable();
-    $(Lt.viewer.getContainer()).off('dblclick');
-    $(Lt.viewer.getContainer()).off('click');
-    $(document).off('keypress');
-    Lt.viewer.getContainer().style.cursor = 'default';
-    this.input.remove();
-    this.active = false;
-  };
-
-}
-
-/**
- * Delete annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function DeleteAnnotation(Lt) {
-  this.btn = new Button(
-    'delete',
-    'Delete an annotation',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-  this.active = false;
-
-    /**
-   * Delete a point
-   * @function action
-   * @param i int - delete the annotation at index i
-   */
-  DeleteAnnotation.prototype.action = function(i) {
-    Lt.undo.push();
-
-    Lt.aData.deleteAnnotation(i);
-
-    Lt.annotationAsset.reload();
-  };
-
-  /**
-   * Enable deleting annotations on click
-   * @function enable
-   */
-  DeleteAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-  };
-
-  /**
-   * Disable deleting annotations on click
-   * @function disable
-   */
-  DeleteAnnotation.prototype.disable = function() {
-    $(Lt.viewer.getContainer()).off('click');
-    this.btn.state('inactive');
-    this.active = false;
-    Lt.viewer.getContainer().style.cursor = 'default';
-  };
-}
-
-/**
- * Edit annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function EditAnnotation(Lt) {
-  this.btn = new Button(
-    'edit',
-    'Edit an annotation',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-  this.active = false;
-
-  /**
-   * Enable editing annotations on click
-   * @function enable
-   */
-  EditAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-  };
-
-  /**
-   * Disable editing annotations on click
-   * @function disable
-   */
-  EditAnnotation.prototype.disable = function() {
-    $(Lt.viewer.getContainer()).off('click');
-    this.btn.state('inactive');
-    this.active = false;
-    Lt.viewer.getContainer().style.cursor = 'default';
-  };
-}
+};
 
 /**
  * Change color properties of image
