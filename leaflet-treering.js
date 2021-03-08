@@ -1112,7 +1112,6 @@ function AnnotationAsset(Lt) {
       this.yearAdjustment = annotation.yearAdjustment;
       this.year = annotation.year;
     } else {
-      this.latLng = {};
       // want this.color to stay constant between creating annotations
       this.text = '';
       this.code = '';
