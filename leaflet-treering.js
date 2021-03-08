@@ -193,11 +193,14 @@ function LTreering (viewer, basePath, options) {
    * @function disableTools
    */
   LTreering.prototype.disableTools = function() {
-    this.tools.forEach(e => { e.disable() });
-    if (this.annotationAsset.dialogAnnotationWindow && this.annotationAsset.createBtn.active) { // if dialog box open, destroy dialog & marker
+    if (this.annotationAsset.dialogAnnotationWindow && this.annotationAsset.createBtn.active) { // if user trying to create annotation, destroy dialog & marker
       this.annotationAsset.dialogAnnotationWindow.destroy();
       this.annotationAsset.annotationIcon.removeFrom(this.viewer);
+    } else if (this.annotationAsset.dialogAnnotationWindow) {
+      this.annotationAsset.dialogAnnotationWindow.destroy();
     };
+
+    this.tools.forEach(e => { e.disable() });
   };
 
   LTreering.prototype.collapseTools = function() {
@@ -1081,6 +1084,14 @@ function AnnotationAsset(Lt) {
   );
   this.createBtn.active = false;
 
+  this.deleteBtn = new Button (
+    'delete',
+    'Delete an annotation',
+    () => { Lt.disableTools(); this.enable(this.deleteBtn) },
+    () => { this.disable(this.deleteBtn) }
+  );
+  this.deleteBtn.active = false;
+
   // crtl-a to activate createBtn
   L.DomEvent.on(window, 'keydown', (e) => {
     if (e.keyCode == 65 && e.getModifierState("Control")) {
@@ -1093,14 +1104,6 @@ function AnnotationAsset(Lt) {
       }
     }
   }, this);
-
-  this.deleteBtn = new Button (
-    'delete',
-    'Delete an annotation',
-    () => { Lt.disableTools(); this.enable(this.deleteBtn) },
-    () => { this.disable(this.deleteBtn) }
-  );
-  this.deleteBtn.active = false;
 
   AnnotationAsset.prototype.createAnnotationDialog = function (annotation, index) {
     if (annotation) { // set all meta data objects
@@ -1677,7 +1680,6 @@ function AnnotationAsset(Lt) {
         if (this.deleteBtn.active) { // deleteing
           Lt.aData.deleteAnnotation(index);
           Lt.annotationAsset.reload();
-          this.deleteBtn.active = false;
         } else { // viewing or editing
           if (this.dialogAnnotationWindow) {
             this.dialogAnnotationWindow.destroy();
@@ -1706,7 +1708,7 @@ function AnnotationAsset(Lt) {
       $(Lt.viewer.getContainer()).click(e => {
         Lt.disableTools();
         Lt.collapseTools();
-        btn.active = true; // disableTools() deactivates all buttons, need create annotation active
+        this.createBtn.active = true; // disableTools() deactivates all buttons, need create annotation active
 
         this.latLng = Lt.viewer.mouseEventToLatLng(e);
 
@@ -1740,52 +1742,6 @@ function AnnotationAsset(Lt) {
     Lt.viewer.getContainer().style.cursor = 'default';
   };
 
-  AnnotationAsset.prototype.popupMouseover = function(e) {
-    this.openPopup();
-  };
-
-  AnnotationAsset.prototype.popupMouseout = function(e) {
-    this.closePopup();
-  };
-
-  AnnotationAsset.prototype.newElement = function(annotations, i) {
-    var ref = annotations[i];
-
-    var draggable = false;
-    if (window.name.includes('popout')) {
-      draggable = true;
-    }
-
-    var circle = L.marker(ref.latLng, {
-      icon: new MarkerIcon('red', Lt.basePath),
-      draggable: draggable,
-      riseOnHover: true
-    });
-
-    circle.bindPopup(ref.text, {closeButton: false});
-    this.markers[i] = circle;
-    this.markers[i].clicked = false;
-
-    this.markers[i].on('dragend', (e) => {
-      annotations[i].latLng = e.target._latlng;
-    });
-
-    // how annotations respond when click depends on what is active
-    $(this.markers[i]).click(e => {
-      if (this.editBtn.active) {
-        this.editAnnotation(i);
-      } else if (this.deleteBtn.active) {
-        Lt.aData.deleteAnnotation(i);
-        this.reload();
-      }
-    });
-
-    $(this.markers[i]).mouseover(this.popupMouseover);
-    $(this.markers[i]).mouseout(this.popupMouseout);
-
-    this.markerLayer.addLayer(this.markers[i]);
-  };
-
   AnnotationAsset.prototype.reload = function() {
     this.markerLayer.clearLayers();
     this.markers = [];
@@ -1801,6 +1757,8 @@ function AnnotationAsset(Lt) {
         if (window.name.includes('popout')) {
           draggable = true;
         };
+
+        e.color = e.color || '#ff1c22';
 
         this.annotationIcon = L.marker([0, 0], {
           icon: L.divIcon( {className: e.color} ),
@@ -1818,10 +1776,16 @@ function AnnotationAsset(Lt) {
         });
 
         $(this.markers[i]).click(() => {
-          if (this.dialogAnnotationWindow) {
-            this.dialogAnnotationWindow.destroy();
-          }
-          this.createAnnotationDialog(Lt.aData.annotations[i], i);
+          if (this.deleteBtn.active) { // deleteing
+            Lt.aData.deleteAnnotation(i);
+            Lt.annotationAsset.reload();
+          } else { // viewing or editing
+            if (this.dialogAnnotationWindow) {
+              this.dialogAnnotationWindow.destroy();
+            };
+            Lt.collapseTools();
+            this.createAnnotationDialog(Lt.aData.annotations[i], i);
+          };
         });
 
         this.markerLayer.addLayer(this.markers[i]);
@@ -1831,37 +1795,7 @@ function AnnotationAsset(Lt) {
     }
   };
 
-  AnnotationAsset.prototype.editAnnotation = function(i) {
-    let marker = this.markers[i];
-
-    $(marker).off('mouseover');
-    $(marker).off('mouseout');
-
-    marker.setPopupContent('<textarea id="comment_input" name="message"' +
-        'rows="2" cols="15">' + Lt.aData.annotations[i].text + '</textarea>');
-    marker.openPopup();
-    document.getElementById('comment_input').select();
-
-    $(document).keypress(e => {
-      var key = e.which || e.keyCode;
-      if (key === 13) {
-        if ($('#comment_input').val() != undefined) {
-          let string = ($('#comment_input').val()).slice(0);
-
-          if (string != '') {
-            Lt.aData.annotations[i].text = string;
-            marker.setPopupContent(string);
-            $(marker).mouseover(this.popupMouseover);
-            $(marker).mouseout(this.popupMouseout);
-          } else {
-            Lt.deleteAnnotation.action(i);
-          }
-        }
-        Lt.editAnnotation.disable();
-      }
-    });
-  };
-}
+};
 
 /**
  * Scale bar for orientation & screenshots
