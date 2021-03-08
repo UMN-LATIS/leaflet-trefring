@@ -1675,67 +1675,7 @@ function AnnotationAsset(Lt) {
       Lt.aData.annotations[index] = content;
       this.markers[index] = this.annotationIcon;
 
-      // how marker reacts when clicked
-      $(this.markers[index]).click(() => {
-        if (this.deleteBtn.active) { // deleteing
-          Lt.aData.deleteAnnotation(index);
-          Lt.annotationAsset.reload();
-        } else { // viewing or editing
-          if (this.dialogAnnotationWindow) {
-            this.dialogAnnotationWindow.destroy();
-            delete this.dialogAnnotationWindow
-          };
-          this.createAnnotationDialog(Lt.aData.annotations[index], index);
-        };
-      });
-
-      // how marker reacts when moussed over
-      $(this.markers[index]).mouseover(() => {
-        this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
-
-        var popupDiv = document.getElementById('mouseover-popup-div');
-
-        var popupTextTitle = document.createElement('h5');
-        popupTextTitle.className = 'annotation-title';
-        popupTextTitle.innerHTML = 'Text: ';
-        popupDiv.appendChild(popupTextTitle);
-
-        var popupText = document.createElement('p');
-        popupText.style.marginTop = 0;
-        popupText.style.marginBottom = '4px';
-        popupText.innerHTML = Lt.aData.annotations[index].text || 'N/A';
-        popupDiv.appendChild(popupText);
-
-        var popupDescriptionTitle = document.createElement('h5');
-        popupDescriptionTitle.className = 'annotation-title';
-        popupDescriptionTitle.style.margin = 0;
-        popupDescriptionTitle.innerHTML = 'Attributes Description: '
-        popupDiv.appendChild(popupDescriptionTitle);
-
-        var popupDescriptionList = document.createElement('ul');
-        popupDescriptionList.style.marginBottom = '3px';
-        for (var descriptorIndex in Lt.aData.annotations[index].description) {
-          var listElm = document.createElement('li');
-          listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
-          popupDescriptionList.appendChild(listElm);
-        };
-        popupDiv.appendChild(popupDescriptionList);
-
-        var popupYearTitle = document.createElement('h5');
-        popupYearTitle.style.margin = 0;
-        popupYearTitle.className = 'annotation-title';
-        popupYearTitle.innerHTML = 'Associated Year: ';
-        popupDiv.appendChild(popupYearTitle);
-
-        var popupYear = document.createElement('span');
-        popupYear.style.cssFloat = 'right';
-        popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
-        popupDiv.appendChild(popupYear);
-      });
-
-      $(this.markers[index]).mouseout(() => {
-        this.markers[index].closePopup();
-      });
+      this.createMouseEventListeners(index);
 
       this.markerLayer.addLayer(this.markers[index]);
 
@@ -1777,6 +1717,70 @@ function AnnotationAsset(Lt) {
 
       });
     };;
+  };
+
+  AnnotationAsset.prototype.createMouseEventListeners = function (index) {
+    // how marker reacts when clicked
+    $(this.markers[index]).click(() => {
+      if (this.deleteBtn.active) { // deleteing
+        Lt.aData.deleteAnnotation(index);
+        Lt.annotationAsset.reload();
+      } else { // viewing or editing
+        if (this.dialogAnnotationWindow) {
+          this.dialogAnnotationWindow.destroy();
+          delete this.dialogAnnotationWindow
+        };
+        this.createAnnotationDialog(Lt.aData.annotations[index], index);
+      };
+    });
+
+    // how marker reacts when moussed over
+    $(this.markers[index]).mouseover(() => {
+      this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
+
+      var popupDiv = document.getElementById('mouseover-popup-div');
+
+      var popupTextTitle = document.createElement('h5');
+      popupTextTitle.className = 'annotation-title';
+      popupTextTitle.innerHTML = 'Text: ';
+      popupDiv.appendChild(popupTextTitle);
+
+      var popupText = document.createElement('p');
+      popupText.style.marginTop = 0;
+      popupText.style.marginBottom = '4px';
+      popupText.innerHTML = Lt.aData.annotations[index].text || 'N/A';
+      popupDiv.appendChild(popupText);
+
+      var popupDescriptionTitle = document.createElement('h5');
+      popupDescriptionTitle.className = 'annotation-title';
+      popupDescriptionTitle.style.margin = 0;
+      popupDescriptionTitle.innerHTML = 'Attributes Description: '
+      popupDiv.appendChild(popupDescriptionTitle);
+
+      var popupDescriptionList = document.createElement('ul');
+      popupDescriptionList.style.marginBottom = '3px';
+      for (var descriptorIndex in Lt.aData.annotations[index].description) {
+        var listElm = document.createElement('li');
+        listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
+        popupDescriptionList.appendChild(listElm);
+      };
+      popupDiv.appendChild(popupDescriptionList);
+
+      var popupYearTitle = document.createElement('h5');
+      popupYearTitle.style.margin = 0;
+      popupYearTitle.className = 'annotation-title';
+      popupYearTitle.innerHTML = 'Associated Year: ';
+      popupDiv.appendChild(popupYearTitle);
+
+      var popupYear = document.createElement('span');
+      popupYear.style.cssFloat = 'right';
+      popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
+      popupDiv.appendChild(popupYear);
+    });
+
+    $(this.markers[index]).mouseout(() => {
+      this.markers[index].closePopup();
+    });
   };
 
   AnnotationAsset.prototype.disable = function (btn) {
@@ -1828,19 +1832,7 @@ function AnnotationAsset(Lt) {
           Lt.aData.annotations[i].latLng = e.target._latlng;
         });
 
-        $(this.markers[i]).click(() => {
-          if (this.deleteBtn.active) { // deleteing
-            Lt.aData.deleteAnnotation(i);
-            Lt.annotationAsset.reload();
-          } else { // viewing or editing
-            if (this.dialogAnnotationWindow) {
-              this.dialogAnnotationWindow.destroy();
-              delete this.dialogAnnotationWindow
-            };
-            Lt.collapseTools();
-            this.createAnnotationDialog(e, i);
-          };
-        });
+        this.createMouseEventListeners(i);
 
         this.markerLayer.addLayer(this.markers[i]);
 
