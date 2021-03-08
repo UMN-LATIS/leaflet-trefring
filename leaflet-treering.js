@@ -96,7 +96,7 @@ function LTreering (viewer, basePath, options) {
 
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.editBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
+  this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
   this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
@@ -1094,14 +1094,6 @@ function AnnotationAsset(Lt) {
     }
   }, this);
 
-  this.editBtn = new Button (
-    'edit',
-    'Edit an annotation',
-    () => { Lt.disableTools(); this.enable(this.editBtn) },
-    () => {this.disable(this.editBtn) }
-  );
-  this.editBtn.active = false;
-
   this.deleteBtn = new Button (
     'delete',
     'Delete an annotation',
@@ -1112,6 +1104,7 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.createAnnotationDialog = function (annotation, index) {
     if (annotation) { // set all meta data objects
+      this.latLng = annotation.latLng;
       this.color = annotation.color;
       this.text = annotation.text;
       this.code = annotation.code;
@@ -1120,6 +1113,7 @@ function AnnotationAsset(Lt) {
       this.yearAdjustment = annotation.yearAdjustment;
       this.year = annotation.year;
     } else {
+      this.latLng = {};
       // want this.color to stay constant between creating annotations
       this.text = '';
       this.code = '';
@@ -1680,11 +1674,18 @@ function AnnotationAsset(Lt) {
       Lt.aData.annotations[index] = content;
       this.markers[index] = this.annotationIcon;
       $(this.markers[index]).click(() => {
-        if (this.dialogAnnotationWindow) {
-          this.dialogAnnotationWindow.destroy();
-        }
-        this.createAnnotationDialog(Lt.aData.annotations[index], index);
+        if (this.deleteBtn.active) { // deleteing
+          Lt.aData.deleteAnnotation(index);
+          Lt.annotationAsset.reload();
+          this.deleteBtn.active = false;
+        } else { // viewing or editing
+          if (this.dialogAnnotationWindow) {
+            this.dialogAnnotationWindow.destroy();
+          };
+          this.createAnnotationDialog(Lt.aData.annotations[index], index);
+        };
       });
+      this.markerLayer.addLayer(this.markers[index]);
 
       this.createBtn.active = false;
     } else {
@@ -1693,13 +1694,13 @@ function AnnotationAsset(Lt) {
   };
 
   // Only creating an annotation is tied to button enabling. Editing & deleting
-  // are connected to newElement through event listeners.
+  // are connected to saveAnnotation()
   AnnotationAsset.prototype.enable = function (btn) {
     btn.state('active');
     btn.active = true;
     Lt.viewer.getContainer().style.cursor = 'pointer';
 
-    this.latLng = '';
+    this.latLng = {};
     if (btn === this.createBtn) {
       Lt.viewer.doubleClickZoom.disable();
       $(Lt.viewer.getContainer()).click(e => {
@@ -1723,13 +1724,12 @@ function AnnotationAsset(Lt) {
         this.createAnnotationDialog();
 
       });
-    };
+    };;
   };
 
   AnnotationAsset.prototype.disable = function (btn) {
     if (!btn) { // for Lt.disableTools()
       this.disable(this.createBtn);
-      this.disable(this.editBtn);
       this.disable(this.deleteBtn);
       return
     };
@@ -1788,15 +1788,44 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.reload = function() {
     this.markerLayer.clearLayers();
-    this.markers = new Array();
+    this.markers = [];
     Lt.aData.index = 0;
     if (Lt.aData.annotations != undefined) {
-      var reduced = Object.values(Lt.aData.annotations).filter(e => e != undefined);
+      // remove null or undefined elements
+      var reducedArray = Object.values(Lt.aData.annotations).filter(e => e != undefined);
       Lt.aData.annotations = {};
-      reduced.map((e, i) => Lt.aData.annotations[i] = e);
+      reducedArray.map((e, i) => Lt.aData.annotations[i] = e);
 
       Object.values(Lt.aData.annotations).map((e, i) => {
-        this.newElement(Lt.aData.annotations, i);
+        var draggable = false;
+        if (window.name.includes('popout')) {
+          draggable = true;
+        };
+
+        this.annotationIcon = L.marker([0, 0], {
+          icon: L.divIcon( {className: e.color} ),
+          draggable: true,
+          riseOnHover: true,
+        });
+
+        this.annotationIcon.setLatLng(e.latLng);
+
+        this.annotationIcon.addTo(Lt.viewer);
+
+        this.markers[i] = this.annotationIcon;
+        this.markers[i].on('dragend', (e) => {
+          Lt.aData.annotations[i].latLng = e.target._latlng;
+        });
+
+        $(this.markers[i]).click(() => {
+          if (this.dialogAnnotationWindow) {
+            this.dialogAnnotationWindow.destroy();
+          }
+          this.createAnnotationDialog(Lt.aData.annotations[i], i);
+        });
+
+        this.markerLayer.addLayer(this.markers[i]);
+
         Lt.aData.index++;
       });
     }
