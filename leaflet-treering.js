@@ -1120,7 +1120,26 @@ function AnnotationAsset(Lt) {
       this.yearAdjustment = 0;
       this.year = 0;
     };
-    this.attributesObject = Lt.meta.attributesObject;
+
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var cookieArray = decodedCookie.split(';');
+    for (var i = 0; i < cookieArray.length; i++) {;
+      var cookieNameArray = cookieArray[i].split('=');
+      var cookieNameIndex = cookieNameArray.indexOf('attributesObject');
+      var cookieAttributeObject = cookieNameArray[cookieNameIndex + 1];
+    };
+
+    if (!Lt.meta.attributesObject.length || Lt.meta.attributesObject.length == 0 ) {
+      try {
+        this.attributesObject = JSON.parse(cookieAttributeObject);
+      }
+      catch (error) {
+        this.attributesObject = {};
+      }
+    } else {
+      this.attributesObject = Lt.meta.attributesObject;
+    };
+
     if (this.createBtn.active == false) {
       this.annotationIcon = this.markers[index];
     };
@@ -1666,7 +1685,8 @@ function AnnotationAsset(Lt) {
       'yearAdjustment': this.yearAdjustment,
       'year': this.year,
     };
-    Lt.meta.attrubutesObject = this.attributesObject;
+    Lt.meta.attributesObject = this.attributesObject;
+    document.cookie = 'attributesObject=' + JSON.stringify(this.attributesObject) + '; max-age=60*60*24*365';
 
     if (this.createBtn.active) {
       var index = Lt.aData.index;
