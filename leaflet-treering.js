@@ -360,6 +360,7 @@ function MeasurementData (dataObject, Lt) {
    * @function cut
    */
   MeasurementData.prototype.cut = function(i, j) {
+    let direction = directionCheck();
     if (i > j) {
       //var trimmed_points = this.points.slice().splice(i, this.index - 1);
       this.points.splice(j,i-j);
@@ -379,13 +380,38 @@ function MeasurementData (dataObject, Lt) {
     } else if (i < j) {
       this.points.splice(i,j-i);
       //this.points = this.points.slice().splice(0, i);
-       console.log(this.points);
+       //console.log(this.points);
       // this.year = this.points[this.index-1].earlywood? this.points[this.index-1].year : this.points[this.index-1].year + 1;
       // this.earlywood = this.year === this.points[this.index-1].year? false : true;
     } else {
       alert('You cannot select the same point');
     }
-
+    year = this.points[1].year;
+    second = false;
+    console.log(year);
+    this.points.map(e=>{
+      if(e && !e.start && !e.break){
+        if(measurementOptions.subAnnual)
+        {
+          e.year = year;
+          if(second)
+          {
+            year++;
+            e.earlywood = false;
+            second = false;
+          }
+          else{
+            e.earlywood = true;
+            second = true;
+          }
+        }
+        else{
+          e.year = year;
+          year++;
+        }
+    
+      }
+    });
     Lt.metaDataText.updateText(); // updates after points are cut
   };
 
@@ -481,6 +507,7 @@ function MeasurementData (dataObject, Lt) {
     var k = i;
     var year_adjusted;
     var earlywood_adjusted = true;
+    
 
     if (this.points[i - 1]) {
       if (this.points[i - 1].earlywood && measurementOptions.subAnnual) { // case 1: subAnnual enabled & previous point ew
