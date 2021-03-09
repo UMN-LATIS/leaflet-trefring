@@ -1101,8 +1101,55 @@ function AnnotationAsset(Lt) {
     }
   }, this);
 
+  // Only creating an annotation is tied to button enabling. Editing & deleting
+  // are connected to saveAnnotation()
+  AnnotationAsset.prototype.enable = function (btn) {
+    btn.state('active');
+    btn.active = true;
+    Lt.viewer.getContainer().style.cursor = 'pointer';
+
+    this.latLng = {};
+    if (btn === this.createBtn) {
+      Lt.viewer.doubleClickZoom.disable();
+      $(Lt.viewer.getContainer()).click(e => {
+        Lt.disableTools();
+        Lt.collapseTools();
+        this.createBtn.active = true; // disableTools() deactivates all buttons, need create annotation active
+
+        this.latLng = Lt.viewer.mouseEventToLatLng(e);
+
+        // display icon
+        this.annotationIcon = L.marker([0, 0], {
+          icon: this.colorDivIcon,
+          draggable: true,
+          riseOnHover: true,
+        });
+
+        this.annotationIcon.setLatLng(this.latLng);
+
+        this.annotationIcon.addTo(Lt.viewer);
+
+        this.createAnnotationDialog();
+
+      });
+    };;
+  };
+
+  AnnotationAsset.prototype.disable = function (btn) {
+    if (!btn) { // for Lt.disableTools()
+      this.disable(this.createBtn);
+      this.disable(this.deleteBtn);
+      return
+    };
+
+    $(Lt.viewer.getContainer()).off('click');
+    btn.state('inactive');
+    btn.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
+  };
+
   AnnotationAsset.prototype.createAnnotationDialog = function (annotation, index) {
-    if (annotation) { // set all meta data objects
+    if (annotation) { // set all meta data objects, catches for undefined elsewhere
       this.latLng = annotation.latLng;
       this.color = annotation.color;
       this.text = annotation.text;
@@ -1129,7 +1176,7 @@ function AnnotationAsset(Lt) {
       var cookieAttributeObject = cookieNameArray[cookieNameIndex + 1];
     };
 
-    if (!Lt.meta.attributesObject.length || Lt.meta.attributesObject.length == 0 ) {
+    if (!Lt.meta.attributesObject || jQuery.isEmptyObject(Lt.meta.attributesObject)) {
       try {
         this.attributesObject = JSON.parse(cookieAttributeObject);
       }
@@ -1254,7 +1301,7 @@ function AnnotationAsset(Lt) {
         checkbox.id = option; // attribute descriptor
         checkbox.value = optionsObject[option]; // code associated w/ option
 
-        var attributesList = this.description;
+        var attributesList = this.description || [];
         if (attributesList.includes(option)) {
           checkbox.checked = true;
         };
@@ -1313,6 +1360,71 @@ function AnnotationAsset(Lt) {
     } else {
       return closestPt.year;
     };
+  };
+
+  AnnotationAsset.prototype.createMouseEventListeners = function (index) {
+    // how marker reacts when clicked
+    $(this.markers[index]).click(() => {
+      Lt.collapseTools();
+      if (this.deleteBtn.active) { // deleteing
+        Lt.aData.deleteAnnotation(index);
+        Lt.annotationAsset.reload();
+      } else { // viewing or editing
+        if (this.dialogAnnotationWindow) {
+          this.dialogAnnotationWindow.destroy();
+          delete this.dialogAnnotationWindow
+        };
+        this.createAnnotationDialog(Lt.aData.annotations[index], index);
+      };
+    });
+
+    // how marker reacts when moussed over
+    $(this.markers[index]).mouseover(() => {
+      this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
+
+      var popupDiv = document.getElementById('mouseover-popup-div');
+
+      var popupTextTitle = document.createElement('h5');
+      popupTextTitle.className = 'annotation-title';
+      popupTextTitle.innerHTML = 'Text: ';
+      popupDiv.appendChild(popupTextTitle);
+
+      var popupText = document.createElement('p');
+      popupText.style.marginTop = 0;
+      popupText.style.marginBottom = '4px';
+      popupText.innerHTML = Lt.aData.annotations[index].text || 'N/A';
+      popupDiv.appendChild(popupText);
+
+      var popupDescriptionTitle = document.createElement('h5');
+      popupDescriptionTitle.className = 'annotation-title';
+      popupDescriptionTitle.style.margin = 0;
+      popupDescriptionTitle.innerHTML = 'Attributes Description: '
+      popupDiv.appendChild(popupDescriptionTitle);
+
+      var popupDescriptionList = document.createElement('ul');
+      popupDescriptionList.style.marginBottom = '3px';
+      for (var descriptorIndex in Lt.aData.annotations[index].description) {
+        var listElm = document.createElement('li');
+        listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
+        popupDescriptionList.appendChild(listElm);
+      };
+      popupDiv.appendChild(popupDescriptionList);
+
+      var popupYearTitle = document.createElement('h5');
+      popupYearTitle.style.margin = 0;
+      popupYearTitle.className = 'annotation-title';
+      popupYearTitle.innerHTML = 'Associated Year: ';
+      popupDiv.appendChild(popupYearTitle);
+
+      var popupYear = document.createElement('span');
+      popupYear.style.cssFloat = 'right';
+      popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
+      popupDiv.appendChild(popupYear);
+    });
+
+    $(this.markers[index]).mouseout(() => {
+      this.markers[index].closePopup();
+    });
   };
 
   AnnotationAsset.prototype.openTab = function (btnName, tabName) {
@@ -1703,117 +1815,6 @@ function AnnotationAsset(Lt) {
     } else {
       Lt.aData.annotations[index] = content;
     };
-  };
-
-  // Only creating an annotation is tied to button enabling. Editing & deleting
-  // are connected to saveAnnotation()
-  AnnotationAsset.prototype.enable = function (btn) {
-    btn.state('active');
-    btn.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-
-    this.latLng = {};
-    if (btn === this.createBtn) {
-      Lt.viewer.doubleClickZoom.disable();
-      $(Lt.viewer.getContainer()).click(e => {
-        Lt.disableTools();
-        Lt.collapseTools();
-        this.createBtn.active = true; // disableTools() deactivates all buttons, need create annotation active
-
-        this.latLng = Lt.viewer.mouseEventToLatLng(e);
-
-        // display icon
-        this.annotationIcon = L.marker([0, 0], {
-          icon: this.colorDivIcon,
-          draggable: true,
-          riseOnHover: true,
-        });
-
-        this.annotationIcon.setLatLng(this.latLng);
-
-        this.annotationIcon.addTo(Lt.viewer);
-
-        this.createAnnotationDialog();
-
-      });
-    };;
-  };
-
-  AnnotationAsset.prototype.createMouseEventListeners = function (index) {
-    // how marker reacts when clicked
-    $(this.markers[index]).click(() => {
-      if (this.deleteBtn.active) { // deleteing
-        Lt.aData.deleteAnnotation(index);
-        Lt.annotationAsset.reload();
-      } else { // viewing or editing
-        if (this.dialogAnnotationWindow) {
-          this.dialogAnnotationWindow.destroy();
-          delete this.dialogAnnotationWindow
-        };
-        this.createAnnotationDialog(Lt.aData.annotations[index], index);
-      };
-    });
-
-    // how marker reacts when moussed over
-    $(this.markers[index]).mouseover(() => {
-      this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
-
-      var popupDiv = document.getElementById('mouseover-popup-div');
-
-      var popupTextTitle = document.createElement('h5');
-      popupTextTitle.className = 'annotation-title';
-      popupTextTitle.innerHTML = 'Text: ';
-      popupDiv.appendChild(popupTextTitle);
-
-      var popupText = document.createElement('p');
-      popupText.style.marginTop = 0;
-      popupText.style.marginBottom = '4px';
-      popupText.innerHTML = Lt.aData.annotations[index].text || 'N/A';
-      popupDiv.appendChild(popupText);
-
-      var popupDescriptionTitle = document.createElement('h5');
-      popupDescriptionTitle.className = 'annotation-title';
-      popupDescriptionTitle.style.margin = 0;
-      popupDescriptionTitle.innerHTML = 'Attributes Description: '
-      popupDiv.appendChild(popupDescriptionTitle);
-
-      var popupDescriptionList = document.createElement('ul');
-      popupDescriptionList.style.marginBottom = '3px';
-      for (var descriptorIndex in Lt.aData.annotations[index].description) {
-        var listElm = document.createElement('li');
-        listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
-        popupDescriptionList.appendChild(listElm);
-      };
-      popupDiv.appendChild(popupDescriptionList);
-
-      var popupYearTitle = document.createElement('h5');
-      popupYearTitle.style.margin = 0;
-      popupYearTitle.className = 'annotation-title';
-      popupYearTitle.innerHTML = 'Associated Year: ';
-      popupDiv.appendChild(popupYearTitle);
-
-      var popupYear = document.createElement('span');
-      popupYear.style.cssFloat = 'right';
-      popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
-      popupDiv.appendChild(popupYear);
-    });
-
-    $(this.markers[index]).mouseout(() => {
-      this.markers[index].closePopup();
-    });
-  };
-
-  AnnotationAsset.prototype.disable = function (btn) {
-    if (!btn) { // for Lt.disableTools()
-      this.disable(this.createBtn);
-      this.disable(this.deleteBtn);
-      return
-    };
-
-    $(Lt.viewer.getContainer()).off('click');
-    btn.state('inactive');
-    btn.active = false;
-    Lt.viewer.getContainer().style.cursor = 'default';
   };
 
   AnnotationAsset.prototype.reload = function() {
@@ -4102,11 +4103,17 @@ function SaveLocal(Lt) {
    */
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
-    var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
+    var dataJSON = {
+      'SaveDate': Lt.data.saveDate,
+      'year': Lt.data.year,
       'forwardDirection': Lt.measurementOptions.forwardDirection,
       'subAnnual': Lt.measurementOptions.subAnnual,
-      'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
-      'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+      'earlywood': Lt.data.earlywood,
+      'index': Lt.data.index,
+      'points': Lt.data.points,
+      'attributesObject': Lt.annotationAsset.attributesObject,
+      'annotations': Lt.aData.annotations,
+    };
 
     // don't serialize our default value
     if(Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
@@ -4190,11 +4197,18 @@ function SaveCloud(Lt) {
     if (Lt.meta.savePermission && Lt.meta.saveURL != "") {
       Lt.data.clean();
       this.updateDate();
-      var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
+      var dataJSON = {
+        'SaveDate': Lt.data.saveDate,
+        'year': Lt.data.year,
         'forwardDirection': Lt.measurementOptions.forwardDirection,
         'subAnnual': Lt.measurementOptions.subAnnual,
-        'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
-        'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+        'earlywood': Lt.data.earlywood,
+        'index': Lt.data.index,
+        'points': Lt.data.points,
+        'attributesObject': Lt.annotationAsset.attributesObject,
+        'annotations': Lt.aData.annotations,
+      };
+
       // don't serialize our default value
       if (Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
         dataJSON.ppm = Lt.meta.ppm;
@@ -4336,6 +4350,15 @@ function LoadLocal(Lt) {
 
     fr.onload = function(e) {
       let newDataJSON = JSON.parse(e.target.result);
+
+      Lt.meta = {
+        'ppm': newDataJSON.ppm || 468,
+        'saveURL': newDataJSON.saveURL || '',
+        'savePermission': newDataJSON.savePermission || false,
+        'popoutUrl': newDataJSON.popoutUrl || null,
+        'assetName': newDataJSON.assetName || 'N/A',
+        'attributesObject': newDataJSON.attributesObject || {},
+      }
 
       Lt.preferences = {
         'forwardDirection': newDataJSON.forwardDirection,
