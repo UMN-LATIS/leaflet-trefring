@@ -1209,6 +1209,9 @@ function AnnotationAsset(Lt) {
     var summaryBtn = document.getElementById('summary-btn');
     $(() => {
       $(summaryBtn).click(() => {
+        if (this.dialogAttributesWindow) {
+          this.dialogAttributesWindow.destroy();
+        };
         this.summaryContent();
         this.openTab('summary-btn', 'summary-tab');
       });
