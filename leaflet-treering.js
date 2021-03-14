@@ -82,6 +82,7 @@ function LTreering (viewer, basePath, options) {
   this.deletePoint = new DeletePoint(this);
   this.cut = new Cut(this);
   this.insertPoint = new InsertPoint(this);
+  this.convertToStartPoint = new ConvertToStartPoint(this);
   this.insertZeroGrowth = new InsertZeroGrowth(this);
   this.insertBreak = new InsertBreak(this);
 
@@ -98,11 +99,11 @@ function LTreering (viewer, basePath, options) {
   this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.editAnnotation.btn, this.deleteAnnotation.btn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
-  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
+  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.convertToStartPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': layer
@@ -275,6 +276,8 @@ function MeasurementData (dataObject, Lt) {
         };
       };
     };
+
+
     this.index++;
     Lt.metaDataText.updateText(); // update every time a point is placed
   };
@@ -990,15 +993,20 @@ function VisualAsset (Lt) {
     this.markers[i].on('click', (e) => {
       if (Lt.deletePoint.active) {
         Lt.deletePoint.action(i);
-      }
+      };
+
+      if (Lt.convertToStartPoint.active) {
+        Lt.convertToStartPoint.action(i);
+      };
 
       if (Lt.cut.active) {
         if (Lt.cut.point != -1) {
           Lt.cut.action(i);
         } else {
           Lt.cut.fromPoint(i);
-        }
-      }
+        };
+      };
+
       if (Lt.insertZeroGrowth.active) {
         var subAnnual = Lt.measurementOptions.subAnnual;
         var pointEW = pts[i].earlywood == true;
@@ -2182,7 +2190,86 @@ function InsertPoint(Lt) {
     this.active = false;
     Lt.viewer.getContainer().style.cursor = 'default';
   };
-}
+};
+
+/**
+ * Insert a new start point where a measurement point exists
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function ConvertToStartPoint(Lt) {
+  this.active = false;
+  this.btn = new Button(
+    'add_circle',
+    'Change a measurement point to a start point',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+
+  ConvertToStartPoint.prototype.action = function (i) {
+    var points = Lt.data.points;
+    var previousYear = points[i].year || 0;
+
+    // convert to start point by changing properties
+    points[i].start = true;
+    delete points[i].year;
+    delete points[i].earlywood;
+
+    if (i - 1 == 0) { // if previous point is first start point
+      Lt.deletePoint.action(i - 1);
+    };
+
+    // re-assign years to following points
+    var previousPoints = points.slice(0, i);
+    var followingPoints = points.slice(i);
+
+    if (Lt.measurementOptions.forwardDirection) { // if measureing forward in time
+      var yearChange = 1;
+    } else { // if measureing backward in time
+      var yearChange = -1;
+    };
+
+    followingPoints.map((c) => { // c = current point, i = index, a = array
+      if (!c.start && !c.break) {
+        if (Lt.measurementOptions.subAnnual) { // flip earlywood & latewood
+          if (c.earlywood) {
+            c.earlywood = false;
+          } else {
+            c.earlywood = true;
+          };
+        };
+
+        c.year = previousYear;
+        if (!(Lt.measurementOptions.subAnnual && c.earlywood)) { // only change year value if latewood or annual measurements
+          previousYear += yearChange;
+        };
+      };
+    });
+
+    Lt.visualAsset.reload();
+    Lt.metaDataText.updateText();
+  };
+
+  ConvertToStartPoint.prototype.enable = function () {
+    Lt.viewer.getContainer().style.cursor = 'pointer';
+    this.btn.state('active');
+    this.active = true;
+  };
+
+  ConvertToStartPoint.prototype.disable = function () {
+    $(document).keyup(e => {
+          var key = e.which || e.keyCode;
+          if (key === 27) { // 27 = esc
+            this.disable();
+          }
+        });
+
+    $(Lt.viewer.getContainer()).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
+  };
+};
 
 /**
  * Insert a zero growth measurement in the middle of a chronology
