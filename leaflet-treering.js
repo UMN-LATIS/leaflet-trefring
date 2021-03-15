@@ -366,7 +366,6 @@ function MeasurementData (dataObject, Lt) {
    * @function cut
    */
   MeasurementData.prototype.cut = function(i, j) {
-    let direction = directionCheck();
     if (i > j) {
       this.points.splice(j,i-j);
       var trimmed_points= this.points;
@@ -398,7 +397,7 @@ function MeasurementData (dataObject, Lt) {
           e.year = year;
           if(second)
           {
-            year++;
+            measurementOptions.forwardInTime? year++: year--;
             e.earlywood = false;
             second = false;
           }
@@ -409,7 +408,7 @@ function MeasurementData (dataObject, Lt) {
         }
         else{
           e.year = year;
-          year++;
+          measurementOptions.forwardInTime? year++: year--;
         }
       }
     });
