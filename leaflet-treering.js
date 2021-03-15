@@ -410,7 +410,7 @@ function MeasurementData (dataObject, Lt) {
     var year_adjusted;
     var earlywood_adjusted = true;
 
-    if (this.points[i - 1]) {
+    if (this.points[i - 1] && this.points[i]) {
       if (this.points[i - 1].earlywood && measurementOptions.subAnnual) { // case 1: subAnnual enabled & previous point ew
         earlywood_adjusted = false;
         if (direction == forwardInTime) {
