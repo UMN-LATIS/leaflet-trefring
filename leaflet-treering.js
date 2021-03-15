@@ -4693,7 +4693,6 @@ function Helper(Lt) {
    */
    Helper.prototype.assignRowColor = function (e,y,Lt, lengthAsAString)
    {
-
      var stringContent;
      if (Lt.measurementOptions.subAnnual) {
        var wood;
