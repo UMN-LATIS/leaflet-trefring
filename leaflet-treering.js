@@ -62,6 +62,7 @@ function LTreering (viewer, basePath, options) {
   this.viewData = new ViewData(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
+  //this.PixelAdjustment = new PixelAdjustment(this);
   this.calibration = new Calibration(this);
 
   this.createAnnotation = new CreateAnnotation(this);
@@ -100,7 +101,8 @@ function LTreering (viewer, basePath, options) {
   this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
-    'Tree Ring': layer
+    'Tree Ring': baseLayer,
+    'GL Layer': layer
   };
 
   this.overlay = {
@@ -131,6 +133,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      //this.PixelAdjustment.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
@@ -141,6 +144,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      //this.PixelAdjustment.btn.addTo(this.viewer);
       //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
     }
@@ -2954,8 +2958,8 @@ function ViewData(Lt) {
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
       '<button id="download-tab-button"' +
-      'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
-      '>TAB</button><br>  '+
+      'class ="text-button" title="Download Measurements, Tab Delimited Format"' +
+      '>TAB</button><br>  '+ 
       '<button id="download-csv-button"' +
       'class="text-button" title="Download Measurements, Common Separated Column Format"' +
       '>CSV</button><br>  '+
@@ -2983,10 +2987,11 @@ function ViewData(Lt) {
       var lengthAsAString;
       var  totalWidthString = String(totalWidth);
       var totalWidth = 0;
+      var wood;
 
       Lt.data.clean();
       pts.map((e, i, a) => {
-
+        wood = Lt.measurementOptions.subAnnual? (e.earlywood? "E": "L") : ""
         if (e.start) {
           last_latLng = e.latLng;
         } else if (e.break) {
@@ -3019,36 +3024,11 @@ function ViewData(Lt) {
               lengthAsAString+='8';
 
           }
+          //assign color to data row
+          var row_color_html = assignRowColor(e,y,Lt,lengthAsAString)
+          stringContent = stringContent.concat(row_color_html);
+          y++;
 
-          if (Lt.measurementOptions.subAnnual) {
-            var wood;
-            var row_color;
-            if (e.earlywood) {
-              wood = 'E';
-              row_color = '#00d2e6';
-            } else {
-              wood = 'L';
-              row_color = '#00838f';
-              y++;
-            };
-            if(e.year%10===0)
-            {
-              if(wood === 'E')
-              {
-                row_color='E06F4C';
-              }
-              else{
-                row_color= '#db2314';
-              }
-            }
-
-            stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
-          } else {
-            y++;
-            row_color = e.year%10===0? 'red':'#00d2e6';
-            stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
-          }
           last_latLng = e.latLng;
 
           //Set up CSV files to download later
@@ -3102,7 +3082,7 @@ function ViewData(Lt) {
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
       'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
-      'class ="text-button disabled" title="Download Measurements, Tab Deliminated Format"' +
+      'class ="text-button disabled" title="Download Measurements, Tab Delimited Format"' +
       'disabled>TAB</button><br>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
@@ -3135,10 +3115,6 @@ function ViewData(Lt) {
           }
          }
        );
-    $('#refresh-button').click(() => {
-      this.disable();
-      this.enable();
-    });
     $('#delete-button').click(() => {
       this.dialog.setContent(
           '<p>This action will delete all data points.' +
@@ -3198,7 +3174,6 @@ function ViewData(Lt) {
     $('#download-csv-button').off('click');
     $('#download-tab-button').off('click');
     $('#copy-data-button').off('click');
-    $('#refresh-button').off('click');
     $('#delete-button').off('click');
     $('#copy-data-button').off('click');
     this.dialog.close();
@@ -3404,7 +3379,15 @@ function ImageAdjustment(Lt) {
     <input class="imageSlider" id="saturation-slider" type=range min=0 max=350 value=100></div> \
     <label style="text-align:center;display:block;">Hue Rotation</label> \
     <input class="imageSlider" id="hue-slider" type=range min=0 max=360 value=0> \
-     <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
+     <label style="text-align:center;display:block;">Sharpness</label> \
+    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">Emboss</label> \
+    <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">edgeDetect</label> \
+    <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">unsharpen</label> \
+    <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
     <button id="reset-button" style="margin-left:auto; margin-right:auto; margin-top: 5px;display:block;" class="mdc-button mdc-button--unelevated mdc-button-compact">reset</button></div>').addTo(Lt.viewer);
 
   /**
@@ -3417,13 +3400,34 @@ function ImageAdjustment(Lt) {
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
     var invert = $("#invert-checkbox").prop('checked')?1:0;
+    var sharpnessSlider = document.getElementById("sharpness-slider").value;
+    var embossSlider = document.getElementById("emboss-slider").value;
+    var edgeDetect = document.getElementById("edgeDetect-slider").value;
+    var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     document.getElementsByClassName("leaflet-pane")[0].style.filter =
       "contrast(" + contrastSlider.value + "%) " +
       "brightness(" + brightnessSlider.value + "%) " +
       "saturate(" + saturationSlider.value + "%) " +
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
-
+    Lt.baseLayer['GL Layer'].setKernelsAndStrength([
+      {
+			"name":"emboss",
+			"strength": embossSlider
+      },
+      {
+        "name":"edgeDetect3",
+        "strength": edgeDetect
+      },
+      {
+        "name":"sharpness",
+        "strength": sharpnessSlider
+      },
+      {
+        "name":"unsharpen",
+        "strength": unsharpnessSlider
+      }
+    ]);
   };
 
   /**
@@ -3437,7 +3441,10 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
-    
+    var sharpnessSlider = document.getElementById("sharpness-slider");
+    var embossSlider = document.getElementById("emboss-slider");
+    var edgeDetect = document.getElementById("edgeDetect-slider");
+    var unsharpnessSlider = document.getElementById("unsharpness-slider");
     //Close view if user clicks anywhere outside of slider window
     $(Lt.viewer.getContainer()).click(e => {
       this.disable();
@@ -3455,6 +3462,10 @@ function ImageAdjustment(Lt) {
       $(contrastSlider).val(100);
       $(saturationSlider).val(100);
       $(hueSlider).val(0);
+      $(sharpnessSlider).val(0);
+      $(embossSlider).val(0);
+      $(edgeDetect).val(0);
+      $(unsharpnessSlider).val(0);
       this.updateFilters();
     });
     $("#invert-button").click(() => {
@@ -3477,6 +3488,107 @@ function ImageAdjustment(Lt) {
   };
 
 }
+ 
+/**
+ * Change GL Filter
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+// function PixelAdjustment(Lt) {
+//   this.btn = new Button(
+//     'brush',
+//     'Edit the pixel composition',
+//     () => { Lt.disableTools(); this.enable() },
+//     () => { this.disable() }
+//   );
+
+//   this.dialog = L.control.dialog({
+//     'size': [340, 280],
+//     'anchor': [50, 5],
+//     'initOpen': false
+//   }).setContent(
+//     '<div><label style="text-align:center;display:block;">Sharpness</label> \
+//     <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+//     <label style="text-align:center;display:block;">Emboss</label> \
+//     <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+//     <label style="text-align:center;display:block;">edgeDetect</label> \
+//     <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
+//     <label style="text-align:center;display:block;">unsharpen</label> \
+//     <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+//     </div>').addTo(Lt.viewer);
+
+//   /**
+//    * Update the image filter to reflect slider values
+//    * @function updateFilters
+//    */
+//   PixelAdjustment.prototype.updateFilters = function() {
+//     var sharpnessSlider = document.getElementById("sharpness-slider").value;
+//     var embossSlider = document.getElementById("emboss-slider").value;
+//     var edgeDetect = document.getElementById("edgeDetect-slider").value;
+//     var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
+//     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
+//       {
+// 			"name":"emboss",
+// 			"strength": embossSlider
+//       },
+//       {
+//         "name":"edgeDetect3",
+//         "strength": edgeDetect
+//       },
+//       {
+//         "name":"sharpness",
+//         "strength": sharpnessSlider
+//       },
+//       {
+//         "name":"unsharpen",
+//         "strength": unsharpnessSlider
+//       }
+//     ]);
+//   };
+
+
+//   /**
+//    * Open the filter sliders dialog
+//    * @function enable
+//    */
+//   PixelAdjustment.prototype.enable = function() {
+//     this.dialog.lock();
+//     this.dialog.open();
+//     var sharpnessSlider = document.getElementById("sharpness-slider");
+    
+//     //Close view if user clicks anywhere outside of slider window
+//     $(Lt.viewer.getContainer()).click(e => {
+//       this.disable();
+//     });
+
+//     this.btn.state('active');
+//     $(".imageSlider").change(() => {
+//       this.updateFilters();
+//     });
+//     $("#invert-checkbox").change(() => {
+//       this.updateFilters();
+//     });
+//     $("#reset-button").click(() => {
+//       $(sharpnessSlider).val(-1);
+//       this.updateFilters();
+//     });
+//     $("#invert-button").click(() => {
+//       $(sharpnessSlider).val(-1);
+//       this.updateFilters();
+//     });
+//   };
+
+//   /**
+//    * Close the filter sliders dialog
+//    * @function disable
+//    */
+//   PixelAdjustment.prototype.disable = function() {
+//     this.dialog.unlock();
+//     this.dialog.close();
+//     this.btn.state('inactive');
+//   };
+
+// }
 
 /**
 * Change measurement options (set subAnnual, previously hasLatewood, and direction)
@@ -4188,3 +4300,37 @@ function Helper(Lt) {
     return i;
   }
 };
+function assignRowColor(e,y,Lt, lengthAsAString)
+{
+  var stringContent;
+  if (Lt.measurementOptions.subAnnual) {
+    var wood;
+    var row_color;
+    if (e.earlywood) {
+      wood = 'E';
+      row_color = '#02bfd1';
+    } else {
+      wood = 'L';
+      row_color = '#00838f';
+      y++;
+    };
+    if(e.year%10===0)
+    {
+      if(wood === 'E')
+      {
+        row_color='#d17154';
+      }
+      else{
+        row_color= '#db2314';
+      }
+    }
+
+    stringContent = '<tr style="color:' + row_color + ';">';
+    stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
+  } else {
+    y++;
+    row_color = e.year%10===0? 'red':'#00d2e6';
+    stringContent = ('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
+  }
+  return stringContent;
+}
