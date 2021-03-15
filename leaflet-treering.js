@@ -405,7 +405,7 @@ function MeasurementData (dataObject, Lt) {
     };
 
     var new_points = this.points;
-    var second_points = this.points.slice().splice(i, this.index - 1);
+    var second_points = this.points.slice().splice(i);
     var k = i;
     var year_adjusted;
     var earlywood_adjusted = true;
@@ -421,7 +421,11 @@ function MeasurementData (dataObject, Lt) {
 
       } else if (this.points[i - 1].start || this.points[i].start) { // case 2: previous or closest point is start
           year_adjusted = this.points[i].year;
-          if ((this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual) || direction == backwardInTime) {
+          if (this.points[i - 2] && this.points[i - 2].earlywood && measurementOptions.subAnnual && direction == forwardInTime) {
+            earlywood_adjusted = false;
+          } else if (this.points[i - 2] && !this.points[i - 2].earlywood && measurementOptions.subAnnual && direction == backwardInTime) {
+            earlywood_adjusted = true;
+          } else if (direction == backwardInTime) {
             earlywood_adjusted = false;
           };
 
@@ -448,7 +452,7 @@ function MeasurementData (dataObject, Lt) {
 
     k++;
 
-    second_points.map(e => {
+    second_points.map((e, i) => {
       if(!e) {
        return;
       }
