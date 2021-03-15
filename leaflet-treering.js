@@ -2200,7 +2200,7 @@ function InsertPoint(Lt) {
 function ConvertToStartPoint(Lt) {
   this.active = false;
   this.btn = new Button(
-    'add_circle',
+    'change_circle',
     'Change a measurement point to a start point',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
