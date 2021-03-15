@@ -317,6 +317,7 @@ function MeasurementData (dataObject, Lt) {
       delete this.points[this.index];
       delete this.points[this.index + 1];
     } else {
+      console.log(this.index);
       var new_points = this.points;
       var k = i;
       second_points = this.points.slice().splice(i + 1, this.index - 1);
@@ -347,6 +348,7 @@ function MeasurementData (dataObject, Lt) {
       this.index--;
       delete this.points[this.index];
       this.earlywood = !this.earlywood;
+      console.log(this.index);
       if (this.points[this.index - 1].earlywood) {
         this.year--;
       }
@@ -362,7 +364,6 @@ function MeasurementData (dataObject, Lt) {
   MeasurementData.prototype.cut = function(i, j) {
     let direction = directionCheck();
     if (i > j) {
-      //var trimmed_points = this.points.slice().splice(i, this.index - 1);
       this.points.splice(j,i-j);
       var trimmed_points= this.points;
       var k = 0;
@@ -377,18 +378,15 @@ function MeasurementData (dataObject, Lt) {
         k++;
       });
       this.index = k;
+      this.points = trimmed_points;
     } else if (i < j) {
       this.points.splice(i,j-i);
-      //this.points = this.points.slice().splice(0, i);
-       //console.log(this.points);
-      // this.year = this.points[this.index-1].earlywood? this.points[this.index-1].year : this.points[this.index-1].year + 1;
-      // this.earlywood = this.year === this.points[this.index-1].year? false : true;
     } else {
       alert('You cannot select the same point');
     }
+    //Correct years to delete gap in timeline
     year = this.points[1].year;
     second = false;
-    console.log(year);
     this.points.map(e=>{
       if(e && !e.start && !e.break){
         if(measurementOptions.subAnnual)
@@ -409,9 +407,9 @@ function MeasurementData (dataObject, Lt) {
           e.year = year;
           year++;
         }
-    
       }
     });
+    console.log(this.points);
     Lt.metaDataText.updateText(); // updates after points are cut
   };
 
