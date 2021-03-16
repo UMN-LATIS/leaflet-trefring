@@ -97,7 +97,7 @@ uniform float u_kernelWeight;
 vec3 texSample(const float x, const float y, in vec2 fragCoord)
 {
 	vec2 uv = fragCoord;
-    uv = (uv + vec2((x-1.)/256.0 , (y-1.)/256.0 ));
+    uv = (uv + vec2((x)/256.0 , (y)/256.0 ));
     // this also fixed the seam by clamping one pixel from the bottom, but it's super hacky
     // if(uv.y > 0.996) {
     //     uv.y = 0.99;
