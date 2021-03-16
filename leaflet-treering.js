@@ -1263,12 +1263,16 @@ function AnnotationAsset(Lt) {
     });
 
     var editBtn = document.getElementById('edit-summary-btn');
-    $(() => {
+    if (window.name.includes('popout')) {
       $(editBtn).click(() => {
         this.editContent();
         this.openTab('edit-summary-btn', 'edit-summary-tab');
       });
-    });
+    } else {
+      $(editBtn).click(() => {
+        alert('Must be in measurement window to edit annotations.')
+      });
+    };
 
     var exitBtn = document.getElementById('exit-btn');
     $(exitBtn).click(() => {
