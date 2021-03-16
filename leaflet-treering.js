@@ -101,7 +101,7 @@ function LTreering (viewer, basePath, options) {
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': baseLayer,
@@ -2971,7 +2971,7 @@ function ConvertToStartPoint(Lt) {
     };
 
     followingPoints.map((c) => { // c = current point, i = index, a = array
-      if (!c.start && !c.break) {
+      if (c && !c.start && !c.break) {
         if (Lt.measurementOptions.subAnnual) { // flip earlywood & latewood
           if (c.earlywood) {
             c.earlywood = false;
