@@ -101,7 +101,7 @@ function LTreering (viewer, basePath, options) {
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': baseLayer,
@@ -1417,11 +1417,11 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createMouseEventListeners = function (index) {
     // how marker reacts when clicked
     $(this.markers[index]).click(() => {
-      Lt.collapseTools();
       if (this.deleteBtn.active) { // deleteing
         Lt.aData.deleteAnnotation(index);
         Lt.annotationAsset.reload();
       } else { // viewing or editing
+        Lt.collapseTools();
         if (this.dialogAnnotationWindow) {
           this.dialogAnnotationWindow.destroy();
           delete this.dialogAnnotationWindow
@@ -1436,31 +1436,36 @@ function AnnotationAsset(Lt) {
 
       var popupDiv = document.getElementById('mouseover-popup-div');
 
-      var popupTextTitle = document.createElement('h5');
-      popupTextTitle.className = 'annotation-title';
-      popupTextTitle.innerHTML = 'Text: ';
-      popupDiv.appendChild(popupTextTitle);
+      if (Lt.aData.annotations[index].text) { // only show text description if text exists
+        var popupTextTitle = document.createElement('h5');
+        popupTextTitle.className = 'annotation-title';
+        popupTextTitle.innerHTML = 'Text: ';
+        popupDiv.appendChild(popupTextTitle);
 
-      var popupText = document.createElement('p');
-      popupText.style.marginTop = 0;
-      popupText.style.marginBottom = '4px';
-      popupText.innerHTML = Lt.aData.annotations[index].text || 'N/A';
-      popupDiv.appendChild(popupText);
-
-      var popupDescriptionTitle = document.createElement('h5');
-      popupDescriptionTitle.className = 'annotation-title';
-      popupDescriptionTitle.style.margin = 0;
-      popupDescriptionTitle.innerHTML = 'Attributes Description: '
-      popupDiv.appendChild(popupDescriptionTitle);
-
-      var popupDescriptionList = document.createElement('ul');
-      popupDescriptionList.style.marginBottom = '3px';
-      for (var descriptorIndex in Lt.aData.annotations[index].description) {
-        var listElm = document.createElement('li');
-        listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
-        popupDescriptionList.appendChild(listElm);
+        var popupText = document.createElement('p');
+        popupText.className = 'text-content';
+        popupText.style.marginTop = 0;
+        popupText.style.marginBottom = '4px';
+        popupText.innerHTML = Lt.aData.annotations[index].text;
+        popupDiv.appendChild(popupText);
       };
-      popupDiv.appendChild(popupDescriptionList);
+
+      if (Lt.aData.annotations[index].description.length > 0) { // only show attributes if attributes exist/selected
+        var popupDescriptionTitle = document.createElement('h5');
+        popupDescriptionTitle.className = 'annotation-title';
+        popupDescriptionTitle.style.margin = 0;
+        popupDescriptionTitle.innerHTML = 'Attributes Description: '
+        popupDiv.appendChild(popupDescriptionTitle);
+
+        var popupDescriptionList = document.createElement('ul');
+        popupDescriptionList.style.marginBottom = '3px';
+        for (var descriptorIndex in Lt.aData.annotations[index].description) {
+          var listElm = document.createElement('li');
+          listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
+          popupDescriptionList.appendChild(listElm);
+        };
+        popupDiv.appendChild(popupDescriptionList);
+      };
 
       var popupYearTitle = document.createElement('h5');
       popupYearTitle.style.margin = 0;
@@ -1863,7 +1868,7 @@ function AnnotationAsset(Lt) {
 
       this.markerLayer.addLayer(this.markers[index]);
 
-      this.createBtn.active = false;
+      this.disable(this.createBtn);
     } else {
       Lt.aData.annotations[index] = content;
     };
