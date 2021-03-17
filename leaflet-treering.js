@@ -1444,13 +1444,14 @@ function AnnotationAsset(Lt) {
 
         var popupText = document.createElement('p');
         popupText.className = 'text-content';
+        popupText.style.fontSize = '14px';
         popupText.style.marginTop = 0;
         popupText.style.marginBottom = '4px';
         popupText.innerHTML = Lt.aData.annotations[index].text;
         popupDiv.appendChild(popupText);
       };
 
-      if (Lt.aData.annotations[index].description.length > 0) { // only show attributes if attributes exist/selected
+      if (Lt.aData.annotations[index].description && Lt.aData.annotations[index].description.length > 0) { // only show attributes if attributes exist/selected
         var popupDescriptionTitle = document.createElement('h5');
         popupDescriptionTitle.className = 'annotation-title';
         popupDescriptionTitle.style.margin = 0;
@@ -1474,7 +1475,9 @@ function AnnotationAsset(Lt) {
       popupDiv.appendChild(popupYearTitle);
 
       var popupYear = document.createElement('span');
+      popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
+      popupYear.style.fontSize = '14px';
       popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
       popupDiv.appendChild(popupYear);
     });
