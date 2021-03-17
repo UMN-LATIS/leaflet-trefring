@@ -53,6 +53,16 @@
         trackResize: true
     }).setView([0, 0], 0);
 
+		// Zoom to annotation URL
+		var getURL = window.location.href;
+		var parsedURL = new URL(getURL);
+		var urlParams = new URLSearchParams(parsedURL.search);
+		var latData = urlParams.get("lat");
+		var lngData = urlParams.get("lng");
+		if (latData && lngData) {
+				map.setView([latData, lngData], 16); //  max zoom level is 18
+		};
+
     var baseLayer = L.tileLayer.elevator(function(coords, tile, done) {
         var error;
         var params = {Bucket: 'elevator-assets', Key: "testasset7/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
@@ -103,23 +113,23 @@ vec3 texSample(const float x, const float y, in vec2 fragCoord)
     //     uv.y = 0.99;
     // }
 	return texture2D(uTexture0, uv).xyz;
-}                
+}
 
 
 vec3 embossFilter(in vec2 fragCoord, float strength){
 	vec3 f =
-	texSample(-1.,-1., fragCoord) *  u_kernel[0] +                     
-	texSample( 0.,-1., fragCoord) *  u_kernel[1] +                    
-	texSample( 1.,-1., fragCoord) *  u_kernel[2] +                      
-	texSample(-1., 0., fragCoord) *  u_kernel[3] +                    
-	texSample( 0., 0., fragCoord) *  u_kernel[4] +                     
-	texSample( 1., 0., fragCoord) *  u_kernel[5] +                      
-	texSample(-1., 1., fragCoord) *  u_kernel[6] +                     
-	texSample( 0., 1., fragCoord) *  u_kernel[7] +                     
+	texSample(-1.,-1., fragCoord) *  u_kernel[0] +
+	texSample( 0.,-1., fragCoord) *  u_kernel[1] +
+	texSample( 1.,-1., fragCoord) *  u_kernel[2] +
+	texSample(-1., 0., fragCoord) *  u_kernel[3] +
+	texSample( 0., 0., fragCoord) *  u_kernel[4] +
+	texSample( 1., 0., fragCoord) *  u_kernel[5] +
+	texSample(-1., 1., fragCoord) *  u_kernel[6] +
+	texSample( 0., 1., fragCoord) *  u_kernel[7] +
 	texSample( 1., 1., fragCoord) *  u_kernel[8]
-	;                                              
-	return mix(texSample( 0., 0., fragCoord), f , strength); 
-}    
+	;
+	return mix(texSample( 0., 0., fragCoord), f , strength);
+}
 
 void main(void){
     // gl_Position = vec4(clipSpace * vec2(1, u_flipY), 0, 1);
