@@ -1315,7 +1315,7 @@ function AnnotationAsset(Lt) {
       '<div id="attributes-options"> \
         <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
         <button class="annotation-btn" id="create-option"><i class="fa fa-plus" aria-hidden="true"></i></button> \
-        <textarea class="attribute-textbox" id="title-input" placeholder="Enter title to edit or create a new attribute."></textarea> \
+        <textarea class="attribute-textbox" id="title-input" placeholder="Title."></textarea> \
       </div> \
       <hr id="attributes-hr"> \
       <div> \
@@ -1336,6 +1336,20 @@ function AnnotationAsset(Lt) {
       optionDeleteBtn.className = 'annotation-btn';
       optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
       $(optionDeleteBtn).click(() => {
+        // remove div & option description/code from this.description & this.code
+        let descriptionTextarea = newOptionDiv.getElementsByTagName('DIV')[0].getElementsByTagName('TEXTAREA')[0];
+        let codeTextarea = newOptionDiv.getElementsByTagName('DIV')[0].getElementsByTagName('TEXTAREA')[1];
+
+        if (this.description.includes(descriptionTextarea.value)) {
+          var indexOfDescriptor = this.description.indexOf(descriptionTextarea.value);
+          this.description.splice(indexOfDescriptor, 1);
+        };
+
+        if (this.code.includes(codeTextarea.value)) {
+          var indexOfCodeEntry = this.code.indexOf(codeTextarea.value);
+          this.code.splice(indexOfCodeEntry, 1);
+        };
+
         $(newOptionDiv).remove();
       });
       newOptionDiv.appendChild(optionDeleteBtn);
@@ -1430,8 +1444,25 @@ function AnnotationAsset(Lt) {
       deleteAttributeBtn.id = attributeArray[0];
       deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attributeArray[0] + '" aria-hidden="true"></i>';
       $(deleteAttributeBtn).click((e) => {
+        var divToDelete = document.getElementsByClassName(e.target.id)[0];
+        for (let checkboxDiv of divToDelete.getElementsByTagName('DIV')) {
+          let descriptor = checkboxDiv.getElementsByTagName('INPUT')[0].id
+          let code = checkboxDiv.getElementsByTagName('INPUT')[0].value
+
+          // remove descriptor and code from this.description & this.code
+          if (this.description.includes(descriptor)) {
+            let indexOfDescriptor = this.description.indexOf(descriptor);
+            this.description.splice(indexOfDescriptor, 1);
+          };
+
+          if (this.code.includes(code)) {
+            var indexOfCodeEntry = this.code.indexOf(code);
+            this.code.splice(indexOfCodeEntry, 1);
+          };
+        };
+
         delete this.attributesObject[e.target.id];
-        $(document.getElementsByClassName(e.target.id)).remove();
+        $(divToDelete).remove();
       });
       soloAttributeDiv.appendChild(deleteAttributeBtn);
 
@@ -1704,7 +1735,7 @@ function AnnotationAsset(Lt) {
 
     var attributesList = document.createElement('ul');
     summaryAttributesDiv.appendChild(attributesList);
-    if (this.description) {
+    if (this.description && this.description.length > 0) {
       var descriptionList = this.description;
     } else {
       var descriptionList = [];
