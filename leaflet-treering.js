@@ -1245,7 +1245,6 @@ function AnnotationAsset(Lt) {
       '<div class="tab"> \
         <button class="tabLinks" id="summary-btn">Summary</button> \
         <button class="tabLinks" id="edit-summary-btn">Edit</button> \
-        <button class="tabLinks" id="exit-btn">Save & Close</button> \
       </div> \
       <div id="summary-tab" class="tabContent"></div> \
       <div id="edit-summary-tab" class="tabContent"></div>',
@@ -1259,6 +1258,7 @@ function AnnotationAsset(Lt) {
       $(summaryBtn).click(() => {
         if (this.dialogAttributesWindow) {
           this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
         };
         this.summaryContent();
         this.openTab('summary-btn', 'summary-tab');
@@ -1277,19 +1277,20 @@ function AnnotationAsset(Lt) {
       });
     };
 
-    var exitBtn = document.getElementById('exit-btn');
-    $(exitBtn).click(() => {
-      if (this.createBtn.active) {
-        this.saveAnnotation();
-      } else {
-        this.saveAnnotation(index);
-      };
+    // save & close dialog window when dialog closed w/ built in close button
+    $(this.dialogAnnotationWindow._map).on('dialog:closed', (dialog) => {
+      if (this.dialogAnnotationWindow && (dialog.originalEvent._content === this.dialogAnnotationWindow._content)) {
+        if (this.createBtn.active) {
+          this.saveAnnotation();
+        } else {
+          this.saveAnnotation(index);
+        };
 
-      this.dialogAnnotationWindow.destroy();
-      delete this.dialogAnnotationWindow;
+        this.dialogAnnotationWindow.destroy();
+        delete this.dialogAnnotationWindow;
+      };
     });
 
-    this.dialogAnnotationWindow.hideClose();
     this.dialogAnnotationWindow.open();
 
     if (this.createBtn.active) { // if action is to create an annotation
@@ -1316,9 +1317,9 @@ function AnnotationAsset(Lt) {
         <button class="annotation-btn" id="create-option"><i class="fa fa-plus" aria-hidden="true"></i></button> \
         <textarea class="attribute-textbox" id="title-input" placeholder="Enter title to edit or create a new attribute."></textarea> \
       </div> \
-      <div id="attributes-options-save">\
-        <hr id="attributes-hr"> \
-        <button class="annotation-btn" id="save-exit-options"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save & Exit </button \
+      <hr id="attributes-hr"> \
+      <div> \
+        <p id="attributes-warning"> Use ESC to exit without saving. </p> \
       </div>'
     ).addTo(Lt.viewer);
 
@@ -1367,41 +1368,44 @@ function AnnotationAsset(Lt) {
               },
     };
     */
-    var exitOptionsBtn = document.createElement('button');
-    exitOptionsBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i> Exit Only';
-    exitOptionsBtn.className = 'annotation-btn';
-    $(exitOptionsBtn).click (() => {
-      this.dialogAttributesWindow.destroy();
+
+    // destroy window without saveing anything with ESC
+    $(document).keyup((e) => {
+      if (e.keyCode === 27 && this.dialogAttributesWindow) {
+        this.dialogAttributesWindow.destroy();
+        delete this.dialogAttributesWindow
+      };
     });
 
-    var saveOptionsDiv = document.getElementById('attributes-options-save');
-    saveOptionsDiv.appendChild(exitOptionsBtn);
+    // save & close dialog window when dialog closed w/ built in close button
+    $(this.dialogAttributesWindow._map).on('dialog:closed', (dialog) => {
+      if (this.dialogAttributesWindow && (dialog.originalEvent._content === this.dialogAttributesWindow._content)) {
+        var allOptionsTitled = true;
 
-    var saveOptionsBtn = document.getElementById('save-exit-options');
-    $(saveOptionsBtn).click(() => {
-      var allOptionsTitled = true;
+        var titleText = document.getElementById('title-input').value;
+        var optionsElmList = document.getElementsByClassName('attribute-option');
 
-      var titleText = document.getElementById('title-input').value;
-      var optionsElmList = document.getElementsByClassName('attribute-option');
-
-      var optionsObject = {};
-      for (var i = 0; i < optionsElmList.length; i += 2) {
-        // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
-        // based on the order they are created above
-        if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
-          alert("Attribute must have a title and all options must be named and given a code.");
-          allOptionsTitled = false;
-          break;
-        } else {
-          optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
-          allOptionsTitled = true;
+        var optionsObject = {};
+        for (var i = 0; i < optionsElmList.length; i += 2) {
+          // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
+          // based on the order they are created above
+          if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
+            alert("Attribute must have a title and all options must be named and given a code.");
+            this.dialogAttributesWindow.open();
+            allOptionsTitled = false;
+            break;
+          } else {
+            optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+            allOptionsTitled = true;
+          };
         };
-      };
 
-      if (allOptionsTitled === true) {
-        this.attributesObject[titleText] = optionsObject;
-        this.dialogAttributesWindow.destroy();
-        this.createCheckboxes(document.getElementById('attributes-options-div'));
+        if (allOptionsTitled === true) {
+          this.attributesObject[titleText] = optionsObject;
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
+          this.createCheckboxes(document.getElementById('attributes-options-div'));
+        };
       };
     });
   };
@@ -1409,16 +1413,16 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
 
-    for (var attribute in this.attributesObject) {
-      var soloAttributeDiv = document.createElement('div');
+    for (let attribute in this.attributesObject) {
+      let soloAttributeDiv = document.createElement('div');
       soloAttributeDiv.className = attribute;
 
-      var title = document.createElement('p');
+      let title = document.createElement('p');
       title.className = 'option-title';
       title.innerHTML = attribute;
       soloAttributeDiv.appendChild(title);
 
-      var deleteAttributeBtn = document.createElement('button');
+      let deleteAttributeBtn = document.createElement('button');
       deleteAttributeBtn.className = 'annotation-btn attribute-btn';
       deleteAttributeBtn.id = attribute;
       deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
@@ -1428,50 +1432,48 @@ function AnnotationAsset(Lt) {
       });
       soloAttributeDiv.appendChild(deleteAttributeBtn);
 
-      var editAttributeBtn = document.createElement('button');
+      let editAttributeBtn = document.createElement('button');
       editAttributeBtn.className = 'annotation-btn attribute-btn';
       editAttributeBtn.id = attribute;
       editAttributeBtn.innerHTML = '<i class="fa fa-pencil" id="' + attribute + '" aria-hidden="true"></i>';
       $(editAttributeBtn).click((e) => {
         this.createAttributesDialog();
-        this.dialogAttributesWindow.hideClose();
         this.dialogAttributesWindow.open();
 
-        var inputTitle = document.getElementById('title-input');
+        let inputTitle = document.getElementById('title-input');
         inputTitle.value = attribute;
 
         // reset attribute code & description
-        var optionNodes = soloAttributeDiv.childNodes;
-        for (var k=0; k < optionNodes.length; k++) {
-          if (optionNodes[k].tagName == 'div' || optionNodes[k].tagName == 'DIV') {
+        let optionNodes = soloAttributeDiv.childNodes;
+        for (let node of optionNodes) {
+          if (node.tagName == 'div' || node.tagName == 'DIV') {
             // firstchild = checkbox input
-            var inputDescription = optionNodes[k].firstChild.id;
-            var inputCode = optionNodes[k].firstChild.value;
+            let inputDescription = node.firstChild.id;
+            let inputCode = node.firstChild.value;
 
             document.getElementById('create-option').click();
 
-            // get 2cd to last textarea created aka the description textarea
-            var textareaDescriptionInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 2];
+            // get second to last textarea created aka the most recent description textarea
+            let textareaDescriptionInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 2];
             textareaDescriptionInput.value = inputDescription;
-            var inputDescriptionIndex = this.description.indexOf(inputDescription);
+            let inputDescriptionIndex = this.description.indexOf(inputDescription);
 
-            // get last textarea created aka the code textarea
-            var textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
+            // get last textarea created aka the most recent code textarea
+            let textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
             textareaCodeInput.value = inputCode;
-            var inputCodeIndex = this.code.indexOf(inputCode);
+            let inputCodeIndex = this.code.indexOf(inputCode);
 
-            var node = optionNodes[k];
             $(textareaDescriptionInput).change(() => {
-              if (node.firstChild.checked) {
-                this.description[inputDescriptionIndex] = textareaDescriptionInput.value;
+              if (node.firstChild.checked && inputDescriptionIndex !== -1) {
+                Lt.annotationAsset.description[inputDescriptionIndex] = textareaDescriptionInput.value;
               };
             });
 
             $(textareaCodeInput).change(() => {
-              if (node.firstChild.checked) {
-                this.code[inputCodeIndex] = textareaCodeInput.value;
+              if (node.firstChild.checked && inputCodeIndex !== -1) {
+                Lt.annotationAsset.code[inputCodeIndex] = textareaCodeInput.value;
               };
-            })
+            });
           };
         };
 
@@ -1481,18 +1483,18 @@ function AnnotationAsset(Lt) {
       });
       soloAttributeDiv.appendChild(editAttributeBtn);
 
-      var optionsObject = this.attributesObject[attribute];
-      for (var option in optionsObject) {
-        var soloOptionDiv = document.createElement('div');
+      let optionsObject = this.attributesObject[attribute];
+      for (let option in optionsObject) {
+        let soloOptionDiv = document.createElement('div');
         soloOptionDiv.className = 'attribute-option-divs';
 
-        var checkbox = document.createElement('input');
+        let checkbox = document.createElement('input');
         checkbox.className = 'checkboxes';
         checkbox.type = 'checkbox';
         checkbox.id = option; // attribute descriptor
         checkbox.value = optionsObject[option]; // code associated w/ option
 
-        var attributesList = this.description || [];
+        let attributesList = this.description || [];
         if (attributesList.includes(option)) {
           checkbox.checked = true;
         };
@@ -1511,7 +1513,7 @@ function AnnotationAsset(Lt) {
         });
         soloOptionDiv.appendChild(checkbox);
 
-        var label = document.createElement('label');
+        let label = document.createElement('label');
         label.innerHTML = option;
         label.for = option;
         soloOptionDiv.appendChild(label);
@@ -1684,7 +1686,7 @@ function AnnotationAsset(Lt) {
     attributeCode.className = 'text-content';
     attributeCode.style.margin = 0;
     var code = '';
-    if (this.code.length > 0) {
+    if (this.code && this.code.length > 0) {
       for (var codeEntry of this.code) {
         code += codeEntry;
       }
@@ -1814,11 +1816,9 @@ function AnnotationAsset(Lt) {
     $(openAttributeEditButton).click(() => {
       if (this.dialogAttributesWindow) {
         this.dialogAttributesWindow.destroy();
+        delete this.dialogAttributesWindow;
       };
       this.createAttributesDialog();
-
-
-      this.dialogAttributesWindow.hideClose();
       this.dialogAttributesWindow.open();
       document.getElementById('create-option').click(); // add one option by default
     });

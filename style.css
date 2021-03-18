@@ -310,9 +310,16 @@ textarea {
 }
 
 #attributes-hr {
-	height: 2%;
-	margin: 4% 0;
+	height: 2px;
+	margin: 1px 0;
 	background-color: #ccc;
+}
+
+#attributes-warning {
+	font-size: 12px;
+	font-weight: bold;
+	margin: 0;
+	color: #ccc;
 }
 
 #save-exit-options {
