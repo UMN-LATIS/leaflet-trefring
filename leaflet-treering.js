@@ -1413,19 +1413,22 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
 
-    for (let attribute in this.attributesObject) {
+    // use array of object so order of checkbox creation is constant 
+    var attributesObjectArray = Object.entries(this.attributesObject);
+
+    for (let attributeArray of attributesObjectArray) {
       let soloAttributeDiv = document.createElement('div');
-      soloAttributeDiv.className = attribute;
+      soloAttributeDiv.className = attributeArray[0];
 
       let title = document.createElement('p');
       title.className = 'option-title';
-      title.innerHTML = attribute;
+      title.innerHTML = attributeArray[0];
       soloAttributeDiv.appendChild(title);
 
       let deleteAttributeBtn = document.createElement('button');
       deleteAttributeBtn.className = 'annotation-btn attribute-btn';
-      deleteAttributeBtn.id = attribute;
-      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
+      deleteAttributeBtn.id = attributeArray[0];
+      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attributeArray[0] + '" aria-hidden="true"></i>';
       $(deleteAttributeBtn).click((e) => {
         delete this.attributesObject[e.target.id];
         $(document.getElementsByClassName(e.target.id)).remove();
@@ -1434,14 +1437,14 @@ function AnnotationAsset(Lt) {
 
       let editAttributeBtn = document.createElement('button');
       editAttributeBtn.className = 'annotation-btn attribute-btn';
-      editAttributeBtn.id = attribute;
-      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" id="' + attribute + '" aria-hidden="true"></i>';
+      editAttributeBtn.id = attributeArray[0];
+      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" id="' + attributeArray[0] + '" aria-hidden="true"></i>';
       $(editAttributeBtn).click((e) => {
         this.createAttributesDialog();
         this.dialogAttributesWindow.open();
 
         let inputTitle = document.getElementById('title-input');
-        inputTitle.value = attribute;
+        inputTitle.value = attributeArray[0];
 
         // reset attribute code & description
         let optionNodes = soloAttributeDiv.childNodes;
@@ -1483,7 +1486,7 @@ function AnnotationAsset(Lt) {
       });
       soloAttributeDiv.appendChild(editAttributeBtn);
 
-      let optionsObject = this.attributesObject[attribute];
+      let optionsObject = attributeArray[1];
       for (let option in optionsObject) {
         let soloOptionDiv = document.createElement('div');
         soloOptionDiv.className = 'attribute-option-divs';
