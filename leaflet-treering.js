@@ -1413,7 +1413,7 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
 
-    // use array of object so order of checkbox creation is constant 
+    // use array of object so order of checkbox creation is constant
     var attributesObjectArray = Object.entries(this.attributesObject);
 
     for (let attributeArray of attributesObjectArray) {
@@ -1479,9 +1479,6 @@ function AnnotationAsset(Lt) {
             });
           };
         };
-
-        // delete orginal attribute
-        delete this.attributesObject[attribute];
 
       });
       soloAttributeDiv.appendChild(editAttributeBtn);
