@@ -208,7 +208,7 @@ th {
 	border: none;
 	border-top: none;
 	font-size: 12px;
-	margin-top: 10%;
+	margin-top: 24px;
 	width: 100%;
 }
 
@@ -225,13 +225,17 @@ textarea {
 	margin-bottom: 2%;
 }
 
+.editTextDiv {
+	margin: 0;
+}
+
 #text-title {
 	margin-bottom: 0;
 	font-weight: bold;
 }
 
 .text-content {
-	font-size: 16px;
+	font-size: 12px;
 	word-wrap: break-word;
 }
 
@@ -242,37 +246,32 @@ textarea {
 	display: inline;
 }
 
-.summaryAttributesDiv p {
-	font-size: 16px;
-	margin: 0;
-}
-
 .summaryAttributesDiv li {
-	font-size: 14px;
+	font-size: 12px;
 }
 
 .summaryLinkDiv {
 	margin-top: 10px;
 }
 
-
 .editAttributesDiv {
 	margin-top: 10px;
 }
 
 .editAttributesDiv p {
-	font-size: 16px;
-	margin: 0;
+	font-size: 14px;
+	margin: 0 0 0 10px;
+	display: inline;
 }
 
 .editAttributesDiv input {
-	margin-left: 5%;
+	margin: 0 0 0 20px;
 }
 
 .editAttributesDiv label {
 	font-weight: normal;
-	font-size: 14px;
-	margin-left: 2%;
+	font-size: 12px;
+	margin-left: 2px;
 }
 
 .attribute-label {
@@ -296,11 +295,18 @@ textarea {
 .annotation-btn {
 	float: right;
 	border: none;
-	border-radius: 6px;
-	background-color: white;
 	width: auto;
 	height: auto;
 	text-align: center;
+	margin: 0;
+	padding: 0 0;
+	background-color: white;
+}
+
+.attribute-btn {
+	margin-top: 4px;
+	margin-left: 4px;
+	font-size: 12px;
 }
 
 #attributes-hr {
@@ -327,10 +333,6 @@ textarea {
 	width: auto;
 }
 
-.summaryAssociatedYearDiv span {
-	font-size: 16px;
-}
-
 .editAssociatedYearDiv {
 	margin-top: 10px;
 }
@@ -344,11 +346,12 @@ textarea {
 
 .color-btn {
 	border-radius: 12px;
-	border-width: 0pc;
-	margin: 2% 3%;
+	border-width: 0;
+	margin: 2% 8%;
+	text-align: center;
 	display: inline-block;
-	height: 28px;
-	width: 40px;
+	height: 18px;
+	width: 20px;
 }
 
 .\#ff1c22 { /* red */
@@ -357,6 +360,7 @@ textarea {
 	background-color: #ff1c22;
 	border-radius: 50%;
 	display: inline-block;
+	margin-left: 0;
 }
 
 .\#17b341 { /* green */
@@ -381,4 +385,5 @@ textarea {
 	background-color: #db029f;
 	border-radius: 50%;
 	display: inline-block;
+	margin-right: 0;
 }

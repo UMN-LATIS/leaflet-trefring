@@ -1206,7 +1206,7 @@ function AnnotationAsset(Lt) {
     } else {
       // want this.color to stay constant between creating annotations
       this.text = '';
-      this.code = '';
+      this.code = [];
       this.description = [];
       this.calculatedYear = 0;
       this.yearAdjustment = 0;
@@ -1237,7 +1237,8 @@ function AnnotationAsset(Lt) {
     };
 
     this.dialogAnnotationWindow = L.control.dialog({
-      'size': [300, 250],
+      'minSize': [0, 0],
+      'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
       'anchor': [50, 5],
       'initOpen': false
     }).setContent(
@@ -1249,6 +1250,8 @@ function AnnotationAsset(Lt) {
       <div id="summary-tab" class="tabContent"></div> \
       <div id="edit-summary-tab" class="tabContent"></div>',
     ).addTo(Lt.viewer);
+
+    $(this.dialogAnnotationWindow._map).on('dialog:resizeend', () => {console.log(this.dialogAnnotationWindow.options.size)} )
 
     // move between tabs & save edits
     var summaryBtn = document.getElementById('summary-btn');
@@ -1286,7 +1289,6 @@ function AnnotationAsset(Lt) {
       delete this.dialogAnnotationWindow;
     });
 
-    this.dialogAnnotationWindow.hideResize();
     this.dialogAnnotationWindow.hideClose();
     this.dialogAnnotationWindow.open();
 
@@ -1304,13 +1306,14 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.createAttributesDialog = function () {
     this.dialogAttributesWindow = L.control.dialog({
-      'size': [300, 185],
+      'minSize': [0, 0],
+      'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
       'anchor': [50, 310],
       'initOpen': false
     }).setContent(
       '<div id="attributes-options"> \
         <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
-        <button class="annotation-btn" id="submit-options"><i class="fa fa-plus" aria-hidden="true"></i></button> \
+        <button class="annotation-btn" id="create-option"><i class="fa fa-plus" aria-hidden="true"></i></button> \
         <textarea class="attribute-textbox" id="title-input" placeholder="Enter title to edit or create a new attribute."></textarea> \
       </div> \
       <div id="attributes-options-save">\
@@ -1318,37 +1321,173 @@ function AnnotationAsset(Lt) {
         <button class="annotation-btn" id="save-exit-options"><i class="fa fa-floppy-o" aria-hidden="true"></i> Save & Exit </button \
       </div>'
     ).addTo(Lt.viewer);
+
+    var addAttributeOption = document.getElementById('create-option');
+    $(addAttributeOption).click(() => {
+      var newOptionDiv = document.createElement('div');
+
+      var optionTitle = document.createElement('label');
+      optionTitle.className = 'attribute-label';
+      optionTitle.innerHTML = 'Option: '
+      newOptionDiv.appendChild(optionTitle);
+
+      var optionDeleteBtn = document.createElement('button');
+      optionDeleteBtn.className = 'annotation-btn';
+      optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+      $(optionDeleteBtn).click(() => {
+        $(newOptionDiv).remove();
+      });
+      newOptionDiv.appendChild(optionDeleteBtn);
+
+      var optionTextDiv = document.createElement('div');
+
+      var optionTextbox = document.createElement('textarea');
+      optionTextbox.className += 'attribute-option attribute-textbox';
+      optionTextbox.placeholder = 'Description.';
+      optionTextDiv.appendChild(optionTextbox);
+
+      var optionTextCode = document.createElement('textarea');
+      optionTextCode.className += 'attribute-option attribute-textbox';
+      optionTextCode.placeholder = 'Code.';
+      optionTextDiv.appendChild(optionTextCode);
+
+      newOptionDiv.appendChild(optionTextDiv)
+
+      var fullOptionDiv = document.getElementById('attributes-options');
+      fullOptionDiv.appendChild(newOptionDiv);
+    });
+
+    /* Model for saving attributes:
+    var attributesObject = {
+      "title 1": { "option 1": "code 1",
+                 "option 2": "code 2",
+               },
+      "title 2": { "option 1": "code 1",
+                "option 2": "code 2",
+              },
+    };
+    */
+    var exitOptionsBtn = document.createElement('button');
+    exitOptionsBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i> Exit Only';
+    exitOptionsBtn.className = 'annotation-btn';
+    $(exitOptionsBtn).click (() => {
+      this.dialogAttributesWindow.destroy();
+    });
+
+    var saveOptionsDiv = document.getElementById('attributes-options-save');
+    saveOptionsDiv.appendChild(exitOptionsBtn);
+
+    var saveOptionsBtn = document.getElementById('save-exit-options');
+    $(saveOptionsBtn).click(() => {
+      var allOptionsTitled = true;
+
+      var titleText = document.getElementById('title-input').value;
+      var optionsElmList = document.getElementsByClassName('attribute-option');
+
+      var optionsObject = {};
+      for (var i = 0; i < optionsElmList.length; i += 2) {
+        // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
+        // based on the order they are created above
+        if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
+          alert("Attribute must have a title and all options must be named and given a code.");
+          allOptionsTitled = false;
+          break;
+        } else {
+          optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+          allOptionsTitled = true;
+        };
+      };
+
+      if (allOptionsTitled === true) {
+        this.attributesObject[titleText] = optionsObject;
+        this.dialogAttributesWindow.destroy();
+        this.createCheckboxes(document.getElementById('attributes-options-div'));
+      };
+    });
   };
 
   AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
-    buttonList = [];
-    divList = [];
 
     for (var attribute in this.attributesObject) {
-      var individualOptionDiv = document.createElement('div');
-      individualOptionDiv.className = attribute;
-      divList.push(individualOptionDiv);
+      var soloAttributeDiv = document.createElement('div');
+      soloAttributeDiv.className = attribute;
 
       var title = document.createElement('p');
+      title.className = 'option-title';
       title.innerHTML = attribute;
-      individualOptionDiv.appendChild(title);
+      soloAttributeDiv.appendChild(title);
 
-      var deleteOptionBtn = document.createElement('button');
-      deleteOptionBtn.className = 'annotation-btn';
-      deleteOptionBtn.id = attribute;
-      deleteOptionBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
-      $(deleteOptionBtn).click((e) => {
+      var deleteAttributeBtn = document.createElement('button');
+      deleteAttributeBtn.className = 'annotation-btn attribute-btn';
+      deleteAttributeBtn.id = attribute;
+      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attribute + '" aria-hidden="true"></i>';
+      $(deleteAttributeBtn).click((e) => {
         delete this.attributesObject[e.target.id];
         $(document.getElementsByClassName(e.target.id)).remove();
       });
-      buttonList.push(deleteOptionBtn);
-      individualOptionDiv.appendChild(deleteOptionBtn);
+      soloAttributeDiv.appendChild(deleteAttributeBtn);
+
+      var editAttributeBtn = document.createElement('button');
+      editAttributeBtn.className = 'annotation-btn attribute-btn';
+      editAttributeBtn.id = attribute;
+      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" id="' + attribute + '" aria-hidden="true"></i>';
+      $(editAttributeBtn).click((e) => {
+        this.createAttributesDialog();
+        this.dialogAttributesWindow.hideClose();
+        this.dialogAttributesWindow.open();
+
+        var inputTitle = document.getElementById('title-input');
+        inputTitle.value = attribute;
+
+        // reset attribute code & description
+        var optionNodes = soloAttributeDiv.childNodes;
+        for (var k=0; k < optionNodes.length; k++) {
+          if (optionNodes[k].tagName == 'div' || optionNodes[k].tagName == 'DIV') {
+            // firstchild = checkbox input
+            var inputDescription = optionNodes[k].firstChild.id;
+            var inputCode = optionNodes[k].firstChild.value;
+
+            document.getElementById('create-option').click();
+
+            // get 2cd to last textarea created aka the description textarea
+            var textareaDescriptionInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 2];
+            textareaDescriptionInput.value = inputDescription;
+            var inputDescriptionIndex = this.description.indexOf(inputDescription);
+
+            // get last textarea created aka the code textarea
+            var textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
+            textareaCodeInput.value = inputCode;
+            var inputCodeIndex = this.code.indexOf(inputCode);
+
+            var node = optionNodes[k];
+            $(textareaDescriptionInput).change(() => {
+              if (node.firstChild.checked) {
+                this.description[inputDescriptionIndex] = textareaDescriptionInput.value;
+              };
+            });
+
+            $(textareaCodeInput).change(() => {
+              if (node.firstChild.checked) {
+                this.code[inputCodeIndex] = textareaCodeInput.value;
+              };
+            })
+          };
+        };
+
+        // delete orginal attribute
+        delete this.attributesObject[attribute];
+
+      });
+      soloAttributeDiv.appendChild(editAttributeBtn);
 
       var optionsObject = this.attributesObject[attribute];
       for (var option in optionsObject) {
+        var soloOptionDiv = document.createElement('div');
+        soloOptionDiv.className = 'attribute-option-divs';
+
         var checkbox = document.createElement('input');
-        checkbox.className += 'checkboxes';
+        checkbox.className = 'checkboxes';
         checkbox.type = 'checkbox';
         checkbox.id = option; // attribute descriptor
         checkbox.value = optionsObject[option]; // code associated w/ option
@@ -1359,27 +1498,28 @@ function AnnotationAsset(Lt) {
         };
 
         $(checkbox).change(() => { // any checkbox changes are saved
-          this.code = '';
+          this.code = [];
           this.description = [];
 
           checkboxClass = document.getElementsByClassName('checkboxes')
           for (checkboxIndex in checkboxClass) {
             if (checkboxClass[checkboxIndex].checked) {
-              this.code += checkboxClass[checkboxIndex].value;
+              this.code.push(checkboxClass[checkboxIndex].value);
               this.description.push(checkboxClass[checkboxIndex].id);
             };
           };
         });
-        individualOptionDiv.appendChild(checkbox);
+        soloOptionDiv.appendChild(checkbox);
 
         var label = document.createElement('label');
         label.innerHTML = option;
-        individualOptionDiv.appendChild(label);
+        label.for = option;
+        soloOptionDiv.appendChild(label);
 
-        individualOptionDiv.appendChild(document.createElement('br'));
-
-        attributesOptionsDiv.appendChild(individualOptionDiv);
+        soloAttributeDiv.appendChild(soloOptionDiv);
       };
+
+      attributesOptionsDiv.appendChild(soloAttributeDiv);
     };
   };
 
@@ -1444,7 +1584,6 @@ function AnnotationAsset(Lt) {
 
         var popupText = document.createElement('p');
         popupText.className = 'text-content';
-        popupText.style.fontSize = '14px';
         popupText.style.marginTop = 0;
         popupText.style.marginBottom = '4px';
         popupText.innerHTML = Lt.aData.annotations[index].text;
@@ -1477,7 +1616,6 @@ function AnnotationAsset(Lt) {
       var popupYear = document.createElement('span');
       popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
-      popupYear.style.fontSize = '14px';
       popupYear.innerHTML = Lt.aData.annotations[index].year || 0;
       popupDiv.appendChild(popupYear);
     });
@@ -1516,7 +1654,7 @@ function AnnotationAsset(Lt) {
     var summaryTextDiv = document.createElement('div');
     summaryTextDiv.className = 'summaryTextDiv';
 
-    var textTitle = document.createElement('h4');
+    var textTitle = document.createElement('h5');
     textTitle.id = 'text-title';
     textTitle.innerHTML = "Text:";
     summaryTextDiv.appendChild(textTitle);
@@ -1537,21 +1675,28 @@ function AnnotationAsset(Lt) {
     var summaryAttributesDiv = document.createElement('div');
     summaryAttributesDiv.className = 'summaryAttributesDiv';
 
-    var attributesTitle = document.createElement('h4');
+    var attributesTitle = document.createElement('h5');
     attributesTitle.className = 'annotation-title'
     attributesTitle.innerHTML = "Attributes:";
     summaryAttributesDiv.appendChild(attributesTitle);
 
     var attributeCode = document.createElement('p');
-    if (this.code) {
-      var code = this.code;
+    attributeCode.className = 'text-content';
+    attributeCode.style.margin = 0;
+    var code = '';
+    if (this.code.length > 0) {
+      for (var codeEntry of this.code) {
+        code += codeEntry;
+      }
     } else {
-      var code = 'N/A';
+      code = 'N/A';
     };
     attributeCode.innerHTML = 'Attributes Code: ' + code;
     summaryAttributesDiv.appendChild(attributeCode);
 
     var attributesDescription = document.createElement('p');
+    attributesDescription.className = 'text-content';
+    attributesDescription.style.margin = 0;
     attributesDescription.innerHTML = 'Attributes Description:';
     summaryAttributesDiv.appendChild(attributesDescription);
 
@@ -1579,12 +1724,13 @@ function AnnotationAsset(Lt) {
     var summaryAssociatedYearDiv = document.createElement('div');
     summaryAssociatedYearDiv.className = 'summaryAssociatedYearDiv';
 
-    var associatedYearTitle = document.createElement('h4');
+    var associatedYearTitle = document.createElement('h5');
     associatedYearTitle.innerHTML = 'Associated Year: ';
     associatedYearTitle.className = 'annotation-title';
     summaryAssociatedYearDiv.appendChild(associatedYearTitle);
 
     var associatedYearSpan = document.createElement('span');
+    associatedYearSpan.className = 'text-content';
     associatedYearSpan.innerHTML = this.year || 0;
     summaryAssociatedYearDiv.appendChild(associatedYearSpan);
 
@@ -1611,7 +1757,7 @@ function AnnotationAsset(Lt) {
       parsedURL.searchParams.set("lng", lng);
     };
 
-    var linkTitle = document.createElement('h4');
+    var linkTitle = document.createElement('h5');
     linkTitle.innerHTML = '<a href=' + String(parsedURL) + '> Annotation GeoLink</a>';
     linkTitle.className = 'annotation-title';
     linkTitle.id = 'link-title';
@@ -1637,7 +1783,7 @@ function AnnotationAsset(Lt) {
     var editTextDiv = document.createElement('div');
     editTextDiv.className = 'editTextDiv';
 
-    var textTitle = document.createElement('h4');
+    var textTitle = document.createElement('h5');
     textTitle.id = 'text-title';
     textTitle.innerHTML = "Text:";
     editTextDiv.appendChild(textTitle);
@@ -1656,7 +1802,7 @@ function AnnotationAsset(Lt) {
     var editAttributesDiv = document.createElement('div');
     editAttributesDiv.className = 'editAttributesDiv';
 
-    var attributesTitle = document.createElement('h4');
+    var attributesTitle = document.createElement('h5');
     attributesTitle.className = 'annotation-title'
     attributesTitle.innerHTML = "Attributes:";
     editAttributesDiv.appendChild(attributesTitle);
@@ -1671,102 +1817,15 @@ function AnnotationAsset(Lt) {
       };
       this.createAttributesDialog();
 
-      var addAttributeOption = document.getElementById('submit-options');
-      $(addAttributeOption).click(() => {
-        var newOptionDiv = document.createElement('div');
 
-        var optionTitle = document.createElement('label');
-        optionTitle.className = 'attribute-label';
-        optionTitle.innerHTML = 'Option: '
-        newOptionDiv.appendChild(optionTitle);
-
-        var optionDeleteBtn = document.createElement('button');
-        optionDeleteBtn.className = 'annotation-btn';
-        optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
-        $(optionDeleteBtn).click(() => {
-          $(newOptionDiv).remove();
-        });
-        newOptionDiv.appendChild(optionDeleteBtn);
-
-        var optionTextDiv = document.createElement('div');
-        optionTextDiv.style.width = '100%';
-        optionTextDiv.style.display = 'inline-block';
-
-        var optionTextbox = document.createElement('textarea');
-        optionTextbox.className += 'attribute-option';
-        optionTextbox.className += ' attribute-textbox';
-        optionTextbox.placeholder = 'Description.';
-        optionTextDiv.appendChild(optionTextbox);
-
-        var optionTextCode = document.createElement('textarea');
-        optionTextCode.className += 'attribute-option';
-        optionTextCode.className += ' attribute-textbox';
-        optionTextCode.placeholder = 'Code.';
-        optionTextDiv.appendChild(optionTextCode);
-
-        newOptionDiv.appendChild(optionTextDiv)
-
-        var fullOptionDiv = document.getElementById('attributes-options');
-        fullOptionDiv.appendChild(newOptionDiv);
-      });
-      addAttributeOption.click(); // add one option by default;
-
-      /* Model for saving attributes:
-      var attributesObject = {
-        "title 1": { "option 1": "code 1",
-                   "option 2": "code 2",
-                 },
-        "title 2": { "option 1": "code 1",
-                  "option 2": "code 2",
-                },
-      };
-      */
-      var exitOptionsBtn = document.createElement('button');
-      exitOptionsBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i> Exit Only';
-      exitOptionsBtn.className = 'annotation-btn';
-      $(exitOptionsBtn).click (() => {
-        this.dialogAttributesWindow.destroy();
-      });
-
-      var saveOptionsDiv = document.getElementById('attributes-options-save');
-      saveOptionsDiv.appendChild(exitOptionsBtn);
-
-      var saveOptionsBtn = document.getElementById('save-exit-options');
-      $(saveOptionsBtn).click(() => {
-        var allOptionsTitled = true;
-
-        var titleText = document.getElementById('title-input').value;
-        var optionsElmList = document.getElementsByClassName('attribute-option');
-
-        var optionsObject = {};
-        for (var i = 0; i < optionsElmList.length; i += 2) {
-          // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
-          // based on the order they are created above
-          if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
-            alert("Attribute must have a title and all options must be named and given a code.");
-            allOptionsTitled = false;
-            break;
-          } else {
-            optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
-            allOptionsTitled = true;
-          };
-        };
-
-        if (allOptionsTitled === true) {
-          this.attributesObject[titleText] = optionsObject;
-          this.dialogAttributesWindow.destroy();
-
-          this.createCheckboxes(attributesOptionsDiv);
-        };
-      });
-
-      this.dialogAttributesWindow.hideResize();
       this.dialogAttributesWindow.hideClose();
       this.dialogAttributesWindow.open();
+      document.getElementById('create-option').click(); // add one option by default
     });
     editAttributesDiv.appendChild(openAttributeEditButton);
 
     var attributesOptionsDiv = document.createElement('div');
+    attributesOptionsDiv.id = 'attributes-options-div';
     this.createCheckboxes(attributesOptionsDiv);
 
     editAttributesDiv.appendChild(attributesOptionsDiv);
@@ -1777,7 +1836,7 @@ function AnnotationAsset(Lt) {
     var editAssociatedYearDiv = document.createElement('div');
     editAssociatedYearDiv.className = 'editAssociatedYearDiv';
 
-    var associatedYearTitle = document.createElement('h4');
+    var associatedYearTitle = document.createElement('h5');
     associatedYearTitle.innerHTML = 'Associated Year: ';
     associatedYearTitle.className = 'annotation-title';
     editAssociatedYearDiv.appendChild(associatedYearTitle);
@@ -1801,7 +1860,7 @@ function AnnotationAsset(Lt) {
     var editColorDiv = document.createElement('div');
     editColorDiv.className = 'editColorDiv';
 
-    var colorTitle = document.createElement('h4');
+    var colorTitle = document.createElement('h5');
     colorTitle.className = 'annotation-title';
     colorTitle.innerHTML = 'Color: '
     colorTitle.style.display = 'block';
