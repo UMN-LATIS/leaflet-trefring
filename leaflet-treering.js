@@ -1690,7 +1690,7 @@ function AnnotationAsset(Lt) {
         checkbox.value = optionCode;
         checkbox.name = optionUniqueNum;
 
-        if (this.checkedUniqueNums.includes(checkbox.name)) {
+        if (this.checkedUniqueNums && this.checkedUniqueNums.includes(checkbox.name)) {
           checkbox.checked = true;
         };
 
