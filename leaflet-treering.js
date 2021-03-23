@@ -25,7 +25,7 @@ function LTreering (viewer, basePath, options) {
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
-    'attributesObject': options.attributesObject || {},
+    'attributesObjectArray': options.attributesObjectArray || [],
   }
 
   this.preferences = { // catch for if forwardDirection or subAnnual are undefined/null on line ~2830
@@ -1217,19 +1217,19 @@ function AnnotationAsset(Lt) {
     var cookieArray = decodedCookie.split(';');
     for (var i = 0; i < cookieArray.length; i++) {;
       var cookieNameArray = cookieArray[i].split('=');
-      var cookieNameIndex = cookieNameArray.indexOf('attributesObject');
-      var cookieAttributeObject = cookieNameArray[cookieNameIndex + 1];
+      var cookieNameIndex = cookieNameArray.indexOf('attributesObjectArray');
+      var cookieAttributesObjectArray = cookieNameArray[cookieNameIndex + 1];
     };
 
-    if (!Lt.meta.attributesObject || jQuery.isEmptyObject(Lt.meta.attributesObject)) {
+    if (!Lt.meta.attributesObjectArray || Lt.meta.attributesObjectArray.length == 0) {
       try {
-        this.attributesObject = JSON.parse(cookieAttributeObject);
+        this.attributesObjectArray = JSON.parse(cookieAttributesObjectArray);
       }
       catch (error) {
-        this.attributesObject = {};
+        this.attributesObjectArray = [];
       }
     } else {
-      this.attributesObject = Lt.meta.attributesObject;
+      this.attributesObjectArray = Lt.meta.attributesObjectArray;
     };
 
     if (this.createBtn.active == false) {
@@ -1305,7 +1305,9 @@ function AnnotationAsset(Lt) {
 
   };
 
-  AnnotationAsset.prototype.createAttributesDialog = function () {
+  AnnotationAsset.prototype.createAttributesDialog = function (attributeIndex) {
+    this.attributeIndex = attributeIndex;
+
     this.dialogAttributesWindow = L.control.dialog({
       'minSize': [0, 0],
       'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
@@ -1372,18 +1374,7 @@ function AnnotationAsset(Lt) {
       fullOptionDiv.appendChild(newOptionDiv);
     });
 
-    /* Model for saving attributes:
-    var attributesObject = {
-      "title 1": { "option 1": "code 1",
-                 "option 2": "code 2",
-               },
-      "title 2": { "option 1": "code 1",
-                "option 2": "code 2",
-              },
-    };
-    */
-
-    // destroy window without saveing anything with ESC
+    // destroy window without saving anything with ESC
     $(document).keyup((e) => {
       if (e.keyCode === 27 && this.dialogAttributesWindow) {
         this.dialogAttributesWindow.destroy();
@@ -1391,33 +1382,72 @@ function AnnotationAsset(Lt) {
       };
     });
 
+    /* Model for saving attributes:
+    var attributesObjectArray = [
+      { 'title': 'title 1',
+        'options': ['option 1', 'option 2'],
+        'codes': ['code 1', 'code 2'],
+      },
+      { 'title': 'title 2',
+        'options': ['option 3', 'option 4'],
+        'codes': ['code 3', 'code 4'],
+      };
+    ];
+    */
+
     // save & close dialog window when dialog closed w/ built in close button
     $(this.dialogAttributesWindow._map).on('dialog:closed', (dialog) => {
       if (this.dialogAttributesWindow && (dialog.originalEvent._content === this.dialogAttributesWindow._content)) {
-        var allOptionsTitled = true;
+        let allOptionsTitled = false;
+        let newAttributeObject = new Object();
+        let optionsArray = [];
+        let codesArray = [];
 
         var titleText = document.getElementById('title-input').value;
         var optionsElmList = document.getElementsByClassName('attribute-option');
 
-        var optionsObject = {};
+        if (optionsElmList.length == 0) {
+          this.dialogAttributesWindow.open();
+          alert("Attribute must have at least one option.");
+        };
+
         for (var i = 0; i < optionsElmList.length; i += 2) {
-          // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
-          // based on the order they are created above
-          if (titleText == "" || optionsElmList[i].value == "" || optionsElmList[i + 1].value == "") {
-            alert("Attribute must have a title and all options must be named and given a code.");
+          if (titleText == "" || optionsElmList[i].value == "") {
             this.dialogAttributesWindow.open();
+            alert("Attribute must have a title and all options must be named.");
             allOptionsTitled = false;
             break;
           } else {
-            optionsObject[optionsElmList[i].value] = optionsElmList[i + 1].value;
+            // each option index will line up with its given code
+            // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
+            // based on the order they are created above
+            var option = optionsElmList[i].value
+            optionsArray.push(option);
+            var code = optionsElmList[i + 1].value || '-';
+            codesArray.push(code);
             allOptionsTitled = true;
           };
         };
 
-        if (allOptionsTitled === true) {
-          this.attributesObject[titleText] = optionsObject;
+        if (allOptionsTitled === true && (!this.attributeIndex && this.attributeIndex != 0)) { // new attribute being created
+          newAttributeObject.title = document.getElementById('title-input').value;
+          newAttributeObject.options = optionsArray;
+          newAttributeObject.codes = codesArray;
+          this.attributesObjectArray.push(newAttributeObject);
+
           this.dialogAttributesWindow.destroy();
           delete this.dialogAttributesWindow
+          this.createCheckboxes(document.getElementById('attributes-options-div'));
+
+        } else if (allOptionsTitled === true && (this.attributeIndex || this.attributeIndex == 0)) { // existing attribute was edited.
+          let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+          existingAttributeObject.title = document.getElementById('title-input').value;
+          existingAttributeObject.options = optionsArray;
+          existingAttributeObject.codes = codesArray;
+
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
+          delete this.attributeIndex;
           this.createCheckboxes(document.getElementById('attributes-options-div'));
         };
       };
@@ -1427,24 +1457,19 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
     attributesOptionsDiv.innerHTML = '';
 
-    // use array of object so order of checkbox creation is constant
-    var attributesObjectArray = Object.entries(this.attributesObject);
-
-    for (let attributeArray of attributesObjectArray) {
+    for (let [attributeIndex, attributeObject] of this.attributesObjectArray.entries()) {
       let soloAttributeDiv = document.createElement('div');
-      soloAttributeDiv.className = attributeArray[0];
 
       let title = document.createElement('p');
       title.className = 'option-title';
-      title.innerHTML = attributeArray[0];
+      title.innerHTML = attributeObject.title;
       soloAttributeDiv.appendChild(title);
 
       let deleteAttributeBtn = document.createElement('button');
       deleteAttributeBtn.className = 'annotation-btn attribute-btn';
-      deleteAttributeBtn.id = attributeArray[0];
-      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" id="' + attributeArray[0] + '" aria-hidden="true"></i>';
+      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
       $(deleteAttributeBtn).click((e) => {
-        var divToDelete = document.getElementsByClassName(e.target.id)[0];
+        var divToDelete = e.target.parentNode.parentNode; // user will click <i> image not button
         for (let checkboxDiv of divToDelete.getElementsByTagName('DIV')) {
           let descriptor = checkboxDiv.getElementsByTagName('INPUT')[0].id
           let code = checkboxDiv.getElementsByTagName('INPUT')[0].value
@@ -1461,21 +1486,21 @@ function AnnotationAsset(Lt) {
           };
         };
 
-        delete this.attributesObject[e.target.id];
+        delete this.attributesObjectArray.splice(attributeIndex, 1);
         $(divToDelete).remove();
       });
       soloAttributeDiv.appendChild(deleteAttributeBtn);
 
       let editAttributeBtn = document.createElement('button');
       editAttributeBtn.className = 'annotation-btn attribute-btn';
-      editAttributeBtn.id = attributeArray[0];
-      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" id="' + attributeArray[0] + '" aria-hidden="true"></i>';
+      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" aria-hidden="true"></i>';
       $(editAttributeBtn).click((e) => {
-        this.createAttributesDialog();
+        // edits saved with createAttributesDialog save button
+        this.createAttributesDialog(attributeIndex);
         this.dialogAttributesWindow.open();
 
         let inputTitle = document.getElementById('title-input');
-        inputTitle.value = attributeArray[0];
+        inputTitle.value = attributeObject.title;
 
         // reset attribute code & description
         let optionNodes = soloAttributeDiv.childNodes;
@@ -1494,8 +1519,10 @@ function AnnotationAsset(Lt) {
 
             // get last textarea created aka the most recent code textarea
             let textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
-            textareaCodeInput.value = inputCode;
-            let inputCodeIndex = this.code.indexOf(inputCode);
+            if (inputCode != '-') { // '-' is used as filler so indexes in optionsArray & codesArray are the same
+              textareaCodeInput.value = inputCode;
+            };
+            let inputCodeIndex = inputDescriptionIndex;
 
             $(textareaDescriptionInput).change(() => {
               if (node.firstChild.checked && inputDescriptionIndex !== -1) {
@@ -1505,7 +1532,11 @@ function AnnotationAsset(Lt) {
 
             $(textareaCodeInput).change(() => {
               if (node.firstChild.checked && inputCodeIndex !== -1) {
-                Lt.annotationAsset.code[inputCodeIndex] = textareaCodeInput.value;
+                if (!textareaCodeInput.value) {
+                  Lt.annotationAsset.code[inputCodeIndex] = '-'; // '-' is used as filler so indexes in optionsArray & codesArray are the same
+                } else {
+                  Lt.annotationAsset.code[inputCodeIndex] = textareaCodeInput.value;
+                };
               };
             });
           };
@@ -1514,8 +1545,8 @@ function AnnotationAsset(Lt) {
       });
       soloAttributeDiv.appendChild(editAttributeBtn);
 
-      let optionsObject = attributeArray[1];
-      for (let option in optionsObject) {
+      let optionsArray = attributeObject.options || [];
+      for (let [optionIndex, option] of optionsArray.entries()) {
         let soloOptionDiv = document.createElement('div');
         soloOptionDiv.className = 'attribute-option-divs';
 
@@ -1523,7 +1554,7 @@ function AnnotationAsset(Lt) {
         checkbox.className = 'checkboxes';
         checkbox.type = 'checkbox';
         checkbox.id = option; // attribute descriptor
-        checkbox.value = optionsObject[option]; // code associated w/ option
+        checkbox.value = attributeObject.codes[optionIndex]; // options will have same index as code
 
         let attributesList = this.description || [];
         if (attributesList.includes(option)) {
@@ -1947,8 +1978,8 @@ function AnnotationAsset(Lt) {
       'yearAdjustment': this.yearAdjustment,
       'year': this.year,
     };
-    Lt.meta.attributesObject = this.attributesObject;
-    document.cookie = 'attributesObject=' + JSON.stringify(this.attributesObject) + '; max-age=60*60*24*365';
+    Lt.meta.attributesObjectArray = this.attributesObjectArray;
+    document.cookie = 'attributesObjectArray=' + JSON.stringify(this.attributesObjectArray) + '; max-age=60*60*24*365';
 
     if (this.createBtn.active) {
       var index = Lt.aData.index;
@@ -4347,7 +4378,7 @@ function SaveLocal(Lt) {
       'earlywood': Lt.data.earlywood,
       'index': Lt.data.index,
       'points': Lt.data.points,
-      'attributesObject': Lt.annotationAsset.attributesObject,
+      'attributesObjectArray': Lt.annotationAsset.attributesObjectArray,
       'annotations': Lt.aData.annotations,
     };
 
@@ -4441,7 +4472,7 @@ function SaveCloud(Lt) {
         'earlywood': Lt.data.earlywood,
         'index': Lt.data.index,
         'points': Lt.data.points,
-        'attributesObject': Lt.annotationAsset.attributesObject,
+        'attributesObjectArray': Lt.annotationAsset.attributesObjectArray,
         'annotations': Lt.aData.annotations,
       };
 
@@ -4593,7 +4624,7 @@ function LoadLocal(Lt) {
         'savePermission': newDataJSON.savePermission || false,
         'popoutUrl': newDataJSON.popoutUrl || null,
         'assetName': newDataJSON.assetName || 'N/A',
-        'attributesObject': newDataJSON.attributesObject || {},
+        'attributesObjectArray': newDataJSON.attributesObjectArray || [],
       }
 
       Lt.preferences = {
