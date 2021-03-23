@@ -1202,7 +1202,7 @@ function AnnotationAsset(Lt) {
       this.text = annotation.text;
       this.code = annotation.code;
       this.description = annotation.description;
-      this.checked = annotation.checked;
+      this.checkedUniqueNums = annotation.checkedUniqueNums;
       this.calculatedYear = annotation.calculatedYear;
       this.yearAdjustment = annotation.yearAdjustment;
       this.year = annotation.year;
@@ -1211,7 +1211,7 @@ function AnnotationAsset(Lt) {
       this.text = '';
       this.code = [];
       this.description = [];
-      this.checked = [];
+      this.checkedUniqueNums = [];
       this.calculatedYear = 0;
       this.yearAdjustment = 0;
       this.year = 0;
@@ -1610,21 +1610,21 @@ function AnnotationAsset(Lt) {
         checkbox.value = optionCode;
         checkbox.name = optionUniqueNum;
 
-        if (this.checked.includes(checkbox.name)) {
+        if (this.checkedUniqueNums.includes(checkbox.name)) {
           checkbox.checked = true;
         };
 
         $(checkbox).change(() => { // any checkbox changes are saved;
           this.code = [];
           this.description = [];
-          this.checked = [];
+          this.checkedUniqueNums = [];
 
           checkboxClass = document.getElementsByClassName('checkboxes')
           for (let checkboxIndex in checkboxClass) {
             if (checkboxClass[checkboxIndex].checked) {
               this.code.push(checkboxClass[checkboxIndex].value);
               this.description.push(checkboxClass[checkboxIndex].id);
-              this.checked.push(checkboxClass[checkboxIndex].name);
+              this.checkedUniqueNums.push(checkboxClass[checkboxIndex].name);
             };
           };
         });
@@ -2029,7 +2029,7 @@ function AnnotationAsset(Lt) {
       'text': this.text,
       'code': this.code,
       'description': this.description,
-      'checked': this.checked,
+      'checkedUniqueNums': this.checkedUniqueNums,
       'calculatedYear': this.calculatedYear,
       'yearAdjustment': this.yearAdjustment,
       'year': this.year,
