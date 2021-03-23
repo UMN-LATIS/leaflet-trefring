@@ -1331,7 +1331,6 @@ function AnnotationAsset(Lt) {
     });
 
     var editBtn = document.getElementById('edit-summary-btn');
-    editBtn.style.cssFloat = 'right';
     if (window.name.includes('popout')) {
       $(editBtn).click(() => {
         this.editContent();
@@ -1339,6 +1338,8 @@ function AnnotationAsset(Lt) {
       });
     } else {
       editBtn.remove();
+      summaryBtn.style.borderTopRightRadius = '10px';
+      summaryBtn.style.borderBottomRightRadius = '10px';
     };
 
     // save & close dialog window when dialog closed w/ built in close button
