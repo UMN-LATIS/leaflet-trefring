@@ -201,6 +201,11 @@ function LTreering (viewer, basePath, options) {
       this.annotationAsset.dialogAnnotationWindow.destroy();
     };
 
+    if (this.annotationAsset.dialogAttributesWindow) {
+      this.annotationAsset.dialogAttributesWindow.destroy();
+      delete this.annotationAsset.dialogAttributesWindow;
+    };
+
     this.tools.forEach(e => { e.disable() });
   };
 
@@ -1225,28 +1230,82 @@ function AnnotationAsset(Lt) {
       var cookieAttributesObjectArray = cookieNameArray[cookieNameIndex + 1];
     };
 
+    var defaultAttributes = [
+      { 'title': 'Anatomical Anomaly',
+        'options': [
+                    {
+                      'title': 'Fire Scar',
+                      'code': 'FS',
+                      'uniqueNum': '000000'
+                    },
+                    {
+                      'title': 'Frost Ring',
+                      'code': 'FR',
+                      'uniqueNum': '000001'
+                    },
+                    {
+                      'title': 'Intra-Annual Density Fluctuation',
+                      'code': 'IADF',
+                      'uniqueNum': '000002'
+                    },
+                    {
+                      'title': 'Tramatic Resin Duct',
+                      'code': 'TRD',
+                      'uniqueNum': '000003'
+                    },
+                  ]
+      },
+      { 'title': 'Location',
+        'options': [
+                    {
+                      'title': 'Earlywood',
+                      'code': 'EW',
+                      'uniqueNum': '000010'
+                    },
+                    {
+                      'title': 'Latewood',
+                      'code': 'LW',
+                      'uniqueNum': '000020'
+                    },
+                    {
+                      'title': 'Dormant',
+                      'code': 'D',
+                      'uniqueNum': '000030'
+                    },
+                  ]
+      }
+    ];
+
     if (!Lt.meta.attributesObjectArray || Lt.meta.attributesObjectArray.length == 0) {
       try {
         this.attributesObjectArray = JSON.parse(cookieAttributesObjectArray);
       }
       catch (error) {
-        this.attributesObjectArray = [];
+        this.attributesObjectArray = defaultAttributes;
       }
     } else {
-      this.attributesObjectArray = Lt.meta.attributesObjectArray;
+      if (Lt.meta.attributesObjectArray.length == 0) {
+        this.attributesObjectArray = defaultAttributes;
+      } else {
+        this.attributesObjectArray = Lt.meta.attributesObjectArray;
+      };
     };
 
     if (this.createBtn.active == false) {
       this.annotationIcon = this.markers[this.index];
     };
 
+    let size = this.annotationDialogSize || [284, 265];
+    let anchor = this.annotationDialogAnchor || [50, 5];
+
     this.dialogAnnotationWindow = L.control.dialog({
-      'minSize': [0, 0],
+      'minSize': [284, 265],
       'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
-      'anchor': [50, 5],
-      'initOpen': false
+      'size': size,
+      'anchor': anchor,
+      'initOpen': true
     }).setContent(
-      '<div class="tab"> \
+      '<div id="tab" class="tab"> \
         <button class="tabLinks" id="summary-btn">Summary</button> \
         <button class="tabLinks" id="edit-summary-btn">Edit</button> \
       </div> \
@@ -1254,7 +1313,9 @@ function AnnotationAsset(Lt) {
       <div id="edit-summary-tab" class="tabContent"></div>',
     ).addTo(Lt.viewer);
 
-    $(this.dialogAnnotationWindow._map).on('dialog:resizeend', () => {console.log(this.dialogAnnotationWindow.options.size)} )
+    // remember annotation size/location each times its resized/moved
+    $(this.dialogAnnotationWindow._map).on('dialog:resizeend', () => { this.annotationDialogSize = this.dialogAnnotationWindow.options.size } );
+    $(this.dialogAnnotationWindow._map).on('dialog:moveend', () => { this.annotationDialogAnchor = this.dialogAnnotationWindow.options.anchor } );
 
     // move between tabs & save edits
     var summaryBtn = document.getElementById('summary-btn');
@@ -1270,15 +1331,14 @@ function AnnotationAsset(Lt) {
     });
 
     var editBtn = document.getElementById('edit-summary-btn');
+    editBtn.style.cssFloat = 'right';
     if (window.name.includes('popout')) {
       $(editBtn).click(() => {
         this.editContent();
         this.openTab('edit-summary-btn', 'edit-summary-tab');
       });
     } else {
-      $(editBtn).click(() => {
-        alert('Must be in measurement window to edit annotations.')
-      });
+      editBtn.remove();
     };
 
     // save & close dialog window when dialog closed w/ built in close button
@@ -1289,6 +1349,11 @@ function AnnotationAsset(Lt) {
         } else {
           this.saveAnnotation(this.index);
           delete this.index;
+        };
+
+        if (this.dialogAttributesWindow) {
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow;
         };
 
         this.dialogAnnotationWindow.destroy();
@@ -1313,11 +1378,15 @@ function AnnotationAsset(Lt) {
   AnnotationAsset.prototype.createAttributesDialog = function (attributeIndex) {
     this.attributeIndex = attributeIndex;
 
+    let size = this.attributesDialogSize || [273, 215];
+    let anchor = this.attributesDialogAnchor || [50, 294];
+
     this.dialogAttributesWindow = L.control.dialog({
-      'minSize': [0, 0],
+      'minSize': [273, 215],
       'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
-      'anchor': [50, 310],
-      'initOpen': false
+      'size': size,
+      'anchor': anchor,
+      'initOpen': true
     }).setContent(
       '<div id="attributes-options"> \
         <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
@@ -1329,6 +1398,10 @@ function AnnotationAsset(Lt) {
         <p id="attributes-warning"> Use ESC to exit without saving. </p> \
       </div>'
     ).addTo(Lt.viewer);
+
+    // remember annotation size/location each times its resized/moved
+    $(this.dialogAttributesWindow._map).on('dialog:resizeend', () => { this.attributesDialogSize = this.dialogAttributesWindow.options.size; console.log(this.attributesDialogSize);} );
+    $(this.dialogAttributesWindow._map).on('dialog:moveend', () => { this.attributesDialogAnchor = this.dialogAttributesWindow.options.anchor } );
 
     let divIndex = -1;
 
@@ -1403,11 +1476,13 @@ function AnnotationAsset(Lt) {
         'options': [
                     {
                       'title': 'option 1',
-                      'code': 'code 1'
+                      'code': 'code 1',
+                      'uniqueNum': 'uniqueNum 1'
                     },
                     {
                       'title': 'option 2',
-                      'code': 'code 2'
+                      'code': 'code 2',
+                      'uniqueNum': 'uniqueNum 2'
                     },
                   ]
       };
@@ -1415,6 +1490,7 @@ function AnnotationAsset(Lt) {
     */
 
     // save & close dialog window when dialog closed w/ built in close button
+    this.alertCount = 0
     $(this.dialogAttributesWindow._map).on('dialog:closed', (dialog) => {
       if (this.dialogAttributesWindow && (dialog.originalEvent._content === this.dialogAttributesWindow._content)) {
         let allOptionsTitled = false;
@@ -1441,7 +1517,10 @@ function AnnotationAsset(Lt) {
         for (var i = 0, j = 0; i < optionsElmList.length; i += 2, j += 1) { // i index for textarea elements, j index for optionObjects. 2i = j
           if (titleText == "" || optionsElmList[i].value == "") {
             this.dialogAttributesWindow.open();
-            alert("Attribute must have a title and all options must be named.");
+            if (this.alertCount == 0) { // alert fires 3 times without catch for unknown reason
+              this.alertCount += 1;
+              alert("Attribute must have a title and all options must be named.");
+            };
             allOptionsTitled = false;
             break;
           } else {
@@ -1865,6 +1944,9 @@ function AnnotationAsset(Lt) {
 
     var lat = this.latLng.lat;
     var lng = this.latLng.lng;
+    // round to 5 decimal places
+    lat = lat.toFixed(5);
+    lng = lng.toFixed(5);
 
     var existingLatParam = parsedURL.searchParams.get("lat");
     var existingLngParam = parsedURL.searchParams.get("lng");
@@ -1937,7 +2019,8 @@ function AnnotationAsset(Lt) {
       };
       this.createAttributesDialog();
       this.dialogAttributesWindow.open();
-      document.getElementById('create-option').click(); // add one option by default
+      document.getElementById('create-option').click(); // add 2 options by default
+      document.getElementById('create-option').click();
     });
     editAttributesDiv.appendChild(openAttributeEditButton);
 
