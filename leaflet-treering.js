@@ -1194,12 +1194,15 @@ function AnnotationAsset(Lt) {
   };
 
   AnnotationAsset.prototype.createAnnotationDialog = function (annotation, index) {
+    this.index = index;
+
     if (annotation) { // set all meta data objects, catches for undefined elsewhere
       this.latLng = annotation.latLng;
       this.color = annotation.color;
       this.text = annotation.text;
       this.code = annotation.code;
       this.description = annotation.description;
+      this.checked = annotation.checked;
       this.calculatedYear = annotation.calculatedYear;
       this.yearAdjustment = annotation.yearAdjustment;
       this.year = annotation.year;
@@ -1208,6 +1211,7 @@ function AnnotationAsset(Lt) {
       this.text = '';
       this.code = [];
       this.description = [];
+      this.checked = [];
       this.calculatedYear = 0;
       this.yearAdjustment = 0;
       this.year = 0;
@@ -1233,7 +1237,7 @@ function AnnotationAsset(Lt) {
     };
 
     if (this.createBtn.active == false) {
-      this.annotationIcon = this.markers[index];
+      this.annotationIcon = this.markers[this.index];
     };
 
     this.dialogAnnotationWindow = L.control.dialog({
@@ -1283,7 +1287,8 @@ function AnnotationAsset(Lt) {
         if (this.createBtn.active) {
           this.saveAnnotation();
         } else {
-          this.saveAnnotation(index);
+          this.saveAnnotation(this.index);
+          delete this.index;
         };
 
         this.dialogAnnotationWindow.destroy();
@@ -1399,12 +1404,10 @@ function AnnotationAsset(Lt) {
                     {
                       'title': 'option 1',
                       'code': 'code 1'
-                      'checked': true
                     },
                     {
                       'title': 'option 2',
                       'code': 'code 2'
-                      'checked': false
                     },
                   ]
       };
@@ -1426,6 +1429,15 @@ function AnnotationAsset(Lt) {
           alert("Attribute must have at least one option.");
         };
 
+        function uniqueNumber () {
+          let randomNumString = ''
+          for (var t = 0; t <= 5; t++) {
+            randomNum = Math.floor(Math.random() * 10)
+            randomNumString += String(randomNum);
+          };
+          return randomNumString;
+        };
+
         for (var i = 0, j = 0; i < optionsElmList.length; i += 2, j += 1) { // i index for textarea elements, j index for optionObjects. 2i = j
           if (titleText == "" || optionsElmList[i].value == "") {
             this.dialogAttributesWindow.open();
@@ -1441,7 +1453,6 @@ function AnnotationAsset(Lt) {
               let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
               if (!existingAttributeObject.options[j]) { //  if option was deleted or added
                 var optionObject = new Object ();
-                optionObject.checked = false;
               } else {
                 var optionObject = existingAttributeObject.options[j];
               };
@@ -1449,13 +1460,14 @@ function AnnotationAsset(Lt) {
               optionObject.code = code;
               allOptionsTitled = true;
               if (!existingAttributeObject.options[j]) { //  if option was deleted or added
+                optionObject.uniqueNum = uniqueNumber();
                 existingAttributeObject.options.push(optionObject);
               };
             } else {
               let optionObject = new Object ();
               optionObject.title = option;
               optionObject.code = code;
-              optionObject.checked = false;
+              optionObject.uniqueNum = uniqueNumber();
               optionsArray.push(optionObject);
               allOptionsTitled = true;
             };
@@ -1580,13 +1592,13 @@ function AnnotationAsset(Lt) {
         /* option =
               {
                 'title': 'option 1',
-                'code': 'code 1'
-                'checked': true
+                'code': 'code 1',
+                'uniqueNum': 'number 1',
               },
         */
         let optionTitle = option.title;
         let optionCode = option.code;
-        let optionChecked = option.checked;
+        let optionUniqueNum = option.uniqueNum;
 
         let soloOptionDiv = document.createElement('div');
         soloOptionDiv.className = 'attribute-option-divs';
@@ -1596,24 +1608,23 @@ function AnnotationAsset(Lt) {
         checkbox.type = 'checkbox';
         checkbox.id = optionTitle;
         checkbox.value = optionCode;
+        checkbox.name = optionUniqueNum;
 
-         // options must be checked & it must be in that annotations description
-         // if optionChecked only counted, each annotation would have the same checkboxes checked
-        if (optionChecked && this.description.includes(optionTitle)) {
+        if (this.checked.includes(checkbox.name)) {
           checkbox.checked = true;
         };
 
-        $(checkbox).change(() => { // any checkbox changes are saved
-          option.checked = checkbox.checked;
-
+        $(checkbox).change(() => { // any checkbox changes are saved;
           this.code = [];
           this.description = [];
+          this.checked = [];
 
           checkboxClass = document.getElementsByClassName('checkboxes')
           for (let checkboxIndex in checkboxClass) {
             if (checkboxClass[checkboxIndex].checked) {
               this.code.push(checkboxClass[checkboxIndex].value);
               this.description.push(checkboxClass[checkboxIndex].id);
+              this.checked.push(checkboxClass[checkboxIndex].name);
             };
           };
         });
@@ -2018,6 +2029,7 @@ function AnnotationAsset(Lt) {
       'text': this.text,
       'code': this.code,
       'description': this.description,
+      'checked': this.checked,
       'calculatedYear': this.calculatedYear,
       'yearAdjustment': this.yearAdjustment,
       'year': this.year,
@@ -2026,15 +2038,15 @@ function AnnotationAsset(Lt) {
     document.cookie = 'attributesObjectArray=' + JSON.stringify(this.attributesObjectArray) + '; max-age=60*60*24*365';
 
     if (this.createBtn.active) {
-      var index = Lt.aData.index;
+      var newIndex = Lt.aData.index;
       Lt.aData.index++;
 
-      Lt.aData.annotations[index] = content;
-      this.markers[index] = this.annotationIcon;
+      Lt.aData.annotations[newIndex] = content;
+      this.markers[newIndex] = this.annotationIcon;
 
-      this.createMouseEventListeners(index);
+      this.createMouseEventListeners(newIndex);
 
-      this.markerLayer.addLayer(this.markers[index]);
+      this.markerLayer.addLayer(this.markers[newIndex]);
 
       this.disable(this.createBtn);
     } else {
