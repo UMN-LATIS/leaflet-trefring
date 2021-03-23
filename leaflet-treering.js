@@ -1325,9 +1325,13 @@ function AnnotationAsset(Lt) {
       </div>'
     ).addTo(Lt.viewer);
 
+    let divIndex = -1;
+
     var addAttributeOption = document.getElementById('create-option');
     $(addAttributeOption).click(() => {
+      divIndex += 1;
       var newOptionDiv = document.createElement('div');
+      newOptionDiv.id = divIndex;
 
       var optionTitle = document.createElement('label');
       optionTitle.className = 'attribute-label';
@@ -1353,6 +1357,12 @@ function AnnotationAsset(Lt) {
         };
 
         $(newOptionDiv).remove();
+
+        // remove option from existing attribute
+        if (this.attributeIndex || this.attributeIndex == 0) {
+          let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+          existingAttributeObject.options.splice(newOptionDiv.id, 1);
+        };
       });
       newOptionDiv.appendChild(optionDeleteBtn);
 
@@ -1385,12 +1395,18 @@ function AnnotationAsset(Lt) {
     /* Model for saving attributes:
     var attributesObjectArray = [
       { 'title': 'title 1',
-        'options': ['option 1', 'option 2'],
-        'codes': ['code 1', 'code 2'],
-      },
-      { 'title': 'title 2',
-        'options': ['option 3', 'option 4'],
-        'codes': ['code 3', 'code 4'],
+        'options': [
+                    {
+                      'title': 'option 1',
+                      'code': 'code 1'
+                      'checked': true
+                    },
+                    {
+                      'title': 'option 2',
+                      'code': 'code 2'
+                      'checked': false
+                    },
+                  ]
       };
     ];
     */
@@ -1399,9 +1415,8 @@ function AnnotationAsset(Lt) {
     $(this.dialogAttributesWindow._map).on('dialog:closed', (dialog) => {
       if (this.dialogAttributesWindow && (dialog.originalEvent._content === this.dialogAttributesWindow._content)) {
         let allOptionsTitled = false;
-        let newAttributeObject = new Object();
+        let newAttributeObject = new Object ();
         let optionsArray = [];
-        let codesArray = [];
 
         var titleText = document.getElementById('title-input').value;
         var optionsElmList = document.getElementsByClassName('attribute-option');
@@ -1411,28 +1426,45 @@ function AnnotationAsset(Lt) {
           alert("Attribute must have at least one option.");
         };
 
-        for (var i = 0; i < optionsElmList.length; i += 2) {
+        for (var i = 0, j = 0; i < optionsElmList.length; i += 2, j += 1) { // i index for textarea elements, j index for optionObjects. 2i = j
           if (titleText == "" || optionsElmList[i].value == "") {
             this.dialogAttributesWindow.open();
             alert("Attribute must have a title and all options must be named.");
             allOptionsTitled = false;
             break;
           } else {
-            // each option index will line up with its given code
             // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
             // based on the order they are created above
-            var option = optionsElmList[i].value
-            optionsArray.push(option);
-            var code = optionsElmList[i + 1].value || '-';
-            codesArray.push(code);
-            allOptionsTitled = true;
+            let option = optionsElmList[i].value
+            let code = optionsElmList[i + 1].value || '-'; // '-' is filler
+            if (this.attributeIndex || this.attributeIndex == 0) {
+              let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+              if (!existingAttributeObject.options[j]) { //  if option was deleted or added
+                var optionObject = new Object ();
+                optionObject.checked = false;
+              } else {
+                var optionObject = existingAttributeObject.options[j];
+              };
+              optionObject.title = option;
+              optionObject.code = code;
+              allOptionsTitled = true;
+              if (!existingAttributeObject.options[j]) { //  if option was deleted or added
+                existingAttributeObject.options.push(optionObject);
+              };
+            } else {
+              let optionObject = new Object ();
+              optionObject.title = option;
+              optionObject.code = code;
+              optionObject.checked = false;
+              optionsArray.push(optionObject);
+              allOptionsTitled = true;
+            };
           };
         };
 
-        if (allOptionsTitled === true && (!this.attributeIndex && this.attributeIndex != 0)) { // new attribute being created
+        if (allOptionsTitled === true && (this.attributeIndex != 0 && !this.attributeIndex)) { // new attribute being created
           newAttributeObject.title = document.getElementById('title-input').value;
           newAttributeObject.options = optionsArray;
-          newAttributeObject.codes = codesArray;
           this.attributesObjectArray.push(newAttributeObject);
 
           this.dialogAttributesWindow.destroy();
@@ -1442,8 +1474,6 @@ function AnnotationAsset(Lt) {
         } else if (allOptionsTitled === true && (this.attributeIndex || this.attributeIndex == 0)) { // existing attribute was edited.
           let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
           existingAttributeObject.title = document.getElementById('title-input').value;
-          existingAttributeObject.options = optionsArray;
-          existingAttributeObject.codes = codesArray;
 
           this.dialogAttributesWindow.destroy();
           delete this.dialogAttributesWindow
@@ -1505,7 +1535,7 @@ function AnnotationAsset(Lt) {
         // reset attribute code & description
         let optionNodes = soloAttributeDiv.childNodes;
         for (let node of optionNodes) {
-          if (node.tagName == 'div' || node.tagName == 'DIV') {
+          if (node.tagName == 'div' || node.tagName == 'DIV') { // each checkbox is held in its own div
             // firstchild = checkbox input
             let inputDescription = node.firstChild.id;
             let inputCode = node.firstChild.value;
@@ -1519,23 +1549,23 @@ function AnnotationAsset(Lt) {
 
             // get last textarea created aka the most recent code textarea
             let textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
-            if (inputCode != '-') { // '-' is used as filler so indexes in optionsArray & codesArray are the same
+            if (inputCode != '-') { // '-' is used as filler
               textareaCodeInput.value = inputCode;
             };
-            let inputCodeIndex = inputDescriptionIndex;
+            let inputCodeIndex = this.code.indexOf(inputCode);
 
             $(textareaDescriptionInput).change(() => {
               if (node.firstChild.checked && inputDescriptionIndex !== -1) {
-                Lt.annotationAsset.description[inputDescriptionIndex] = textareaDescriptionInput.value;
+                this.description[inputDescriptionIndex] = textareaDescriptionInput.value;
               };
             });
 
             $(textareaCodeInput).change(() => {
               if (node.firstChild.checked && inputCodeIndex !== -1) {
                 if (!textareaCodeInput.value) {
-                  Lt.annotationAsset.code[inputCodeIndex] = '-'; // '-' is used as filler so indexes in optionsArray & codesArray are the same
+                  this.code[inputCodeIndex] = '-'; // '-' is used as filler
                 } else {
-                  Lt.annotationAsset.code[inputCodeIndex] = textareaCodeInput.value;
+                  this.code[inputCodeIndex] = textareaCodeInput.value;
                 };
               };
             });
@@ -1546,27 +1576,41 @@ function AnnotationAsset(Lt) {
       soloAttributeDiv.appendChild(editAttributeBtn);
 
       let optionsArray = attributeObject.options || [];
-      for (let [optionIndex, option] of optionsArray.entries()) {
+      for (let option of optionsArray) {
+        /* option =
+              {
+                'title': 'option 1',
+                'code': 'code 1'
+                'checked': true
+              },
+        */
+        let optionTitle = option.title;
+        let optionCode = option.code;
+        let optionChecked = option.checked;
+
         let soloOptionDiv = document.createElement('div');
         soloOptionDiv.className = 'attribute-option-divs';
 
         let checkbox = document.createElement('input');
         checkbox.className = 'checkboxes';
         checkbox.type = 'checkbox';
-        checkbox.id = option; // attribute descriptor
-        checkbox.value = attributeObject.codes[optionIndex]; // options will have same index as code
+        checkbox.id = optionTitle;
+        checkbox.value = optionCode;
 
-        let attributesList = this.description || [];
-        if (attributesList.includes(option)) {
+         // options must be checked & it must be in that annotations description
+         // if optionChecked only counted, each annotation would have the same checkboxes checked
+        if (optionChecked && this.description.includes(optionTitle)) {
           checkbox.checked = true;
         };
 
         $(checkbox).change(() => { // any checkbox changes are saved
+          option.checked = checkbox.checked;
+
           this.code = [];
           this.description = [];
 
           checkboxClass = document.getElementsByClassName('checkboxes')
-          for (checkboxIndex in checkboxClass) {
+          for (let checkboxIndex in checkboxClass) {
             if (checkboxClass[checkboxIndex].checked) {
               this.code.push(checkboxClass[checkboxIndex].value);
               this.description.push(checkboxClass[checkboxIndex].id);
@@ -1576,8 +1620,8 @@ function AnnotationAsset(Lt) {
         soloOptionDiv.appendChild(checkbox);
 
         let label = document.createElement('label');
-        label.innerHTML = option;
-        label.for = option;
+        label.innerHTML = optionTitle;
+        label.for = optionTitle;
         soloOptionDiv.appendChild(label);
 
         soloAttributeDiv.appendChild(soloOptionDiv);
