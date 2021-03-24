@@ -411,12 +411,12 @@ function MeasurementData (dataObject, Lt) {
     second = false;
     this.points.map(e=>{
       if(e && !e.start && !e.break){
-        if(measurementOptions.subAnnual)
+        if(Lt.measurementOptions.subAnnual)
         {
           e.year = year;
           if(second)
           {
-            measurementOptions.forwardInTime? year++: year--;
+            Lt.measurementOptions.forwardDirection? year++: year--;
             e.earlywood = false;
             second = false;
           }
@@ -427,7 +427,7 @@ function MeasurementData (dataObject, Lt) {
         }
         else{
           e.year = year;
-          measurementOptions.forwardInTime? year++: year--;
+          Lt.measurementOptions.forwardDirection? year++: year--;
         }
       }
     });
