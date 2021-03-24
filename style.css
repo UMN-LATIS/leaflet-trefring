@@ -174,10 +174,9 @@ th {
 
 /* annotations */
 .tab {
-	border: 3px solid #ccc;
-	background-color: #ccc;
-	position: fixed;
-	width: 256px;
+	position: relative;
+	width: 100%;
+	display: inline-block;
 }
 
 .tab button {
@@ -190,8 +189,9 @@ th {
 	transition: 0.3s;
 	font-size: 16px;
 	font-weight: bold;
-	background-color: #f1f1f1;
+	background-color: #e8e8e8;
 	color: #636363;
+	width:50%;
 }
 
 .tab button:hover {
@@ -199,7 +199,18 @@ th {
 }
 
 .tab button.active {
-	background-color: #d9d9d9;
+	background-color: #ccc;
+}
+
+#summary-btn {
+	border-top-left-radius: 10px;
+	border-bottom-left-radius: 10px;
+}
+
+#edit-summary-btn {
+	border-top-right-radius: 10px;
+	border-bottom-right-radius: 10px;
+	float: right;
 }
 
 .tabContent {
@@ -208,7 +219,7 @@ th {
 	border: none;
 	border-top: none;
 	font-size: 12px;
-	margin-top: 24px;
+	margin-top: 0;
 	width: 100%;
 }
 
@@ -259,7 +270,7 @@ textarea {
 }
 
 .editAttributesDiv p {
-	font-size: 14px;
+	font-size: 12px;
 	margin: 0 0 0 10px;
 	display: inline;
 }
@@ -276,7 +287,7 @@ textarea {
 
 .attribute-label {
 	margin-bottom: 0;
-	font-size: 14px;
+	font-size: 12px;
 }
 
 .attribute-textbox {
@@ -354,11 +365,11 @@ textarea {
 .color-btn {
 	border-radius: 12px;
 	border-width: 0;
-	margin: 2% 8%;
+	margin: 6px 8%;
 	text-align: center;
 	display: inline-block;
 	height: 18px;
-	width: 20px;
+	width: 18px;
 }
 
 .\#ff1c22 { /* red */
