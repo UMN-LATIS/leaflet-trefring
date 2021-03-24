@@ -2187,9 +2187,9 @@ function AnnotationAsset(Lt) {
         });
 
         this.annotationIcon.setLatLng(e.latLng);
-
         this.annotationIcon.addTo(Lt.viewer);
 
+        this.markers[i] = this.annotationIcon;
         this.createMouseEventListeners(i);
 
         this.markerLayer.addLayer(this.markers[i]);
