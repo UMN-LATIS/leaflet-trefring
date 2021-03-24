@@ -1765,6 +1765,12 @@ function AnnotationAsset(Lt) {
   };
 
   AnnotationAsset.prototype.createMouseEventListeners = function (index) {
+    // how marker reacts when dragged
+    this.markers[index].on('dragend', (e) => {
+      Lt.aData.annotations[index].latLng = e.target._latlng;
+      Lt.annotationAsset.reloadAssociatedYears();
+    });
+
     // how marker reacts when clicked
     $(this.markers[index]).click(() => {
       if (this.deleteBtn.active) { // deleteing
@@ -2183,12 +2189,6 @@ function AnnotationAsset(Lt) {
         this.annotationIcon.setLatLng(e.latLng);
 
         this.annotationIcon.addTo(Lt.viewer);
-
-        this.markers[i] = this.annotationIcon;
-        this.markers[i].on('dragend', (e) => {
-          Lt.aData.annotations[i].latLng = e.target._latlng;
-          Lt.annotationAsset.reloadAssociatedYears();
-        });
 
         this.createMouseEventListeners(i);
 
