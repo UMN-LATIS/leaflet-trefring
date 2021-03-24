@@ -424,7 +424,6 @@ function MeasurementData (dataObject, Lt) {
         }
       }
     });
-    console.log(this.points);
     Lt.metaDataText.updateText(); // updates after points are cut
   };
 
@@ -2467,6 +2466,7 @@ function Undo(Lt) {
    */
   Undo.prototype.pop = function() {
     if (this.stack.length > 0) {
+      console.log(Lt.data.points[Lt.data.index - 1]);
       if (Lt.data.points[Lt.data.index - 1].start) {
         Lt.createPoint.disable();
       } else {
