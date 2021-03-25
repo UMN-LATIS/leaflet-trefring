@@ -385,27 +385,35 @@ function MeasurementData (dataObject, Lt) {
    * @function cut
    */
   MeasurementData.prototype.cut = function(i, j) {
+    function removeNulls (e) {
+      if (e != null) {
+        return e
+      };
+    };
+
     if (i > j) {
       this.points.splice(j,i-j);
-      var trimmed_points= this.points;
-      var k = 0;
-      this.points = {};
-      trimmed_points.map(e => {
-        if (!k) {
-          this.points[k] = {'start': true, 'skip': false, 'break': false,
-            'latLng': e.latLng};
-        } else {
-          this.points[k] = e;
-        }
-        k++;
-      });
-      this.index = k;
-      this.points = trimmed_points;
     } else if (i < j) {
       this.points.splice(i,j-i);
     } else {
       alert('You cannot select the same point');
-    }
+    };
+
+    var trimmed_points = this.points.filter(removeNulls); // remove null points
+    var k = 0;
+    this.points = {};
+    trimmed_points.map(e => {
+      if (!k) {
+        this.points[k] = {'start': true, 'skip': false, 'break': false,
+          'latLng': e.latLng};
+      } else {
+        this.points[k] = e;
+      }
+      k++;
+    });
+    this.index = k;
+    this.points = trimmed_points;
+
     //Correct years to delete gap in timeline
     year = this.points[1].year;
     second = false;
@@ -2544,7 +2552,7 @@ function Popout(Lt) {
  */
 function Undo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('undo', 'Undo', () => { this.pop() });
+  this.btn = new Button('undo', 'Undo', () => { this.pop(); Lt.metaDataText.updateText() });
   this.btn.disable();
 
   /**
@@ -2601,7 +2609,7 @@ function Undo(Lt) {
  */
 function Redo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('redo', 'Redo', () => { this.pop()});
+  this.btn = new Button('redo', 'Redo', () => { this.pop(); Lt.metaDataText.updateText();});
   this.btn.disable();
 
   /**
