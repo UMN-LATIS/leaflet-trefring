@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <style>
+
+    #tabs {
+
+    }
+
+    #instructions {
+
+    }
+
+    #iframe {
+
+    }
+
+    #description {
+
+    }
+
+    </style>
+
+  </head>
+  <body>
+
+    <div id='tabs'>
+      <button class='tabBtn' id='default' onclick='openTab("blank")'>Blank</button>
+      <button class='tabBtn' onclick='openTab("assetName")'>assetName</button>
+      <button class='tabBtn' onclick='openTab("assetName")'>assetName</button>
+      <button class='tabBtn' onclick='openTab("assetName")'>assetName</button>
+      <button class='tabBtn' onclick='openTab("assetName")'>assetName</button>
+    </div>
+
+    <div id='instructions'>
+    </div>
+
+    <div id='iframe'>
+    </div>
+
+    <div id='description'>
+    </div>
+
+    <script>
+
+    const coreArray = [
+      {'assetName': 'blank',
+       'src': 'CCS130A_blank_core.html',
+       'description': 'Core with no measurements or annotations.',
+      },
+      {'assetName': 'assetName',
+       'src': 'assetName_direction_measurementType.html',
+       'description': 'description',
+      },
+      {'assetName': 'assetName',
+       'src': 'assetName_direction_measurementType.html',
+       'description': 'description',
+      },
+      {'assetName': 'assetName',
+       'src': 'assetName_direction_measurementType.html',
+       'description': 'description',
+      },
+      {'assetName': 'assetName',
+       'src': 'assetName_direction_measurementType.html',
+       'description': 'description',
+      },
+    ];
+
+    function openTab(assetName) {
+      var iframeDiv = document.getElementById('iframe');
+      var descriptionDiv = document.getElementById('description');
+
+      // reset iframe & description
+      iframeDiv.innerHTML = '';
+      descriptionDiv.innerHTML = '';
+
+      // find clicked core to
+      for (let core of coreArray) {
+        if (core.assetName == assetName) {
+          var newiFrame = document.createElement('iframe');
+          newiFrame.src = core.src;
+          iframeDiv.appendChild(newiFrame);
+
+          var newDescription = document.createElement('p');
+          newDescription.innerHTML = core.description;
+          descriptionDiv.appendChild(newDescription);
+
+          return;
+        };
+      };
+    };
+
+    document.getElementById("default").click();
+
+    </script>
+
+  </body>
+</html>
