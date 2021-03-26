@@ -89,11 +89,11 @@
   <body>
 
     <div id='tabs-div'>
-      <button id='left-btn' onclick='openTab("blank")'>Blank</button>
-      <button onclick='openTab("assetName")'>assetName</button>
-      <button onclick='openTab("assetName")'>assetName</button>
-      <button onclick='openTab("assetName")'>assetName</button>
-      <button id='right-btn' onclick='openTab("assetName")'>assetName</button>
+      <button class='tabBtns' id='left-btn' onclick='openTab(event, "blank")'>Blank</button>
+      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
+      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
+      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
+      <button class='tabBtns' id='right-btn' onclick='openTab(event, "assetName")'>assetName</button>
     </div>
 
     <div id='instructions-div'>
@@ -132,7 +132,17 @@
       },
     ];
 
-    function openTab(assetName) {
+    function openTab (e, assetName) {
+      // reset color of all tabs
+      var tabClass = document.getElementsByClassName('tabBtns');
+      let i = 0;
+      for (i; i < tabClass.length; i++) {
+        tabClass[i].style.backgroundColor = '#e8e8e8';
+      };
+
+      // change tab color to show it was selected
+      e.currentTarget.style.backgroundColor = '#d1d1d1';
+
       var iframeDiv = document.getElementById('iframe-div');
       var descriptionDiv = document.getElementById('description-div');
 
