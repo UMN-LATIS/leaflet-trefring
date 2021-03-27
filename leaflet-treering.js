@@ -439,6 +439,24 @@ function MeasurementData (dataObject, Lt) {
         }
       }
     });
+
+    if(Lt.measurementOptions.subAnnual)
+    {
+      if(Lt.measurementOptions.forwardDirection && !this.points[this.points.length-1].earlywood)
+      {
+        this.year = this.points[this.points.length-1].year+1;
+        this.earlywood = true;
+      }
+      else if(!Lt.measurementOptions.forwardDirection && this.points[this.points.length-1].earlywood)
+      {
+        this.year = this.points[this.points.length-1].year-1;
+      }
+    }
+    else
+    {
+      this.year = Lt.measurementOptions.forwardDirection? this.points[this.points.length-1].year+1: this.points[this.points.length-1].year-1;
+    }
+    
     Lt.metaDataText.updateText(); // updates after points are cut
     Lt.annotationAsset.reloadAssociatedYears();
   };
@@ -3263,9 +3281,9 @@ function ConvertToStartPoint(Lt) {
     var previousPoints = points.slice(0, i);
     var followingPoints = points.slice(i);
 
-    if (Lt.measurementOptions.forwardDirection) { // if measureing forward in time
+    if (Lt.measurementOptions.forwardDirection) { // if measuring forward in time
       var yearChange = 1;
-    } else { // if measureing backward in time
+    } else { // if measuring backward in time
       var yearChange = -1;
     };
 
@@ -3285,7 +3303,7 @@ function ConvertToStartPoint(Lt) {
         };
       };
     });
-
+    Lt.data.year = Lt.measurementOptions.forwardDirection? points[points.length-1].year+1: points[points.length-1].year-1;
     Lt.visualAsset.reload();
     Lt.metaDataText.updateText();
     Lt.annotationAsset.reloadAssociatedYears();
