@@ -392,9 +392,9 @@ function MeasurementData (dataObject, Lt) {
     };
 
     if (i > j) {
-      this.points.splice(j,i-j);
+      this.points.splice(j,i-j+1);
     } else if (i < j) {
-      this.points.splice(i,j-i);
+      this.points.splice(i,j-i+1);
     } else {
       alert('You cannot select the same point');
     };
