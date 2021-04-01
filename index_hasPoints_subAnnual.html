@@ -53,16 +53,6 @@
         trackResize: true
     }).setView([0, 0], 0);
 
-		// Zoom to annotation URL
-		var getURL = window.location.href;
-		var parsedURL = new URL(getURL);
-		var urlParams = new URLSearchParams(parsedURL.search);
-		var latData = urlParams.get("lat");
-		var lngData = urlParams.get("lng");
-		if (latData && lngData) {
-				map.setView([latData, lngData], 16); //  max zoom level is 18
-		};
-
     var baseLayer = L.tileLayer.elevator(function(coords, tile, done) {
         var error;
         var params = {Bucket: 'elevator-assets', Key: "testasset7/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};

@@ -18,6 +18,18 @@ function LTreering (viewer, basePath, options) {
   this.viewer = viewer;
   this.basePath = basePath;
 
+  var getURL = window.location.href;
+  var parsedURL = new URL(getURL);
+  var urlParams = new URLSearchParams(parsedURL.search);
+  var latData = urlParams.get("lat");
+  var lngData = urlParams.get("lng");
+  if (latData && lngData) {
+    setTimeout(function() {
+      viewer.setView([latData, lngData], 16); //  max zoom level is 18   
+    }, 500);  
+  }
+
+
   //options
   this.meta = {
     'ppm': options.ppm || 468,
