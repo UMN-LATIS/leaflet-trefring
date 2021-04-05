@@ -2135,6 +2135,17 @@ function InsertPoint(Lt) {
     () => { this.disable() }
   );
 
+  L.DomEvent.on(window, 'keydown', (e) => {
+     if (e.keyCode == 73 && e.getModifierState("Control")) { // 73 refers to 'i'
+       if (!this.active) {
+         Lt.disableTools();
+         this.enable();
+       } else {
+         this.disable();
+       }
+     }
+  }, this);
+
   /**
    * Insert a point on click event
    * @function action
