@@ -113,7 +113,7 @@ function LTreering (viewer, basePath, options) {
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions, this.keyboardShortCutDialog];
+  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
     'Tree Ring': baseLayer,
