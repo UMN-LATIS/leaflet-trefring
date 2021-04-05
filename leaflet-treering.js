@@ -25,8 +25,8 @@ function LTreering (viewer, basePath, options) {
   var lngData = urlParams.get("lng");
   if (latData && lngData) {
     setTimeout(function() {
-      viewer.setView([latData, lngData], 16); //  max zoom level is 18   
-    }, 500);  
+      viewer.setView([latData, lngData], 16); //  max zoom level is 18
+    }, 500);
   }
 
 
@@ -468,7 +468,7 @@ function MeasurementData (dataObject, Lt) {
     {
       this.year = Lt.measurementOptions.forwardDirection? this.points[this.points.length-1].year+1: this.points[this.points.length-1].year-1;
     }
-    
+
     Lt.metaDataText.updateText(); // updates after points are cut
     Lt.annotationAsset.reloadAssociatedYears();
   };
@@ -1183,8 +1183,10 @@ function AnnotationAsset(Lt) {
 
   // crtl-a to activate createBtn
   L.DomEvent.on(window, 'keydown', (e) => {
-    if (e.keyCode == 65 && e.getModifierState("Control")) {
+    if (e.keyCode == 65 && e.getModifierState("Control") && window.name.includes('popout')) { // 65 refers to 'a'
       if(!this.active) {
+        e.preventDefault();
+        e.stopPropagation();
         Lt.disableTools();
         this.enable(this.createBtn);
       }
@@ -3210,8 +3212,10 @@ function InsertPoint(Lt) {
   );
 
   L.DomEvent.on(window, 'keydown', (e) => {
-     if (e.keyCode == 73 && e.getModifierState("Control")) { // 73 refers to 'i'
-       if (!this.active) {
+     if (e.keyCode == 73 && !(e.getModifierState("Shift")) && e.getModifierState("Control")) { // 73 refers to 'i'
+       if (!this.active && window.name.includes('popout')) {
+         e.preventDefault();
+         e.stopPropagation();
          Lt.disableTools();
          this.enable();
        } else {
@@ -4613,6 +4617,15 @@ function SaveCloud(Lt) {
     () => { this.action() }
   );
 
+  L.DomEvent.on(window, 'keydown', (e) => {
+    console.log('pushed')
+     if (e.keyCode == 83 && e.getModifierState("Control") && window.name.includes('popout')) { // 83 refers to 's'
+       e.preventDefault();
+       e.stopPropagation();
+       this.action();
+     };
+  });
+
   this.date = new Date(),
 
   /**
@@ -4697,9 +4710,8 @@ function SaveCloud(Lt) {
             alert('Error: failed to save changes');
           });
     } else {
-      alert(
-        'Authentication Error: save to cloud permission not granted');
-    }
+      alert('Authentication Error: save to cloud permission not granted');
+    };
   };
 };
 
