@@ -160,6 +160,25 @@ th {
 	margin-right: auto;
 }
 
+/* keyboard short cut dialog */
+#keyboardShortcutDiv h4 {
+	font-weight: bold;
+	padding-bottom: 2px;
+	border-bottom: 2px solid #ddd;
+}
+
+#keyboardShortcutDiv p {
+	margin: 0;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+#keyboardShortcutDiv span {
+	margin-left: 10px;
+	margin-bottom: 5px;
+	display: block;
+}
+
 .meta-data-text-box {
 	font-size: 12px;
 	background-color: rgba(245, 245, 245, .75);

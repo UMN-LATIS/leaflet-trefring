@@ -29,7 +29,6 @@ function LTreering (viewer, basePath, options) {
     }, 500);
   }
 
-
   //options
   this.meta = {
     'ppm': options.ppm || 468,
@@ -104,6 +103,7 @@ function LTreering (viewer, basePath, options) {
     ioBtns.push(this.saveCloud.btn);
   }
 
+  this.keyboardShortCutDialog = new KeyboardShortCutDialog(this);
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
@@ -113,7 +113,7 @@ function LTreering (viewer, basePath, options) {
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions, this.keyboardShortCutDialog];
 
   this.baseLayer = {
     'Tree Ring': baseLayer,
@@ -153,6 +153,7 @@ function LTreering (viewer, basePath, options) {
       this.editTools.bar.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
+      this.keyboardShortCutDialog.btn.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
     } else {
       this.popout.btn.addTo(this.viewer);
@@ -4999,6 +5000,108 @@ function Panhandler(La) {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
           });
         }
+
+/**
+ * Opens dialog box with all keyboard shortcuts
+ * @function
+ */
+function KeyboardShortCutDialog (Lt) {
+  this.btn = new Button (
+    'keyboard',
+    'Display keyboard shortcuts',
+    () => { this.action() },
+  );
+
+  KeyboardShortCutDialog.prototype.action = function () {
+    if (this.dialog) {
+      this.dialog.close();
+    };
+
+    let anchor = this.anchor || [50, 5];
+
+    this.dialog = L.control.dialog ({
+      'size': [290, 300],
+      'anchor': anchor,
+      'initOpen': true
+    }).addTo(Lt.viewer);
+
+    // remember annotation location each times its moved
+    $(this.dialog._map).on('dialog:moveend', () => { this.anchor = this.dialog.options.anchor } );
+
+    const shortcutGuide = [
+      {
+       'key': 'CTRL - Z',
+       'use': 'Toggle magnification loupe on/off',
+      },
+      {
+       'key': 'CTRL - M',
+       'use': 'Toggle measurement tool on/off',
+      },
+      {
+       'key': 'RIGHT CLICK OR CTRL - CLICK',
+       'use': 'End measurement path OR resume measuring from last point',
+      },
+      {
+       'key': 'CTRL - S',
+       'use': 'Save change to cloud (if permitted)',
+      },
+      {
+       'key': 'CTRL - A',
+       'use': 'Create new annotation',
+      },
+      {
+       'key': 'CTRL - I',
+       'use': 'Toggle insert point tool on/off',
+      },
+      {
+       'key': 'ARROWS',
+       'use': 'Pan up / down / left / right',
+      },
+      {
+       'key': 'CTRL - ARROWS',
+       'use': 'Pan continuously up / down / left / right',
+      },
+      {
+       'key': 'SHIFT - ARROWS',
+       'use': 'Pan slowly up / down / left / right',
+      },
+      {
+       'key': 'SHIFT',
+       'use': 'Disable panning when cursor is near edge',
+      },
+    ];
+
+    // reset dialog box
+    if (document.getElementById('keyboardShortcutDiv') != null) {
+      document.getElementById('keyboardShortcutDiv').remove();
+      this.dialog.setContent('');
+    };
+
+    this.dialog.setContent('<div id="keyboardShortcutDiv"></div>');
+
+    let mainDiv = document.getElementById('keyboardShortcutDiv');
+
+    var title = document.createElement('h4');
+    title.innerHTML = 'Keyboard Shortcuts';
+    mainDiv.appendChild(title);
+
+    for (shortcut of shortcutGuide) {
+      let key = document.createElement('p');
+      key.innerHTML = shortcut.key;
+      mainDiv.appendChild(key);
+
+      let description = document.createElement('span');
+      description.innerHTML = shortcut.use;
+      mainDiv.appendChild(description);
+    };
+
+    this.dialog.hideResize();
+    this.dialog.open();
+
+  };
+};
+
+
 /**
  * Hosts all global helper functions
  * @function
