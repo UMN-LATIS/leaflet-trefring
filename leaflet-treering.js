@@ -18,6 +18,18 @@ function LTreering (viewer, basePath, options) {
   this.viewer = viewer;
   this.basePath = basePath;
 
+  var getURL = window.location.href;
+  var parsedURL = new URL(getURL);
+  var urlParams = new URLSearchParams(parsedURL.search);
+  var latData = urlParams.get("lat");
+  var lngData = urlParams.get("lng");
+  if (latData && lngData) {
+    setTimeout(function() {
+      viewer.setView([latData, lngData], 16); //  max zoom level is 18   
+    }, 500);  
+  }
+
+
   //options
   this.meta = {
     'ppm': options.ppm || 468,
@@ -25,6 +37,7 @@ function LTreering (viewer, basePath, options) {
     'savePermission': options.savePermission || false,
     'popoutUrl': options.popoutUrl || null,
     'assetName': options.assetName || 'N/A',
+    'attributesObjectArray': options.attributesObjectArray || [],
   }
 
   this.preferences = { // catch for if forwardDirection or subAnnual are undefined/null on line ~2830
@@ -67,11 +80,8 @@ function LTreering (viewer, basePath, options) {
   this.viewData = new ViewData(this);
 
   this.imageAdjustment = new ImageAdjustment(this);
+  //this.PixelAdjustment = new PixelAdjustment(this);
   this.calibration = new Calibration(this);
-
-  this.createAnnotation = new CreateAnnotation(this);
-  this.deleteAnnotation = new DeleteAnnotation(this);
-  this.editAnnotation = new EditAnnotation(this);
 
   this.dating = new Dating(this);
 
@@ -82,6 +92,7 @@ function LTreering (viewer, basePath, options) {
   this.deletePoint = new DeletePoint(this);
   this.cut = new Cut(this);
   this.insertPoint = new InsertPoint(this);
+  this.convertToStartPoint = new ConvertToStartPoint(this);
   this.insertZeroGrowth = new InsertZeroGrowth(this);
   this.insertBreak = new InsertBreak(this);
 
@@ -95,17 +106,18 @@ function LTreering (viewer, basePath, options) {
 
 
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
-  this.annotationTools = new ButtonBar(this, [this.createAnnotation.btn, this.editAnnotation.btn, this.deleteAnnotation.btn], 'comment', 'Manage annotations');
+  this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
-  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
+  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.convertToStartPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
 
-  this.tools = [this.viewData, this.calibration, this.createAnnotation, this.deleteAnnotation, this.editAnnotation, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.insertZeroGrowth, this.insertBreak, this.imageAdjustment, this.measurementOptions];
+  this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
-    'Tree Ring': layer
+    'Tree Ring': baseLayer,
+    'GL Layer': layer
   };
 
   this.overlay = {
@@ -136,6 +148,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      //this.PixelAdjustment.btn.addTo(this.viewer);
       this.createTools.bar.addTo(this.viewer);
       this.editTools.bar.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
@@ -146,6 +159,7 @@ function LTreering (viewer, basePath, options) {
       this.viewData.btn.addTo(this.viewer);
       this.ioTools.bar.addTo(this.viewer);
       this.imageAdjustment.btn.addTo(this.viewer);
+      //this.PixelAdjustment.btn.addTo(this.viewer);
       //defaults overlay 'points' option to disabled
       map.removeLayer(this.visualAsset.markerLayer);
     }
@@ -192,6 +206,18 @@ function LTreering (viewer, basePath, options) {
    * @function disableTools
    */
   LTreering.prototype.disableTools = function() {
+    if (this.annotationAsset.dialogAnnotationWindow && this.annotationAsset.createBtn.active) { // if user trying to create annotation, destroy dialog & marker
+      this.annotationAsset.dialogAnnotationWindow.destroy();
+      this.annotationAsset.annotationIcon.removeFrom(this.viewer);
+    } else if (this.annotationAsset.dialogAnnotationWindow) {
+      this.annotationAsset.dialogAnnotationWindow.destroy();
+    };
+
+    if (this.annotationAsset.dialogAttributesWindow) {
+      this.annotationAsset.dialogAttributesWindow.destroy();
+      delete this.annotationAsset.dialogAttributesWindow;
+    };
+
     this.tools.forEach(e => { e.disable() });
   };
 
@@ -275,8 +301,11 @@ function MeasurementData (dataObject, Lt) {
         };
       };
     };
+
+
     this.index++;
     Lt.metaDataText.updateText(); // update every time a point is placed
+    Lt.annotationAsset.reloadAssociatedYears();
   };
 
   /**
@@ -322,6 +351,7 @@ function MeasurementData (dataObject, Lt) {
       delete this.points[this.index];
       delete this.points[this.index + 1];
     } else {
+      console.log(this.index);
       var new_points = this.points;
       var k = i;
       second_points = this.points.slice().splice(i + 1, this.index - 1);
@@ -352,12 +382,14 @@ function MeasurementData (dataObject, Lt) {
       this.index--;
       delete this.points[this.index];
       this.earlywood = !this.earlywood;
+      console.log(this.index);
       if (this.points[this.index - 1].earlywood) {
         this.year--;
       }
     }
 
     Lt.metaDataText.updateText(); // updates after a point is deleted
+    Lt.annotationAsset.reloadAssociatedYears();
   };
 
   /**
@@ -365,28 +397,80 @@ function MeasurementData (dataObject, Lt) {
    * @function cut
    */
   MeasurementData.prototype.cut = function(i, j) {
+    function removeNulls (e) {
+      if (e != null) {
+        return e
+      };
+    };
+
     if (i > j) {
-      var trimmed_points = this.points.slice().splice(i, this.index - 1);
-      var k = 0;
-      this.points = {};
-      trimmed_points.map(e => {
-        if (!k) {
-          this.points[k] = {'start': true, 'skip': false, 'break': false,
-            'latLng': e.latLng};
-        } else {
-          this.points[k] = e;
-        }
-        k++;
-      });
-      this.index = k;
+      this.points.splice(j,i-j+1);
     } else if (i < j) {
-      this.points = this.points.slice().splice(0, i);
-      this.index = i;
+      this.points.splice(i,j-i+1);
     } else {
       alert('You cannot select the same point');
-    }
+    };
 
+    var trimmed_points = this.points.filter(removeNulls); // remove null points
+    var k = 0;
+    this.points = {};
+    trimmed_points.map(e => {
+      if (!k) {
+        this.points[k] = {'start': true, 'skip': false, 'break': false,
+          'latLng': e.latLng};
+      } else {
+        this.points[k] = e;
+      }
+      k++;
+    });
+    this.index = k;
+    this.points = trimmed_points;
+
+    //Correct years to delete gap in timeline
+    year = this.points[1].year;
+    second = false;
+    this.points.map(e=>{
+      if(e && !e.start && !e.break){
+        if(Lt.measurementOptions.subAnnual)
+        {
+          e.year = year;
+          if(second)
+          {
+            Lt.measurementOptions.forwardDirection? year++: year--;
+            e.earlywood = false;
+            second = false;
+          }
+          else{
+            e.earlywood = true;
+            second = true;
+          }
+        }
+        else{
+          e.year = year;
+          Lt.measurementOptions.forwardDirection? year++: year--;
+        }
+      }
+    });
+
+    if(Lt.measurementOptions.subAnnual)
+    {
+      if(Lt.measurementOptions.forwardDirection && !this.points[this.points.length-1].earlywood)
+      {
+        this.year = this.points[this.points.length-1].year+1;
+        this.earlywood = true;
+      }
+      else if(!Lt.measurementOptions.forwardDirection && this.points[this.points.length-1].earlywood)
+      {
+        this.year = this.points[this.points.length-1].year-1;
+      }
+    }
+    else
+    {
+      this.year = Lt.measurementOptions.forwardDirection? this.points[this.points.length-1].year+1: this.points[this.points.length-1].year-1;
+    }
+    
     Lt.metaDataText.updateText(); // updates after points are cut
+    Lt.annotationAsset.reloadAssociatedYears();
   };
 
   /**
@@ -409,6 +493,7 @@ function MeasurementData (dataObject, Lt) {
     var k = i;
     var year_adjusted;
     var earlywood_adjusted = true;
+
 
     if (this.points[i - 1] && this.points[i]) {
       if (this.points[i - 1].earlywood && measurementOptions.subAnnual) { // case 1: subAnnual enabled & previous point ew
@@ -489,6 +574,7 @@ function MeasurementData (dataObject, Lt) {
     };
 
     Lt.metaDataText.updateText(); // updates after a single point is inserted
+    Lt.annotationAsset.reloadAssociatedYears();
     return tempK;
   };
 
@@ -557,6 +643,7 @@ function MeasurementData (dataObject, Lt) {
     };
 
     Lt.metaDataText.updateText(); // updates after a single point is inserted
+    Lt.annotationAsset.reloadAssociatedYears();
     return tempK;
   };
 
@@ -988,21 +1075,27 @@ function VisualAsset (Lt) {
     this.markers[i].on('dragend', (e) => {
       Lt.undo.push();
       pts[i].latLng = e.target._latlng;
+      Lt.annotationAsset.reloadAssociatedYears();
     });
 
     //tell marker what to do when clicked
     this.markers[i].on('click', (e) => {
       if (Lt.deletePoint.active) {
         Lt.deletePoint.action(i);
-      }
+      };
+
+      if (Lt.convertToStartPoint.active) {
+        Lt.convertToStartPoint.action(i);
+      };
 
       if (Lt.cut.active) {
         if (Lt.cut.point != -1) {
           Lt.cut.action(i);
         } else {
           Lt.cut.fromPoint(i);
-        }
-      }
+        };
+      };
+
       if (Lt.insertZeroGrowth.active) {
         var subAnnual = Lt.measurementOptions.subAnnual;
         var pointEW = pts[i].earlywood == true;
@@ -1070,102 +1163,1080 @@ function AnnotationAsset(Lt) {
   this.markers = new Array();
   this.markerLayer = L.layerGroup().addTo(Lt.viewer);
 
-  AnnotationAsset.prototype.reload = function() {
+  this.colorDivIcon = L.divIcon( {className: '#ff1c22'} ); // default red color
+
+  this.createBtn = new Button (
+    'comment',
+    'Create annotations (Ctrl-a)',
+    () => { Lt.disableTools(); this.enable(this.createBtn) },
+    () => { this.disable(this.createBtn) }
+  );
+  this.createBtn.active = false;
+
+  this.deleteBtn = new Button (
+    'delete',
+    'Delete an annotation',
+    () => { Lt.disableTools(); this.enable(this.deleteBtn) },
+    () => { this.disable(this.deleteBtn) }
+  );
+  this.deleteBtn.active = false;
+
+  // crtl-a to activate createBtn
+  L.DomEvent.on(window, 'keydown', (e) => {
+    if (e.keyCode == 65 && e.getModifierState("Control")) {
+      if(!this.active) {
+        Lt.disableTools();
+        this.enable(this.createBtn);
+      }
+      else {
+        this.disable(this.createBtn);
+      }
+    }
+  }, this);
+
+  // Only creating an annotation is tied to button enabling. Editing & deleting
+  // are connected to saveAnnotation()
+  AnnotationAsset.prototype.enable = function (btn) {
+    btn.state('active');
+    btn.active = true;
+    Lt.viewer.getContainer().style.cursor = 'pointer';
+
+    this.latLng = {};
+    if (btn === this.createBtn) {
+      Lt.viewer.doubleClickZoom.disable();
+      $(Lt.viewer.getContainer()).click(e => {
+        Lt.disableTools();
+        Lt.collapseTools();
+        this.createBtn.active = true; // disableTools() deactivates all buttons, need create annotation active
+
+        this.latLng = Lt.viewer.mouseEventToLatLng(e);
+
+        // display icon
+        this.annotationIcon = L.marker([0, 0], {
+          icon: this.colorDivIcon,
+          draggable: true,
+          riseOnHover: true,
+        });
+
+        this.annotationIcon.setLatLng(this.latLng);
+
+        this.annotationIcon.addTo(Lt.viewer);
+
+        this.createAnnotationDialog();
+
+      });
+    };;
+  };
+
+  AnnotationAsset.prototype.disable = function (btn) {
+    if (!btn) { // for Lt.disableTools()
+      this.disable(this.createBtn);
+      this.disable(this.deleteBtn);
+      return
+    };
+
+    $(Lt.viewer.getContainer()).off('click');
+    btn.state('inactive');
+    btn.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
+  };
+
+  AnnotationAsset.prototype.createAnnotationDialog = function (annotation, index) {
+    this.index = index;
+
+    if (annotation) { // set all meta data objects, catches for undefined elsewhere
+      this.latLng = annotation.latLng;
+      this.color = annotation.color;
+      this.text = annotation.text;
+      this.code = annotation.code;
+      this.description = annotation.description;
+      this.checkedUniqueNums = annotation.checkedUniqueNums;
+      this.calculatedYear = annotation.calculatedYear;
+      this.yearAdjustment = annotation.yearAdjustment;
+      this.year = annotation.year;
+    } else {
+      // want this.color to stay constant between creating annotations
+      this.text = '';
+      this.code = [];
+      this.description = [];
+      this.checkedUniqueNums = [];
+      this.calculatedYear = 0;
+      this.yearAdjustment = 0;
+      this.year = 0;
+    };
+
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var cookieArray = decodedCookie.split(';');
+    for (var i = 0; i < cookieArray.length; i++) {;
+      var cookieNameArray = cookieArray[i].split('=');
+      var cookieNameIndex = cookieNameArray.indexOf('attributesObjectArray');
+      var cookieAttributesObjectArray = cookieNameArray[cookieNameIndex + 1];
+    };
+
+    var defaultAttributes = [
+      { 'title': 'Anatomical Anomaly',
+        'options': [
+                    {
+                      'title': 'Fire Scar',
+                      'code': 'FS',
+                      'uniqueNum': '000000'
+                    },
+                    {
+                      'title': 'Frost Ring',
+                      'code': 'FR',
+                      'uniqueNum': '000001'
+                    },
+                    {
+                      'title': 'Intra-Annual Density Fluctuation',
+                      'code': 'IADF',
+                      'uniqueNum': '000002'
+                    },
+                    {
+                      'title': 'Tramatic Resin Duct',
+                      'code': 'TRD',
+                      'uniqueNum': '000003'
+                    },
+                  ]
+      },
+      { 'title': 'Location',
+        'options': [
+                    {
+                      'title': 'Earlywood',
+                      'code': 'EW',
+                      'uniqueNum': '000010'
+                    },
+                    {
+                      'title': 'Latewood',
+                      'code': 'LW',
+                      'uniqueNum': '000020'
+                    },
+                    {
+                      'title': 'Dormant',
+                      'code': 'D',
+                      'uniqueNum': '000030'
+                    },
+                  ]
+      }
+    ];
+
+    if (!Lt.meta.attributesObjectArray || Lt.meta.attributesObjectArray.length == 0) {
+      try {
+        this.attributesObjectArray = JSON.parse(cookieAttributesObjectArray);
+      }
+      catch (error) {
+        this.attributesObjectArray = defaultAttributes;
+      }
+    } else {
+      if (Lt.meta.attributesObjectArray.length == 0) {
+        this.attributesObjectArray = defaultAttributes;
+      } else {
+        this.attributesObjectArray = Lt.meta.attributesObjectArray;
+      };
+    };
+
+    if (this.createBtn.active == false) {
+      this.annotationIcon = this.markers[this.index];
+    };
+
+    let size = this.annotationDialogSize || [284, 265];
+    let anchor = this.annotationDialogAnchor || [50, 5];
+
+    this.dialogAnnotationWindow = L.control.dialog({
+      'minSize': [284, 265],
+      'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      'size': size,
+      'anchor': anchor,
+      'initOpen': true
+    }).setContent(
+      '<div id="tab" class="tab"> \
+        <button class="tabLinks" id="summary-btn">Summary</button> \
+        <button class="tabLinks" id="edit-summary-btn">Edit</button> \
+      </div> \
+      <div id="summary-tab" class="tabContent"></div> \
+      <div id="edit-summary-tab" class="tabContent"></div>',
+    ).addTo(Lt.viewer);
+
+    // remember annotation size/location each times its resized/moved
+    $(this.dialogAnnotationWindow._map).on('dialog:resizeend', () => { this.annotationDialogSize = this.dialogAnnotationWindow.options.size } );
+    $(this.dialogAnnotationWindow._map).on('dialog:moveend', () => { this.annotationDialogAnchor = this.dialogAnnotationWindow.options.anchor } );
+
+    // move between tabs & save edits
+    var summaryBtn = document.getElementById('summary-btn');
+    $(() => {
+      $(summaryBtn).click(() => {
+        if (this.dialogAttributesWindow) {
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
+        };
+        this.summaryContent();
+        this.openTab('summary-btn', 'summary-tab');
+      });
+    });
+
+    var editBtn = document.getElementById('edit-summary-btn');
+    if (window.name.includes('popout')) {
+      $(editBtn).click(() => {
+        this.editContent();
+        this.openTab('edit-summary-btn', 'edit-summary-tab');
+      });
+    } else {
+      editBtn.remove();
+      summaryBtn.style.borderTopRightRadius = '10px';
+      summaryBtn.style.borderBottomRightRadius = '10px';
+    };
+
+    // save & close dialog window when dialog closed w/ built in close button
+    $(this.dialogAnnotationWindow._map).on('dialog:closed', (dialog) => {
+      if (this.dialogAnnotationWindow && (dialog.originalEvent._content === this.dialogAnnotationWindow._content)) {
+        if (this.createBtn.active) {
+          this.saveAnnotation();
+        } else {
+          this.saveAnnotation(this.index);
+          delete this.annotation;
+          delete this.index;
+        };
+
+        if (this.dialogAttributesWindow) {
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow;
+        };
+
+        this.dialogAnnotationWindow.destroy();
+        delete this.dialogAnnotationWindow;
+      };
+    });
+
+    this.dialogAnnotationWindow.open();
+
+    if (this.createBtn.active) { // if action is to create an annotation
+      $(document).ready(() => {
+        editBtn.click();
+      });
+    } else {
+      $(document).ready(() => {
+        summaryBtn.click();
+      });
+    };
+
+  };
+
+  AnnotationAsset.prototype.createAttributesDialog = function (attributeIndex) {
+    this.attributeIndex = attributeIndex;
+
+    let size = this.attributesDialogSize || [273, 215];
+    let anchor = this.attributesDialogAnchor || [50, 294];
+
+    this.dialogAttributesWindow = L.control.dialog({
+      'minSize': [273, 215],
+      'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      'size': size,
+      'anchor': anchor,
+      'initOpen': true
+    }).setContent(
+      '<div id="attributes-options"> \
+        <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
+        <button class="annotation-btn" id="create-option"><i class="fa fa-plus" aria-hidden="true"></i></button> \
+        <textarea class="attribute-textbox" id="title-input" placeholder="Title."></textarea> \
+      </div> \
+      <hr id="attributes-hr"> \
+      <div> \
+        <p id="attributes-warning"> Use ESC to exit without saving. </p> \
+      </div>'
+    ).addTo(Lt.viewer);
+
+    // remember annotation size/location each times its resized/moved
+    $(this.dialogAttributesWindow._map).on('dialog:resizeend', () => { this.attributesDialogSize = this.dialogAttributesWindow.options.size; console.log(this.attributesDialogSize);} );
+    $(this.dialogAttributesWindow._map).on('dialog:moveend', () => { this.attributesDialogAnchor = this.dialogAttributesWindow.options.anchor } );
+
+    let divIndex = -1;
+
+    var addAttributeOption = document.getElementById('create-option');
+    $(addAttributeOption).click(() => {
+      divIndex += 1;
+      var newOptionDiv = document.createElement('div');
+      newOptionDiv.id = divIndex;
+
+      var optionTitle = document.createElement('label');
+      optionTitle.className = 'attribute-label';
+      optionTitle.innerHTML = 'Option: '
+      newOptionDiv.appendChild(optionTitle);
+
+      var optionDeleteBtn = document.createElement('button');
+      optionDeleteBtn.className = 'annotation-btn';
+      optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+      $(optionDeleteBtn).click(() => {
+        // remove div & option description/code from this.description & this.code
+        let descriptionTextarea = newOptionDiv.getElementsByTagName('DIV')[0].getElementsByTagName('TEXTAREA')[0];
+        let codeTextarea = newOptionDiv.getElementsByTagName('DIV')[0].getElementsByTagName('TEXTAREA')[1];
+
+        if (this.description.includes(descriptionTextarea.value)) {
+          var indexOfDescriptor = this.description.indexOf(descriptionTextarea.value);
+          this.description.splice(indexOfDescriptor, 1);
+        };
+
+        if (this.code.includes(codeTextarea.value)) {
+          var indexOfCodeEntry = this.code.indexOf(codeTextarea.value);
+          this.code.splice(indexOfCodeEntry, 1);
+        };
+
+        $(newOptionDiv).remove();
+
+        // remove option from existing attribute
+        if (this.attributeIndex || this.attributeIndex == 0) {
+          let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+          existingAttributeObject.options.splice(newOptionDiv.id, 1);
+        };
+      });
+      newOptionDiv.appendChild(optionDeleteBtn);
+
+      var optionTextDiv = document.createElement('div');
+
+      var optionTextbox = document.createElement('textarea');
+      optionTextbox.className += 'attribute-option attribute-textbox';
+      optionTextbox.placeholder = 'Description.';
+      optionTextDiv.appendChild(optionTextbox);
+
+      var optionTextCode = document.createElement('textarea');
+      optionTextCode.className += 'attribute-option attribute-textbox';
+      optionTextCode.placeholder = 'Code.';
+      optionTextDiv.appendChild(optionTextCode);
+
+      newOptionDiv.appendChild(optionTextDiv)
+
+      var fullOptionDiv = document.getElementById('attributes-options');
+      fullOptionDiv.appendChild(newOptionDiv);
+    });
+
+    // destroy window without saving anything with ESC
+    $(document).keyup((e) => {
+      if (e.keyCode === 27 && this.dialogAttributesWindow) {
+        this.dialogAttributesWindow.destroy();
+        delete this.dialogAttributesWindow
+      };
+    });
+
+    /* Model for saving attributes:
+    var attributesObjectArray = [
+      { 'title': 'title 1',
+        'options': [
+                    {
+                      'title': 'option 1',
+                      'code': 'code 1',
+                      'uniqueNum': 'uniqueNum 1'
+                    },
+                    {
+                      'title': 'option 2',
+                      'code': 'code 2',
+                      'uniqueNum': 'uniqueNum 2'
+                    },
+                  ]
+      };
+    ];
+    */
+
+    // save & close dialog window when dialog closed w/ built in close button
+    this.alertCount = 0
+    $(this.dialogAttributesWindow._map).on('dialog:closed', (dialog) => {
+      if (this.dialogAttributesWindow && (dialog.originalEvent._content === this.dialogAttributesWindow._content)) {
+        let allOptionsTitled = false;
+        let newAttributeObject = new Object ();
+        let optionsArray = [];
+
+        var titleText = document.getElementById('title-input').value;
+        var optionsElmList = document.getElementsByClassName('attribute-option');
+
+        if (optionsElmList.length == 0) {
+          this.dialogAttributesWindow.open();
+          alert("Attribute must have at least one option.");
+        };
+
+        function uniqueNumber () {
+          let randomNumString = ''
+          for (var t = 0; t <= 5; t++) {
+            randomNum = Math.floor(Math.random() * 10)
+            randomNumString += String(randomNum);
+          };
+          return randomNumString;
+        };
+
+        for (var i = 0, j = 0; i < optionsElmList.length; i += 2, j += 1) { // i index for textarea elements, j index for optionObjects. 2i = j
+          if (titleText == "" || optionsElmList[i].value == "") {
+            this.dialogAttributesWindow.open();
+            if (this.alertCount == 0) { // alert fires 3 times without catch for unknown reason
+              this.alertCount += 1;
+              alert("Attribute must have a title and all options must be named.");
+            };
+            allOptionsTitled = false;
+            break;
+          } else {
+            // optionsElmList[i] is the option text, optionsElmList[i + 1] is the option code
+            // based on the order they are created above
+            let option = optionsElmList[i].value
+            let code = optionsElmList[i + 1].value || '-'; // '-' is filler
+            if (this.attributeIndex || this.attributeIndex == 0) {
+              let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+              if (!existingAttributeObject.options[j]) { //  if option was deleted or added
+                var optionObject = new Object ();
+              } else {
+                var optionObject = existingAttributeObject.options[j];
+              };
+              optionObject.title = option;
+              optionObject.code = code;
+              allOptionsTitled = true;
+              if (!existingAttributeObject.options[j]) { //  if option was deleted or added
+                optionObject.uniqueNum = uniqueNumber();
+                existingAttributeObject.options.push(optionObject);
+              };
+            } else {
+              let optionObject = new Object ();
+              optionObject.title = option;
+              optionObject.code = code;
+              optionObject.uniqueNum = uniqueNumber();
+              optionsArray.push(optionObject);
+              allOptionsTitled = true;
+            };
+          };
+        };
+
+        if (allOptionsTitled === true && (this.attributeIndex != 0 && !this.attributeIndex)) { // new attribute being created
+          newAttributeObject.title = document.getElementById('title-input').value;
+          newAttributeObject.options = optionsArray;
+          this.attributesObjectArray.push(newAttributeObject);
+
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
+          this.createCheckboxes(document.getElementById('attributes-options-div'));
+
+        } else if (allOptionsTitled === true && (this.attributeIndex || this.attributeIndex == 0)) { // existing attribute was edited.
+          let existingAttributeObject = this.attributesObjectArray[this.attributeIndex];
+          existingAttributeObject.title = document.getElementById('title-input').value;
+
+          this.dialogAttributesWindow.destroy();
+          delete this.dialogAttributesWindow
+          delete this.attributeIndex;
+          this.createCheckboxes(document.getElementById('attributes-options-div'));
+        };
+      };
+    });
+  };
+
+  AnnotationAsset.prototype.createCheckboxes = function (attributesOptionsDiv) {
+    attributesOptionsDiv.innerHTML = '';
+
+    for (let [attributeIndex, attributeObject] of this.attributesObjectArray.entries()) {
+      let soloAttributeDiv = document.createElement('div');
+
+      let title = document.createElement('p');
+      title.className = 'option-title';
+      title.innerHTML = attributeObject.title;
+      soloAttributeDiv.appendChild(title);
+
+      let deleteAttributeBtn = document.createElement('button');
+      deleteAttributeBtn.className = 'annotation-btn attribute-btn';
+      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+      $(deleteAttributeBtn).click((e) => {
+        var divToDelete = e.target.parentNode.parentNode; // user will click <i> image not button
+        for (let checkboxDiv of divToDelete.getElementsByTagName('DIV')) {
+          let descriptor = checkboxDiv.getElementsByTagName('INPUT')[0].id
+          let code = checkboxDiv.getElementsByTagName('INPUT')[0].value
+
+          // remove descriptor and code from this.description & this.code
+          if (this.description.includes(descriptor)) {
+            let indexOfDescriptor = this.description.indexOf(descriptor);
+            this.description.splice(indexOfDescriptor, 1);
+          };
+
+          if (this.code.includes(code)) {
+            var indexOfCodeEntry = this.code.indexOf(code);
+            this.code.splice(indexOfCodeEntry, 1);
+          };
+        };
+
+        delete this.attributesObjectArray.splice(attributeIndex, 1);
+        $(divToDelete).remove();
+      });
+      soloAttributeDiv.appendChild(deleteAttributeBtn);
+
+      let editAttributeBtn = document.createElement('button');
+      editAttributeBtn.className = 'annotation-btn attribute-btn';
+      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" aria-hidden="true"></i>';
+      $(editAttributeBtn).click((e) => {
+        // edits saved with createAttributesDialog save button
+        this.createAttributesDialog(attributeIndex);
+        this.dialogAttributesWindow.open();
+
+        let inputTitle = document.getElementById('title-input');
+        inputTitle.value = attributeObject.title;
+
+        // reset attribute code & description
+        let optionNodes = soloAttributeDiv.childNodes;
+        for (let node of optionNodes) {
+          if (node.tagName == 'div' || node.tagName == 'DIV') { // each checkbox is held in its own div
+            // firstchild = checkbox input
+            let inputDescription = node.firstChild.id;
+            let inputCode = node.firstChild.value;
+
+            document.getElementById('create-option').click();
+
+            // get second to last textarea created aka the most recent description textarea
+            let textareaDescriptionInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 2];
+            textareaDescriptionInput.value = inputDescription;
+            let inputDescriptionIndex = this.description.indexOf(inputDescription);
+
+            // get last textarea created aka the most recent code textarea
+            let textareaCodeInput = document.getElementsByClassName('attribute-textbox')[document.getElementsByClassName('attribute-textbox').length - 1];
+            if (inputCode != '-') { // '-' is used as filler
+              textareaCodeInput.value = inputCode;
+            };
+            let inputCodeIndex = this.code.indexOf(inputCode);
+
+            $(textareaDescriptionInput).change(() => {
+              if (node.firstChild.checked && inputDescriptionIndex !== -1) {
+                this.description[inputDescriptionIndex] = textareaDescriptionInput.value;
+              };
+            });
+
+            $(textareaCodeInput).change(() => {
+              if (node.firstChild.checked && inputCodeIndex !== -1) {
+                if (!textareaCodeInput.value) {
+                  this.code[inputCodeIndex] = '-'; // '-' is used as filler
+                } else {
+                  this.code[inputCodeIndex] = textareaCodeInput.value;
+                };
+              };
+            });
+          };
+        };
+
+      });
+      soloAttributeDiv.appendChild(editAttributeBtn);
+
+      let optionsArray = attributeObject.options || [];
+      for (let option of optionsArray) {
+        /* option =
+              {
+                'title': 'option 1',
+                'code': 'code 1',
+                'uniqueNum': 'number 1',
+              },
+        */
+        let optionTitle = option.title;
+        let optionCode = option.code;
+        let optionUniqueNum = option.uniqueNum;
+
+        let soloOptionDiv = document.createElement('div');
+        soloOptionDiv.className = 'attribute-option-divs';
+
+        let checkbox = document.createElement('input');
+        checkbox.className = 'checkboxes';
+        checkbox.type = 'checkbox';
+        checkbox.id = optionTitle;
+        checkbox.value = optionCode;
+        checkbox.name = optionUniqueNum;
+
+        if (this.checkedUniqueNums && this.checkedUniqueNums.includes(checkbox.name)) {
+          checkbox.checked = true;
+        };
+
+        $(checkbox).change(() => { // any checkbox changes are saved;
+          this.code = [];
+          this.description = [];
+          this.checkedUniqueNums = [];
+
+          checkboxClass = document.getElementsByClassName('checkboxes')
+          for (let checkboxIndex in checkboxClass) {
+            if (checkboxClass[checkboxIndex].checked) {
+              this.code.push(checkboxClass[checkboxIndex].value);
+              this.description.push(checkboxClass[checkboxIndex].id);
+              this.checkedUniqueNums.push(checkboxClass[checkboxIndex].name);
+            };
+          };
+        });
+        soloOptionDiv.appendChild(checkbox);
+
+        let label = document.createElement('label');
+        label.innerHTML = optionTitle;
+        label.for = optionTitle;
+        soloOptionDiv.appendChild(label);
+
+        soloAttributeDiv.appendChild(soloOptionDiv);
+      };
+
+      attributesOptionsDiv.appendChild(soloAttributeDiv);
+    };
+  };
+
+  AnnotationAsset.prototype.nearestYear = function (latLng) {
+    var closestI = Lt.helper.closestPointIndex(latLng)
+    var closestPt = Lt.data.points[closestI];
+    var closestYear;
+
+    // find closest year to annotation
+    if (!closestPt) {
+      closestYear = 0;
+    } else if (!closestPt.year && closestPt.year != 0) { // case 1: start or break point
+      var previousPt = Lt.data.points[closestI - 1];
+      var nextPt = Lt.data.points[closestI + 1];
+
+      if (!previousPt) { // case 2: inital start point
+        closestYear = nextPt.year
+      } else if (!nextPt.year) { // case 3: break point & next point is a start point
+        closestYear = Lt.data.points[closestI + 2].year;
+      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+        closestYear = Lt.data.points[closestI + 1].year;
+      } else { // case 5: start point in middle of point path
+        var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
+        var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
+
+        if (distanceToNextPt > distanceToPreviousPt) {
+          closestYear = previousPt.year;
+        } else {
+          closestYear = nextPt.year;
+        };
+      };
+    } else {
+      closestYear = closestPt.year;
+    };
+
+    return closestYear;
+  };
+
+  AnnotationAsset.prototype.createMouseEventListeners = function (index) {
+    // how marker reacts when dragged
+    this.markers[index].on('dragend', (e) => {
+      Lt.aData.annotations[index].latLng = e.target._latlng;
+      Lt.annotationAsset.reloadAssociatedYears();
+    });
+
+    // how marker reacts when clicked
+    $(this.markers[index]).click(() => {
+      if (this.deleteBtn.active) { // deleteing
+        Lt.aData.deleteAnnotation(index);
+        Lt.annotationAsset.reload();
+      } else { // viewing or editing
+        Lt.collapseTools();
+        if (this.dialogAnnotationWindow) {
+          this.dialogAnnotationWindow.destroy();
+          delete this.dialogAnnotationWindow
+        };
+        this.createAnnotationDialog(Lt.aData.annotations[index], index);
+      };
+    });
+
+    // how marker reacts when moussed over
+    $(this.markers[index]).mouseover(() => {
+      this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
+
+      var popupDiv = document.getElementById('mouseover-popup-div');
+
+      if (Lt.aData.annotations[index].text) { // only show text description if text exists
+        var popupTextTitle = document.createElement('h5');
+        popupTextTitle.className = 'annotation-title';
+        popupTextTitle.innerHTML = 'Text: ';
+        popupDiv.appendChild(popupTextTitle);
+
+        var popupText = document.createElement('p');
+        popupText.className = 'text-content';
+        popupText.style.marginTop = 0;
+        popupText.style.marginBottom = '4px';
+        popupText.innerHTML = Lt.aData.annotations[index].text;
+        popupDiv.appendChild(popupText);
+      };
+
+      if (Lt.aData.annotations[index].description && Lt.aData.annotations[index].description.length > 0) { // only show attributes if attributes exist/selected
+        var popupDescriptionTitle = document.createElement('h5');
+        popupDescriptionTitle.className = 'annotation-title';
+        popupDescriptionTitle.style.margin = 0;
+        popupDescriptionTitle.innerHTML = 'Attributes: '
+        popupDiv.appendChild(popupDescriptionTitle);
+
+        var popupDescriptionList = document.createElement('ul');
+        popupDescriptionList.style.marginBottom = '3px';
+        for (var descriptorIndex in Lt.aData.annotations[index].description) {
+          var listElm = document.createElement('li');
+          listElm.innerHTML = Lt.aData.annotations[index].description[descriptorIndex];
+          popupDescriptionList.appendChild(listElm);
+        };
+        popupDiv.appendChild(popupDescriptionList);
+      };
+
+      var popupYearTitle = document.createElement('h5');
+      popupYearTitle.style.margin = 0;
+      popupYearTitle.className = 'annotation-title';
+      popupYearTitle.innerHTML = 'Associated Year: ';
+      popupDiv.appendChild(popupYearTitle);
+
+      var popupYear = document.createElement('span');
+      popupYear.className = 'text-content';
+      popupYear.style.cssFloat = 'right';
+      popupYear.innerHTML = this.nearestYear(Lt.aData.annotations[index].latLng) + Lt.aData.annotations[index].yearAdjustment;
+      popupDiv.appendChild(popupYear);
+    });
+
+    $(this.markers[index]).mouseout(() => {
+      this.markers[index].closePopup();
+    });
+  };
+
+  AnnotationAsset.prototype.openTab = function (btnName, tabName) {
+    var i;
+    var tabContent;
+    var tabLinks;
+
+    tabContent = document.getElementsByClassName("tabContent");
+    for (i = 0; i < tabContent.length; i++) {
+      tabContent[i].style.display = "none";
+    };
+
+    tabLinks = document.getElementsByClassName("tabLinks");
+    for (i = 0; i < tabLinks.length; i++) {
+      tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    };
+
+    if (tabName && btnName) {
+      document.getElementById(tabName).style.display = "block";
+      document.getElementById(btnName).className += " active";
+    };
+  };
+
+  AnnotationAsset.prototype.summaryContent = function () {
+    var summaryDiv = document.getElementById('summary-tab');
+    summaryDiv.innerHTML = '';
+
+    // Start: text
+    var summaryTextDiv = document.createElement('div');
+    summaryTextDiv.className = 'summaryTextDiv';
+
+    var textTitle = document.createElement('h5');
+    textTitle.id = 'text-title';
+    textTitle.innerHTML = "Text:";
+    summaryTextDiv.appendChild(textTitle);
+
+    var textContent = document.createElement('p');
+    textContent.className = 'text-content';
+    if (this.text == "") {
+      textContent.innerHTML = 'N/A';
+    } else {
+      textContent.innerHTML = this.text;
+    };
+
+    summaryTextDiv.appendChild(textContent);
+    summaryDiv.appendChild(summaryTextDiv);
+    // End: text
+
+    // Start: attributes
+    var summaryAttributesDiv = document.createElement('div');
+    summaryAttributesDiv.className = 'summaryAttributesDiv';
+
+    var attributesTitle = document.createElement('h5');
+    attributesTitle.className = 'annotation-title'
+    attributesTitle.innerHTML = "Attributes:";
+    summaryAttributesDiv.appendChild(attributesTitle);
+
+    var attributeCode = document.createElement('p');
+    attributeCode.className = 'text-content';
+    attributeCode.style.margin = 0;
+    var code = '';
+    if (this.code && this.code.length > 0) {
+      for (var codeEntry of this.code) {
+        code += codeEntry;
+      }
+    } else {
+      code = 'N/A';
+    };
+    attributeCode.innerHTML = 'Attributes Code: ' + code;
+    summaryAttributesDiv.appendChild(attributeCode);
+
+    var attributesDescription = document.createElement('p');
+    attributesDescription.className = 'text-content';
+    attributesDescription.style.margin = 0;
+    attributesDescription.innerHTML = 'Attributes:';
+    summaryAttributesDiv.appendChild(attributesDescription);
+
+    var attributesList = document.createElement('ul');
+    summaryAttributesDiv.appendChild(attributesList);
+    if (this.description && this.description.length > 0) {
+      var descriptionList = this.description;
+    } else {
+      var descriptionList = [];
+      var descriptorElm = document.createElement('li');
+      descriptorElm.innerHTML = 'N/A';
+      attributesList.appendChild(descriptorElm);
+    };
+
+    for (var descriptor in descriptionList) {
+      var descriptorElm = document.createElement('li')
+      descriptorElm.innerHTML = descriptionList[descriptor];
+      attributesList.appendChild(descriptorElm);
+    };
+
+    summaryDiv.appendChild(summaryAttributesDiv);
+    // End: attributes
+
+    // START: associated year
+    var summaryAssociatedYearDiv = document.createElement('div');
+    summaryAssociatedYearDiv.className = 'summaryAssociatedYearDiv';
+
+    var associatedYearTitle = document.createElement('h5');
+    associatedYearTitle.innerHTML = 'Associated Year: ';
+    associatedYearTitle.className = 'annotation-title';
+    summaryAssociatedYearDiv.appendChild(associatedYearTitle);
+
+    var associatedYearSpan = document.createElement('span');
+    associatedYearSpan.className = 'text-content';
+    associatedYearSpan.innerHTML = this.nearestYear(this.latLng) + this.yearAdjustment;
+    summaryAssociatedYearDiv.appendChild(associatedYearSpan);
+
+    summaryDiv.appendChild(summaryAssociatedYearDiv);
+    // END: associated year
+
+    // START: link to annotation
+    var summaryLinkDiv = document.createElement('div');
+    summaryLinkDiv.className = 'summaryLinkDiv';
+
+    var getURL = window.location.href;
+    var parsedURL = new URL(getURL);
+
+    var lat = this.latLng.lat;
+    var lng = this.latLng.lng;
+    // round to 5 decimal places
+    lat = lat.toFixed(5);
+    lng = lng.toFixed(5);
+
+    var existingLatParam = parsedURL.searchParams.get("lat");
+    var existingLngParam = parsedURL.searchParams.get("lng");
+    if (!existingLatParam || !existingLngParam) { // url parameters don't exist
+      parsedURL.searchParams.append("lat", lat);
+      parsedURL.searchParams.append("lng", lng);
+    } else { // url parameters already exist
+      parsedURL.searchParams.set("lat", lat);
+      parsedURL.searchParams.set("lng", lng);
+    };
+
+    var linkTitle = document.createElement('h5');
+    linkTitle.innerHTML = '<a href=' + String(parsedURL) + '> Annotation GeoLink</a>';
+    linkTitle.className = 'annotation-title';
+    linkTitle.id = 'link-title';
+    summaryLinkDiv.appendChild(linkTitle)
+
+    var copyLinkBtn = document.createElement('button');
+    copyLinkBtn.className = 'annotation-link-btn';
+    copyLinkBtn.innerHTML = '<i class="fa fa-clone" aria-hidden="true"></i>';
+    $(copyLinkBtn).click(() => {
+      window.copyToClipboard(parsedURL);
+    });
+    summaryLinkDiv.appendChild(copyLinkBtn);
+
+    summaryDiv.appendChild(summaryLinkDiv);
+    // END : link to annotation
+  };
+
+  AnnotationAsset.prototype.editContent = function () {
+    var editDiv = document.getElementById('edit-summary-tab');
+    editDiv.innerHTML = ''; // reset div so elements do not duplicate
+
+    // Start: text
+    var editTextDiv = document.createElement('div');
+    editTextDiv.className = 'editTextDiv';
+
+    var textTitle = document.createElement('h5');
+    textTitle.id = 'text-title';
+    textTitle.innerHTML = "Text:";
+    editTextDiv.appendChild(textTitle);
+
+    var textBox = document.createElement('TEXTAREA');
+    textBox.value = this.text;
+    $(textBox).change(() => { //  any text changes are saved
+      this.text = textBox.value;
+    });
+
+    editTextDiv.appendChild(textBox);
+    editDiv.appendChild(editTextDiv);
+    // End: text
+
+    // Start: attributes
+    var editAttributesDiv = document.createElement('div');
+    editAttributesDiv.className = 'editAttributesDiv';
+
+    var attributesTitle = document.createElement('h5');
+    attributesTitle.className = 'annotation-title'
+    attributesTitle.innerHTML = "Attributes:";
+    editAttributesDiv.appendChild(attributesTitle);
+
+    // add a new attribute options
+    var openAttributeEditButton = document.createElement('button');
+    openAttributeEditButton.className = 'annotation-btn';
+    openAttributeEditButton.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+    $(openAttributeEditButton).click(() => {
+      if (this.dialogAttributesWindow) {
+        this.dialogAttributesWindow.destroy();
+        delete this.dialogAttributesWindow;
+      };
+      this.createAttributesDialog();
+      this.dialogAttributesWindow.open();
+      document.getElementById('create-option').click(); // add 2 options by default
+      document.getElementById('create-option').click();
+    });
+    editAttributesDiv.appendChild(openAttributeEditButton);
+
+    var attributesOptionsDiv = document.createElement('div');
+    attributesOptionsDiv.id = 'attributes-options-div';
+    this.createCheckboxes(attributesOptionsDiv);
+
+    editAttributesDiv.appendChild(attributesOptionsDiv);
+    editDiv.appendChild(editAttributesDiv);
+    // END: attributes
+
+    // START: associated year
+    var editAssociatedYearDiv = document.createElement('div');
+    editAssociatedYearDiv.className = 'editAssociatedYearDiv';
+
+    var associatedYearTitle = document.createElement('h5');
+    associatedYearTitle.innerHTML = 'Associated Year: ';
+    associatedYearTitle.className = 'annotation-title';
+    editAssociatedYearDiv.appendChild(associatedYearTitle);
+
+    var associatedYearInput = document.createElement('input');
+    associatedYearInput.type = 'number';
+    associatedYearInput.value = this.nearestYear(this.latLng) + this.yearAdjustment;
+    $(associatedYearInput).change(() => {
+      this.year = associatedYearInput.value;
+      this.yearAdjustment = associatedYearInput.value - this.calculatedYear;
+    });
+    editAssociatedYearDiv.appendChild(associatedYearInput);
+
+    editDiv.appendChild(editAssociatedYearDiv);
+    // END: associated year
+
+    // START: color selection
+    var editColorDiv = document.createElement('div');
+    editColorDiv.className = 'editColorDiv';
+
+    var colorTitle = document.createElement('h5');
+    colorTitle.className = 'annotation-title';
+    colorTitle.innerHTML = 'Color: '
+    colorTitle.style.display = 'block';
+    editColorDiv.appendChild(colorTitle);
+
+    var colorPalette = {
+      'red': '#ff1c22',
+      'green': '#17b341',
+      'blue': '#1395d1',
+      'purple': '#db029f',
+    };
+
+    for (color in colorPalette) { // create color buttons
+      var colorBtn = document.createElement('button');
+      var hexCode = colorPalette[color];
+      colorBtn.className = 'color-btn';
+      colorBtn.style.backgroundColor = hexCode;
+      colorBtn.id = hexCode;
+      $(colorBtn).click((e) => {
+        this.colorDivIcon = L.divIcon( {className: e.currentTarget.id} );
+        this.annotationIcon.setIcon(this.colorDivIcon);
+
+        var colorBtnList = document.getElementsByClassName('color-btn');
+        for (var i = 0; i < colorBtnList.length; i++) { // deselect other buttons
+          colorBtnList[i].style.boxShadow = "0 0 0 0";
+        };
+        e.currentTarget.style.boxShadow = "0 0 0 4px #b8b8b8";
+      });
+
+      editColorDiv.appendChild(colorBtn);
+    };
+
+    for (var j = 0; j < editColorDiv.childNodes.length; j++) {
+      var iconColor = this.colorDivIcon.options.className;
+      var buttonColor = editColorDiv.childNodes[j].id;
+      if (iconColor == buttonColor) {
+        editColorDiv.childNodes[j].click();
+      };
+    };
+
+    editDiv.appendChild(editColorDiv);
+    // END: color selection
+  };
+
+  AnnotationAsset.prototype.saveAnnotation = function (index) {
+    var content = {
+      'latLng': this.latLng,
+      'color': this.colorDivIcon.options.className,
+      'text': this.text,
+      'code': this.code,
+      'description': this.description,
+      'checkedUniqueNums': this.checkedUniqueNums,
+      'calculatedYear': this.calculatedYear,
+      'yearAdjustment': this.yearAdjustment,
+      'year': this.year,
+    };
+    Lt.meta.attributesObjectArray = this.attributesObjectArray;
+    document.cookie = 'attributesObjectArray=' + JSON.stringify(this.attributesObjectArray) + '; max-age=60*60*24*365';
+
+    if (this.createBtn.active) {
+      var newIndex = Lt.aData.index;
+      Lt.aData.index++;
+
+      Lt.aData.annotations[newIndex] = content;
+      this.markers[newIndex] = this.annotationIcon;
+
+      this.createMouseEventListeners(newIndex);
+
+      this.markerLayer.addLayer(this.markers[newIndex]);
+
+      this.disable(this.createBtn);
+    } else {
+      Lt.aData.annotations[index] = content;
+    };
+  };
+
+  AnnotationAsset.prototype.reloadAssociatedYears = function () {
+      Object.values(Lt.aData.annotations).map((e) => {
+        e.calculatedYear = this.nearestYear(e.latLng);
+        e.yearAdjustment = e.yearAdjustment || 0;
+        e.year = e.calculatedYear + e.yearAdjustment;
+      });
+  };
+
+  AnnotationAsset.prototype.reload = function () {
     this.markerLayer.clearLayers();
-    this.markers = new Array();
+    this.markers = [];
     Lt.aData.index = 0;
     if (Lt.aData.annotations != undefined) {
-      var reduced = Object.values(Lt.aData.annotations).filter(e => e != undefined);
+      // remove null or undefined elements
+      var reducedArray = Object.values(Lt.aData.annotations).filter(e => e != undefined);
       Lt.aData.annotations = {};
-      reduced.map((e, i) => Lt.aData.annotations[i] = e);
+      reducedArray.map((e, i) => Lt.aData.annotations[i] = e);
+
+      this.reloadAssociatedYears();
 
       Object.values(Lt.aData.annotations).map((e, i) => {
-        this.newAnnotation(Lt.aData.annotations, i);
+        var draggable = false;
+        if (window.name.includes('popout')) {
+          draggable = true;
+        };
+
+        e.color = e.color || '#ff1c22';
+
+        this.annotationIcon = L.marker([0, 0], {
+          icon: L.divIcon( {className: e.color} ),
+          draggable: true,
+          riseOnHover: true,
+        });
+
+        this.annotationIcon.setLatLng(e.latLng);
+        this.annotationIcon.addTo(Lt.viewer);
+
+        this.markers[i] = this.annotationIcon;
+        this.createMouseEventListeners(i);
+
+        this.markerLayer.addLayer(this.markers[i]);
+
         Lt.aData.index++;
       });
     }
   };
 
-  AnnotationAsset.prototype.popupMouseover = function(e) {
-    this.openPopup();
-  };
-
-  AnnotationAsset.prototype.popupMouseout = function(e) {
-    this.closePopup();
-  };
-
-  AnnotationAsset.prototype.newAnnotation = function(ants, i) {
-    var ref = ants[i];
-
-    if (ref.text == '') {
-      Lt.aData.deleteAnnotation(i);
-      return;
-    }
-
-    var draggable = false;
-    if (window.name.includes('popout')) {
-      draggable = true;
-    }
-
-    var circle = L.marker(ref.latLng, {
-      icon: new MarkerIcon('red', Lt.basePath),
-      draggable: draggable,
-      riseOnHover: true
-    });
-
-    circle.bindPopup(ref.text, {closeButton: false});
-    this.markers[i] = circle;
-    this.markers[i].clicked = false;
-
-    this.markers[i].on('dragend', (e) => {
-      ants[i].latLng = e.target._latlng;
-    });
-
-    $(this.markers[i]).click(e => {
-      if (Lt.editAnnotation.active) {
-        this.editAnnotation(i);
-      } else if (Lt.deleteAnnotation.active) {
-        Lt.deleteAnnotation.action(i);
-      }
-    });
-
-    $(this.markers[i]).mouseover(this.popupMouseover);
-    $(this.markers[i]).mouseout(this.popupMouseout);
-
-    this.markerLayer.addLayer(this.markers[i]);
-  };
-
-  AnnotationAsset.prototype.editAnnotation = function(i) {
-    let marker = this.markers[i];
-
-    $(marker).off('mouseover');
-    $(marker).off('mouseout');
-
-    marker.setPopupContent('<textarea id="comment_input" name="message"' +
-        'rows="2" cols="15">' + Lt.aData.annotations[i].text + '</textarea>');
-    marker.openPopup();
-    document.getElementById('comment_input').select();
-
-    $(document).keypress(e => {
-      var key = e.which || e.keyCode;
-      if (key === 13) {
-        if ($('#comment_input').val() != undefined) {
-          let string = ($('#comment_input').val()).slice(0);
-
-          if (string != '') {
-            Lt.aData.annotations[i].text = string;
-            marker.setPopupContent(string);
-            $(marker).mouseover(this.popupMouseover);
-            $(marker).mouseout(this.popupMouseout);
-          } else {
-            Lt.deleteAnnotation.action(i);
-          }
-        }
-        Lt.editAnnotation.disable();
-      }
-    });
-  };
-}
+};
 
 /**
  * Scale bar for orientation & screenshots
@@ -1511,7 +2582,7 @@ function Popout(Lt) {
  */
 function Undo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('undo', 'Undo', () => { this.pop() });
+  this.btn = new Button('undo', 'Undo', () => { this.pop(); Lt.metaDataText.updateText() });
   this.btn.disable();
 
   /**
@@ -1533,6 +2604,7 @@ function Undo(Lt) {
    */
   Undo.prototype.pop = function() {
     if (this.stack.length > 0) {
+      console.log(Lt.data.points[Lt.data.index - 1]);
       if (Lt.data.points[Lt.data.index - 1].start) {
         Lt.createPoint.disable();
       } else {
@@ -1567,7 +2639,7 @@ function Undo(Lt) {
  */
 function Redo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('redo', 'Redo', () => { this.pop()});
+  this.btn = new Button('redo', 'Redo', () => { this.pop(); Lt.metaDataText.updateText();});
   this.btn.disable();
 
   /**
@@ -1765,6 +2837,7 @@ function Dating(Lt) {
    */
   Dating.prototype.disable = function() {
     Lt.metaDataText.updateText(); // updates once user hits enter
+    Lt.annotationAsset.reloadAssociatedYears();
 
     this.btn.state('inactive');
     $(Lt.viewer.getContainer()).off('click');
@@ -1941,6 +3014,7 @@ function CreateZeroGrowth(Lt) {
       };
 
       Lt.metaDataText.updateText(); // updates after point is inserted
+      Lt.annotationAsset.reloadAssociatedYears();
 
     } else {
       alert('First year cannot be missing!');
@@ -2197,7 +3271,87 @@ function InsertPoint(Lt) {
     this.active = false;
     Lt.viewer.getContainer().style.cursor = 'default';
   };
-}
+};
+
+/**
+ * Insert a new start point where a measurement point exists
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function ConvertToStartPoint(Lt) {
+  this.active = false;
+  this.btn = new Button(
+    'change_circle',
+    'Change a measurement point to a start point',
+    () => { Lt.disableTools(); this.enable() },
+    () => { this.disable() }
+  );
+
+  ConvertToStartPoint.prototype.action = function (i) {
+    var points = Lt.data.points;
+    var previousYear = points[i].year || 0;
+
+    // convert to start point by changing properties
+    points[i].start = true;
+    delete points[i].year;
+    delete points[i].earlywood;
+
+    if (i - 1 == 0) { // if previous point is first start point
+      Lt.deletePoint.action(i - 1);
+    };
+
+    // re-assign years to following points
+    var previousPoints = points.slice(0, i);
+    var followingPoints = points.slice(i);
+
+    if (Lt.measurementOptions.forwardDirection) { // if measuring forward in time
+      var yearChange = 1;
+    } else { // if measuring backward in time
+      var yearChange = -1;
+    };
+
+    followingPoints.map((c) => { // c = current point, i = index, a = array
+      if (c && !c.start && !c.break) {
+        if (Lt.measurementOptions.subAnnual) { // flip earlywood & latewood
+          if (c.earlywood) {
+            c.earlywood = false;
+          } else {
+            c.earlywood = true;
+          };
+        };
+
+        c.year = previousYear;
+        if (!(Lt.measurementOptions.subAnnual && c.earlywood)) { // only change year value if latewood or annual measurements
+          previousYear += yearChange;
+        };
+      };
+    });
+    Lt.data.year = Lt.measurementOptions.forwardDirection? points[points.length-1].year+1: points[points.length-1].year-1;
+    Lt.visualAsset.reload();
+    Lt.metaDataText.updateText();
+    Lt.annotationAsset.reloadAssociatedYears();
+  };
+
+  ConvertToStartPoint.prototype.enable = function () {
+    Lt.viewer.getContainer().style.cursor = 'pointer';
+    this.btn.state('active');
+    this.active = true;
+  };
+
+  ConvertToStartPoint.prototype.disable = function () {
+    $(document).keyup(e => {
+          var key = e.which || e.keyCode;
+          if (key === 27) { // 27 = esc
+            this.disable();
+          }
+        });
+
+    $(Lt.viewer.getContainer()).off('click');
+    this.btn.state('inactive');
+    this.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
+  };
+};
 
 /**
  * Insert a zero growth measurement in the middle of a chronology
@@ -2872,7 +4026,7 @@ function ViewData(Lt) {
       'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
       '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
       '<button id="download-tab-button"' +
-      'class ="text-button" title="Download Measurements, Tab Deliminated Format"' +
+      'class ="text-button" title="Download Measurements, Tab Delimited Format"' +
       '>TAB</button><br>  '+
       '<button id="download-csv-button"' +
       'class="text-button" title="Download Measurements, Common Separated Column Format"' +
@@ -2901,10 +4055,11 @@ function ViewData(Lt) {
       var lengthAsAString;
       var  totalWidthString = String(totalWidth);
       var totalWidth = 0;
+      var wood;
 
       Lt.data.clean();
       pts.map((e, i, a) => {
-
+        wood = Lt.measurementOptions.subAnnual? (e.earlywood? "E": "L") : ""
         if (e.start) {
           last_latLng = e.latLng;
         } else if (e.break) {
@@ -2937,36 +4092,11 @@ function ViewData(Lt) {
               lengthAsAString+='8';
 
           }
+          //assign color to data row
+          var row_color_html = Lt.helper.assignRowColor(e,y,Lt,lengthAsAString)
+          stringContent = stringContent.concat(row_color_html);
+          y++;
 
-          if (Lt.measurementOptions.subAnnual) {
-            var wood;
-            var row_color;
-            if (e.earlywood) {
-              wood = 'E';
-              row_color = '#00d2e6';
-            } else {
-              wood = 'L';
-              row_color = '#00838f';
-              y++;
-            };
-            if(e.year%10===0)
-            {
-              if(wood === 'E')
-              {
-                row_color='E06F4C';
-              }
-              else{
-                row_color= '#db2314';
-              }
-            }
-
-            stringContent = stringContent.concat('<tr style="color:' + row_color + ';">');
-            stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
-          } else {
-            y++;
-            row_color = e.year%10===0? 'red':'#00d2e6';
-            stringContent = stringContent.concat('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
-          }
           last_latLng = e.latLng;
 
           //Set up CSV files to download later
@@ -3020,7 +4150,7 @@ function ViewData(Lt) {
       '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
       'disabled>CSV</button><br>'+
       '<button id="download-tab-button"' +
-      'class ="text-button disabled" title="Download Measurements, Tab Deliminated Format"' +
+      'class ="text-button disabled" title="Download Measurements, Tab Delimited Format"' +
       'disabled>TAB</button><br>'+
       '<button id="delete-button"' +
       'class="icon-button delete" title="Delete All Measurement Point Data"' +
@@ -3053,10 +4183,6 @@ function ViewData(Lt) {
           }
          }
        );
-    $('#refresh-button').click(() => {
-      this.disable();
-      this.enable();
-    });
     $('#delete-button').click(() => {
       this.dialog.setContent(
           '<p>This action will delete all data points.' +
@@ -3116,185 +4242,11 @@ function ViewData(Lt) {
     $('#download-csv-button').off('click');
     $('#download-tab-button').off('click');
     $('#copy-data-button').off('click');
-    $('#refresh-button').off('click');
     $('#delete-button').off('click');
     $('#copy-data-button').off('click');
     this.dialog.close();
   };
-}
-
-/**
- * Create annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function CreateAnnotation(Lt) {
-  this.active = false;
-  this.input = L.circle([0, 0], {radius: .0001, color: 'red', weight: '6'})
-      .bindPopup('<textarea class="comment_input" name="message" rows="2"' +
-      'cols="15"></textarea>', {closeButton: false});
-  this.btn = new Button(
-    'comment',
-    'Create annotations (Ctrl-a)',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-
-  L.DomEvent.on(window, 'keydown', (e) => {
-    if (e.keyCode == 65 && e.getModifierState("Control")) {
-      if(!this.active) {
-        Lt.disableTools();
-        this.enable();
-      }
-      else {
-        this.disable();
-      }
-    }
-  }, this);
-
-  /**
-   * Enable creating annotations on click
-   * @function enable
-   */
-  CreateAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-
-    Lt.viewer.doubleClickZoom.disable();
-    $(Lt.viewer.getContainer()).click(e => {
-      $(Lt.viewer.getContainer()).click(e => {
-        this.disable();
-        this.enable();
-      });
-      var latLng = Lt.viewer.mouseEventToLatLng(e);
-      this.input.setLatLng(latLng);
-      this.input.addTo(Lt.viewer);
-      this.input.openPopup();
-
-      document.getElementsByClassName('comment_input')[0].select();
-
-      $(document).keypress(e => {
-        var key = e.which || e.keyCode;
-        if (key === 13) {
-          var string = ($('.comment_input').val()).slice(0);
-
-          this.input.remove();
-
-          if (string != '') {
-            Lt.aData.annotations[Lt.aData.index] = {'latLng': latLng, 'text': string};
-            Lt.annotationAsset.newAnnotation(Lt.aData.annotations, Lt.aData.index);
-            Lt.aData.index++;
-          }
-
-          this.disable();
-          this.enable();
-        }
-      });
-    });
-  };
-
-  /**
-   * Disable creating annotations on click
-   * @function enable
-   */
-  CreateAnnotation.prototype.disable = function() {
-    this.btn.state('inactive');
-    Lt.viewer.doubleClickZoom.enable();
-    $(Lt.viewer.getContainer()).off('dblclick');
-    $(Lt.viewer.getContainer()).off('click');
-    $(document).off('keypress');
-    Lt.viewer.getContainer().style.cursor = 'default';
-    this.input.remove();
-    this.active = false;
-  };
-
-}
-
-/**
- * Delete annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function DeleteAnnotation(Lt) {
-  this.btn = new Button(
-    'delete',
-    'Delete an annotation',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-  this.active = false;
-
-    /**
-   * Delete a point
-   * @function action
-   * @param i int - delete the annotation at index i
-   */
-  DeleteAnnotation.prototype.action = function(i) {
-    Lt.undo.push();
-
-    Lt.aData.deleteAnnotation(i);
-
-    Lt.annotationAsset.reload();
-  };
-
-  /**
-   * Enable deleting annotations on click
-   * @function enable
-   */
-  DeleteAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-  };
-
-  /**
-   * Disable deleting annotations on click
-   * @function disable
-   */
-  DeleteAnnotation.prototype.disable = function() {
-    $(Lt.viewer.getContainer()).off('click');
-    this.btn.state('inactive');
-    this.active = false;
-    Lt.viewer.getContainer().style.cursor = 'default';
-  };
-}
-
-/**
- * Edit annotations
- * @constructor
- * @param {Ltreering} Lt - Leaflet treering object
- */
-function EditAnnotation(Lt) {
-  this.btn = new Button(
-    'edit',
-    'Edit an annotation',
-    () => { Lt.disableTools(); this.enable() },
-    () => { this.disable() }
-  );
-  this.active = false;
-
-  /**
-   * Enable editing annotations on click
-   * @function enable
-   */
-  EditAnnotation.prototype.enable = function() {
-    this.btn.state('active');
-    this.active = true;
-    Lt.viewer.getContainer().style.cursor = 'pointer';
-  };
-
-  /**
-   * Disable editing annotations on click
-   * @function disable
-   */
-  EditAnnotation.prototype.disable = function() {
-    $(Lt.viewer.getContainer()).off('click');
-    this.btn.state('inactive');
-    this.active = false;
-    Lt.viewer.getContainer().style.cursor = 'default';
-  };
-}
+};
 
 /**
  * Change color properties of image
@@ -3322,7 +4274,15 @@ function ImageAdjustment(Lt) {
     <input class="imageSlider" id="saturation-slider" type=range min=0 max=350 value=100></div> \
     <label style="text-align:center;display:block;">Hue Rotation</label> \
     <input class="imageSlider" id="hue-slider" type=range min=0 max=360 value=0> \
-     <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
+     <label style="text-align:center;display:block;">Sharpness</label> \
+    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">Emboss</label> \
+    <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">edgeDetect</label> \
+    <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">unsharpen</label> \
+    <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
     <button id="reset-button" style="margin-left:auto; margin-right:auto; margin-top: 5px;display:block;" class="mdc-button mdc-button--unelevated mdc-button-compact">reset</button></div>').addTo(Lt.viewer);
 
   /**
@@ -3335,13 +4295,34 @@ function ImageAdjustment(Lt) {
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
     var invert = $("#invert-checkbox").prop('checked')?1:0;
+    var sharpnessSlider = document.getElementById("sharpness-slider").value;
+    var embossSlider = document.getElementById("emboss-slider").value;
+    var edgeDetect = document.getElementById("edgeDetect-slider").value;
+    var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     document.getElementsByClassName("leaflet-pane")[0].style.filter =
       "contrast(" + contrastSlider.value + "%) " +
       "brightness(" + brightnessSlider.value + "%) " +
       "saturate(" + saturationSlider.value + "%) " +
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
-
+    Lt.baseLayer['GL Layer'].setKernelsAndStrength([
+      {
+			"name":"emboss",
+			"strength": embossSlider
+      },
+      {
+        "name":"edgeDetect3",
+        "strength": edgeDetect
+      },
+      {
+        "name":"sharpness",
+        "strength": sharpnessSlider
+      },
+      {
+        "name":"unsharpen",
+        "strength": unsharpnessSlider
+      }
+    ]);
   };
 
   /**
@@ -3355,7 +4336,10 @@ function ImageAdjustment(Lt) {
     var contrastSlider = document.getElementById("contrast-slider");
     var saturationSlider = document.getElementById("saturation-slider");
     var hueSlider = document.getElementById("hue-slider");
-
+    var sharpnessSlider = document.getElementById("sharpness-slider");
+    var embossSlider = document.getElementById("emboss-slider");
+    var edgeDetect = document.getElementById("edgeDetect-slider");
+    var unsharpnessSlider = document.getElementById("unsharpness-slider");
     //Close view if user clicks anywhere outside of slider window
     $(Lt.viewer.getContainer()).click(e => {
       this.disable();
@@ -3373,6 +4357,10 @@ function ImageAdjustment(Lt) {
       $(contrastSlider).val(100);
       $(saturationSlider).val(100);
       $(hueSlider).val(0);
+      $(sharpnessSlider).val(0);
+      $(embossSlider).val(0);
+      $(edgeDetect).val(0);
+      $(unsharpnessSlider).val(0);
       this.updateFilters();
     });
     $("#invert-button").click(() => {
@@ -3590,11 +4578,17 @@ function SaveLocal(Lt) {
    */
   SaveLocal.prototype.action = function() {
     Lt.data.clean();
-    var dataJSON = {'SaveDate': Lt.data.saveDate, 'year': Lt.data.year,
+    var dataJSON = {
+      'SaveDate': Lt.data.saveDate,
+      'year': Lt.data.year,
       'forwardDirection': Lt.measurementOptions.forwardDirection,
       'subAnnual': Lt.measurementOptions.subAnnual,
-      'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
-      'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+      'earlywood': Lt.data.earlywood,
+      'index': Lt.data.index,
+      'points': Lt.data.points,
+      'attributesObjectArray': Lt.annotationAsset.attributesObjectArray,
+      'annotations': Lt.aData.annotations,
+    };
 
     // don't serialize our default value
     if(Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
@@ -3678,11 +4672,18 @@ function SaveCloud(Lt) {
     if (Lt.meta.savePermission && Lt.meta.saveURL != "") {
       Lt.data.clean();
       this.updateDate();
-      var dataJSON = {'saveDate': Lt.data.saveDate, 'year': Lt.data.year,
+      var dataJSON = {
+        'SaveDate': Lt.data.saveDate,
+        'year': Lt.data.year,
         'forwardDirection': Lt.measurementOptions.forwardDirection,
         'subAnnual': Lt.measurementOptions.subAnnual,
-        'earlywood': Lt.data.earlywood, 'index': Lt.data.index,
-        'points': Lt.data.points, 'annotations': Lt.aData.annotations};
+        'earlywood': Lt.data.earlywood,
+        'index': Lt.data.index,
+        'points': Lt.data.points,
+        'attributesObjectArray': Lt.annotationAsset.attributesObjectArray,
+        'annotations': Lt.aData.annotations,
+      };
+
       // don't serialize our default value
       if (Lt.meta.ppm != 468 || Lt.meta.ppmCalibration) {
         dataJSON.ppm = Lt.meta.ppm;
@@ -3847,6 +4848,7 @@ function LoadLocal(Lt) {
 }
 
 function Panhandler(La) {
+  var map = La.viewer;
   this.panHandler = L.Handler.extend({
     panAmount: 120,
     panDirection: 0,
@@ -3985,7 +4987,6 @@ function Panhandler(La) {
             saveAs(blob, (Lt.meta.assetName + '_tab.zip'));
           });
         }
-
 /**
  * Hosts all global helper functions
  * @function
@@ -4068,13 +5069,13 @@ function Helper(Lt) {
 
     // if denominator = 0, set denominator = ~0
     if (dis_i_to_minus == 0) {
-      dis_i_to_minus = 0.000000000001;
+      dis_i_to_minus = Number.MIN_VALUE;
     };
     if (dis_i_to_plus == 0) {
-      dis_i_to_plus = 0.000000000001;
-    }
+      dis_i_to_plus = Number.MIN_VALUE;
+    };
     if (dis_i_to_insert == 0) {
-      dis_i_to_insert = 0.000000000001;
+      dis_i_to_insert = Number.MIN_VALUE;
     };
 
     /* Law of cosines:
@@ -4105,4 +5106,43 @@ function Helper(Lt) {
 
     return i;
   }
+  /**
+   * returns the correct colors for points in a measurement path
+   * @function
+   * @param {leaflet object} - Lt
+   */
+   Helper.prototype.assignRowColor = function (e,y,Lt, lengthAsAString)
+   {
+     var stringContent;
+     if (Lt.measurementOptions.subAnnual) {
+       var wood;
+       var row_color;
+       if (e.earlywood) {
+         wood = 'E';
+         row_color = '#02bfd1';
+       } else {
+         wood = 'L';
+         row_color = '#00838f';
+         y++;
+       };
+       if(e.year%10===0)
+       {
+         if(wood === 'E')
+         {
+           row_color='#d17154';
+         }
+         else{
+           row_color= '#db2314';
+         }
+       }
+
+       stringContent = '<tr style="color:' + row_color + ';">';
+       stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
+     } else {
+       y++;
+       row_color = e.year%10===0? 'red':'#00d2e6';
+       stringContent = ('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
+     }
+     return stringContent;
+   }
 };
