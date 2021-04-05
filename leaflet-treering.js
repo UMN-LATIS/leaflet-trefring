@@ -452,7 +452,7 @@ function MeasurementData (dataObject, Lt) {
 
     k++;
 
-    second_points.map((e, i) => {
+    second_points.map(e => {
       if(!e) {
        return;
       }
