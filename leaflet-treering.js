@@ -3030,7 +3030,7 @@ function CreateZeroGrowth(Lt) {
 function CreateBreak(Lt) {
   this.btn = new Button(
     'broken_image',
-    'Create a within-year break in measurement path\n(Avoid measuring physical specimin gaps & cracks!)',
+    'Create a within-year break in measurement path\n(Avoid measuring physical specimen gaps & cracks!)',
     () => {
       Lt.disableTools();
       this.enable();
@@ -3142,7 +3142,7 @@ function Cut(Lt) {
   this.point = -1;
   this.btn = new Button(
     'content_cut',
-    'Delete measurement path from a selected point to the beginning or end of series',
+    'Delete all points between two selected points',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -4256,7 +4256,7 @@ function ViewData(Lt) {
 function ImageAdjustment(Lt) {
   this.btn = new Button(
     'brightness_6',
-    'Adjust image brightness, contrast & color',
+    'Adjust image appearance settings',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
