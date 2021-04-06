@@ -171,12 +171,13 @@ th {
 	margin: 0;
 	font-size: 14px;
 	font-weight: bold;
+	display: inline;
 }
 
 #keyboardShortcutDiv span {
 	margin-left: 10px;
 	margin-bottom: 5px;
-	display: block;
+	display: inline;
 }
 
 .meta-data-text-box {

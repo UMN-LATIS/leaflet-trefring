@@ -111,7 +111,7 @@ function LTreering (viewer, basePath, options) {
   // add this.insertBreak.btn below once fixed
   this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.convertToStartPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
-  this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn], 'settings', 'Measurement preferences & distance calibration');
+  this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn, this.keyboardShortCutDialog.btn], 'settings', 'Measurement preferences & distance calibration');
 
   this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
 
@@ -153,7 +153,6 @@ function LTreering (viewer, basePath, options) {
       this.editTools.bar.addTo(this.viewer);
       this.annotationTools.bar.addTo(this.viewer);
       this.settings.bar.addTo(this.viewer);
-      this.keyboardShortCutDialog.btn.addTo(this.viewer);
       this.undoRedoBar.addTo(this.viewer);
     } else {
       this.popout.btn.addTo(this.viewer);
@@ -3207,7 +3206,7 @@ function InsertPoint(Lt) {
   this.active = false;
   this.btn = new Button(
     'add_circle_outline',
-    'Insert a point between two other points',
+    'Insert a point between two other points (Ctrl-i)',
     () => { Lt.disableTools(); this.enable() },
     () => { this.disable() }
   );
@@ -4614,7 +4613,7 @@ function SaveLocal(Lt) {
 function SaveCloud(Lt) {
   this.btn = new Button(
     'cloud_upload',
-    'Save the current measurements, annotations, etc.\nto the cloud-hosted .json file',
+    'Save the current measurements, annotations, etc.\nto the cloud-hosted .json file (Ctrl-s)',
     () => { this.action() }
   );
 
@@ -5017,10 +5016,10 @@ function KeyboardShortCutDialog (Lt) {
       this.dialog.close();
     };
 
-    let anchor = this.anchor || [50, 5];
+    let anchor = this.anchor || [50, 0];
 
     this.dialog = L.control.dialog ({
-      'size': [290, 300],
+      'size': [306, 290],
       'anchor': anchor,
       'initOpen': true
     }).addTo(Lt.viewer);
@@ -5030,44 +5029,40 @@ function KeyboardShortCutDialog (Lt) {
 
     const shortcutGuide = [
       {
-       'key': 'CTRL - Z',
-       'use': 'Toggle magnification loupe on/off',
+       'key': 'Ctrl-z',
+       'use': 'Toggle magnification loupe on / off',
       },
       {
-       'key': 'CTRL - M',
-       'use': 'Toggle measurement tool on/off',
+       'key': 'Ctrl-m',
+       'use': 'Toggle measurement tool on / off',
       },
       {
-       'key': 'RIGHT CLICK OR CTRL - CLICK',
-       'use': 'End measurement path OR resume measuring from last point',
+       'key': 'Ctrl-i',
+       'use': 'Toggle insert point tool on / off',
       },
       {
-       'key': 'CTRL - S',
-       'use': 'Save change to cloud (if permitted)',
-      },
-      {
-       'key': 'CTRL - A',
+       'key': 'Ctrl-a',
        'use': 'Create new annotation',
       },
       {
-       'key': 'CTRL - I',
-       'use': 'Toggle insert point tool on/off',
+       'key': 'Ctrl-s',
+       'use': 'Save changes to cloud (if permitted)',
       },
       {
-       'key': 'ARROWS',
+       'key': 'Shift',
+       'use': 'Disable panning when cursor is near edge',
+      },
+      {
+       'key': 'Arrows',
        'use': 'Pan up / down / left / right',
       },
       {
-       'key': 'CTRL - ARROWS',
-       'use': 'Pan continuously up / down / left / right',
-      },
-      {
-       'key': 'SHIFT - ARROWS',
+       'key': 'Shift-arrows',
        'use': 'Pan slowly up / down / left / right',
       },
       {
-       'key': 'SHIFT',
-       'use': 'Disable panning when cursor is near edge',
+       'key': 'Right click or Ctrl-click',
+       'use': 'End measurement path OR resume measuring from last point',
       },
     ];
 
@@ -5086,13 +5081,17 @@ function KeyboardShortCutDialog (Lt) {
     mainDiv.appendChild(title);
 
     for (shortcut of shortcutGuide) {
+      let subDiv = document.createElement('div');
+
       let key = document.createElement('p');
       key.innerHTML = shortcut.key;
-      mainDiv.appendChild(key);
+      subDiv.appendChild(key);
 
       let description = document.createElement('span');
       description.innerHTML = shortcut.use;
-      mainDiv.appendChild(description);
+      subDiv.appendChild(description);
+
+      mainDiv.appendChild(subDiv);
     };
 
     this.dialog.hideResize();
