@@ -5016,10 +5016,10 @@ function KeyboardShortCutDialog (Lt) {
       this.dialog.close();
     };
 
-    let anchor = this.anchor || [50, 0];
+    let anchor = this.anchor || [1, 350];
 
     this.dialog = L.control.dialog ({
-      'size': [306, 290],
+      'size': [310, 290],
       'anchor': anchor,
       'initOpen': true
     }).addTo(Lt.viewer);
@@ -5030,15 +5030,15 @@ function KeyboardShortCutDialog (Lt) {
     const shortcutGuide = [
       {
        'key': 'Ctrl-z',
-       'use': 'Toggle magnification loupe on / off',
+       'use': 'Toggle magnification loupe on/off',
       },
       {
        'key': 'Ctrl-m',
-       'use': 'Toggle measurement tool on / off',
+       'use': 'Toggle measurement tool on/off',
       },
       {
        'key': 'Ctrl-i',
-       'use': 'Toggle insert point tool on / off',
+       'use': 'Toggle insert point tool on/off',
       },
       {
        'key': 'Ctrl-a',
@@ -5050,15 +5050,15 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Shift',
-       'use': 'Disable panning when cursor is near edge',
+       'use': 'Disable cursor panning near edge',
       },
       {
        'key': 'Arrows',
-       'use': 'Pan up / down / left / right',
+       'use': 'Pan up/down/left/right',
       },
       {
        'key': 'Shift-arrows',
-       'use': 'Pan slowly up / down / left / right',
+       'use': 'Pan slowly up/down/left/right',
       },
       {
        'key': 'Right click or Ctrl-click',
