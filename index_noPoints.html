@@ -157,7 +157,7 @@ var layer = L.tileLayer.gl({
 
     //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
 		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
-		var treering = new LTreering(map, "", {'savePermission': true, 'saveURL': '/test', 'ppm':
+		var treering = new LTreering(map, "", {'savePermission': false, 'saveURL': '/test', 'ppm':
     468, 'popoutUrl': "index_noPoints.html", 'assetName': "noPts", 'hasLatewood': true, 'attributesObject': {},
     'initialData': {}});
 treering.loadInterface();
