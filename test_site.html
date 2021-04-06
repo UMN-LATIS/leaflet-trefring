@@ -10,8 +10,8 @@
 
     #tabs-div {
       margin: auto;
-      margin-top: 10px;
-      margin-bottom: 20px;
+      margin-top: 1%;
+      margin-bottom: 2%;
       width: 99%;
       height: 5%;
     }
@@ -56,7 +56,7 @@
 
     #iframe-div {
       margin-right: 1%;
-      height: 75%;
+      height: 80%;
 
     }
 
@@ -69,7 +69,7 @@
     }
 
     #description-div {
-      height: 25%;
+      height: 20%;
 
     }
 
@@ -85,11 +85,11 @@
   <body>
 
     <div id='tabs-div'>
-      <button class='tabBtns' id='left-btn' onclick='openTab(event, "blank")'>Blank</button>
-      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
-      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
-      <button class='tabBtns' onclick='openTab(event, "assetName")'>assetName</button>
-      <button class='tabBtns' id='right-btn' onclick='openTab(event, "assetName")'>assetName</button>
+      <button class='tabBtns' id='left-btn' onclick='openTab(event, "CCS130A")'>CCS130A</button>
+      <button class='tabBtns' onclick='openTab(event, "SpRln07c1")'>SpRln07c1</button>
+      <button class='tabBtns' onclick='openTab(event, "CCS134A")'>CCS134A</button>
+      <button class='tabBtns' onclick='openTab(event, "BSK06")'>BSK06</button>
+      <button class='tabBtns' id='right-btn' onclick='openTab(event, "CCL01A")'>CCL01A</button>
     </div>
 
     <div id='instructions-div'>
@@ -106,25 +106,25 @@
     <script>
 
     const coreArray = [
-      {'assetName': 'blank',
+      {'assetName': 'CCS130A',
        'src': 'CCS130A_blank_core.html',
        'description': 'Core with no measurements or annotations.',
       },
-      {'assetName': 'assetName',
-       'src': 'assetName_direction_measurementType.html',
-       'description': 'description',
+      {'assetName': 'SpRln07c1',
+       'src': 'SpRln07c1_forward_annual.html',
+       'description': 'Core measured forward annually.',
       },
-      {'assetName': 'assetName',
-       'src': 'assetName_direction_measurementType.html',
-       'description': 'description',
+      {'assetName': 'CCS134A',
+       'src': 'CCS134A_backwards_annual.html',
+       'description': 'Core measured backwards annually.',
       },
-      {'assetName': 'assetName',
-       'src': 'assetName_direction_measurementType.html',
-       'description': 'description',
+      {'assetName': 'BSK06',
+       'src': 'BSK06_forward_subannual.html',
+       'description': 'Core measure forward subannually.',
       },
-      {'assetName': 'assetName',
-       'src': 'assetName_direction_measurementType.html',
-       'description': 'description',
+      {'assetName': 'CCL01A',
+       'src': 'CCL01A_backward_subannual.html',
+       'description': 'Core measured backwards subannually.',
       },
     ];
 
