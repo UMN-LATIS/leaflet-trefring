@@ -54,7 +54,7 @@
 
     var layer = L.tileLayer.elevator(function(coords, tile, done) {
         var error;
-        var params = {Bucket: 'elevator-assets', Key: "sample_cores/ccl01atiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+        var params = {Bucket: 'elevator-assets', Key: "sample_cores/ccl01a/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
         tile.onload = (function(done, error, tile) {
             return function() {
                 done(error, tile);
@@ -69,8 +69,8 @@
 				width: 161686,
         height: 3922,
         tileSize :254,
-        maxNativeZoom: 16,
-        maxZoom: 16,
+				maxNativeZoom: 18,
+        maxZoom: 18,
         overlap: 1,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
