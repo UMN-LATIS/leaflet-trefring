@@ -2,10 +2,10 @@
   <head>
     <style>
 
-    html, body {
+    body {
       height: 100%;
       margin: 0;
-      overflow: hidden;
+      overflow-y: hidden;
     }
 
     #tabs-div {
@@ -22,12 +22,15 @@
     	outline: none;
     	cursor: pointer;
     	padding: 1% 3%;
-    	transition: 0.3s;
     	font-size: 16px;
     	font-weight: bold;
     	background-color: #e8e8e8;
     	color: #636363;
     	width: 20%;
+    }
+
+    button:hover {
+      background-color: #d1d1d1 !important;
     }
 
     #left-btn {
@@ -44,26 +47,32 @@
       display: inline-block;
       width: 30%;
       height: 100%;
-
     }
 
-    #instructions-text-div {
-      font-size: small;
-      margin-left: 10px;
-      margin-right: 10px;
+    #popout-btn {
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+      margin-left: 10%;
+      width: 40%;
+    }
+
+    #reset-btn {
+      float: left;
+      margin: 0;
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+      width: 40%;
     }
 
     #iframe-description-parent-div {
       float: right;
       width: 70%;
       height: 100%;
-
     }
 
     #iframe-div {
       margin-right: 1%;
       height: 80%;
-
     }
 
     iframe {
@@ -71,18 +80,15 @@
       height: 100%;
       border: none;
       border-radius: 6px;
-
     }
 
     #description-div {
       height: 20%;
-
     }
 
     p {
       font-size: 16px;
       font-family: sans-serif;
-
     }
 
     </style>
@@ -99,75 +105,10 @@
     </div>
 
     <div id='instructions-div'>
-      <div id='instructions-text-div'>
-      <h3>Annotations</h3>
-      <input type="checkbox" id="item1" name="item1" value="1">
-      <label for="item1"> Create an annotation</label><br>
-      <input type="checkbox" id="item2" name="item2" value="2">
-      <label for="item2"> Add text</label><br>
-      <input type="checkbox" id="item3" name="item3" value="3">
-      <label for="item3"> Create and select attributes</label><br>
-      <input type="checkbox" id="item4" name="item4" value="4">
-      <label for="item4"> Change color</label><br>
-      <input type="checkbox" id="item5" name="item5" value="5">
-      <label for="item5"> Drag an annotation</label><br>
-      <input type="checkbox" id="item6" name="item6" value="6">
-      <label for="item6"> Edit an annotation by clicking it then selecting the ‘Edit’ tab</label><br>
-      <input type="checkbox" id="item7" name="item7" value="7">
-      <label for="item7"> Delete an annotation</label><br>
-      <input type="checkbox" id="item8" name="item8" value="8">
-      <label for="item8"> Check hover text to see if it aligns with inputted annotation</label><br>
-      <input type="checkbox" id="item9" name="item9" value="9">
-      <label for="item9"> Use GeoLink on the ‘Summary’ tab of annotation to open the annotation location in another browser window</label><br>
-      <h3>Change date of end year</h3>
-      <input type="checkbox" id="item8" name="item8" value="8">
-      <label for="item8"> Check if it changed rest of core</label><br>
-      <input type="checkbox" id="item9" name="item9" value="9">
-      <label for="item9"> Check if it changed the associated years of the annotations </label><br>
-      <h3>Create measurements forward, one increment per year</h3>
-      <input type="checkbox" id="item10" name="item10" value="10">
-      <label for="item10"> Create measurement line</label><br>
-      <input type="checkbox" id="item11" name="item11" value="11">
-      <label for="item11"> Create zero growth year</label><br>
-      <input type="checkbox" id="item12" name="item12" value="12">
-      <label for="item12"> Create breakpoint</label><br>
-      <h3>Create measurements backward, one increment per year</h3>
-      <input type="checkbox" id="item13" name="item13" value="13">
-      <label for="item13"> Create measurement line</label><br>
-      <input type="checkbox" id="item14" name="item14" value="14">
-      <label for="item14"> Create zero growth year</label><br>
-      <input type="checkbox" id="item15" name="item15" value="15">
-      <label for="item15"> Create breakpoint</label><br>
-      <h3>Create measurements forward, two increments per year</h3>
-      <input type="checkbox" id="item16" name="item16" value="16">
-      <label for="item16"> Create measurement line</label><br>
-      <input type="checkbox" id="item17" name="item17" value="17">
-      <label for="item17"> Create zero growth year</label><br>
-      <input type="checkbox" id="item18" name="item18" value="18">
-      <label for="item18"> Create breakpoint</label><br>
-      <h3>Create measurements backward, two increments per year</h3>
-      <input type="checkbox" id="item16" name="item16" value="16">
-      <label for="item16"> Create measurement line</label><br>
-      <input type="checkbox" id="item17" name="item17" value="17">
-      <label for="item17"> Create zero growth year</label><br>
-      <input type="checkbox" id="item18" name="item18" value="18">
-      <label for="item18"> Create breakpoint</label><br>
-      <h3>Edit Measurements</h3>
-      <input type="checkbox" id="item19" name="item19" value="19">
-      <label for="item19"> Delete point</label><br>
-      <input type="checkbox" id="item20" name="item20" value="20">
-      <label for="item20"> Cut section of points</label><br>
-      <input type="checkbox" id="item21" name="item21" value="21">
-      <label for="item21"> Add point</label><br>
-      <input type="checkbox" id="item22" name="item22" value="22">
-      <label for="item22"> Add zero growth year</label><br>
-      <input type="checkbox" id="item23" name="item23" value="23">
-      <label for="item23"> Check if it changed the associated years of the annotations</label><br>
-
-
-      
+      <button id='popout-btn' class='tabBtns' onclick='window.open("instructions.html")'>Popout Instructions</button>
+      <button id='reset-btn' class='tabBtns' onclick='resetBoxes()'>Reset Instructions</button>
+      <iframe id='popout-iframe' src='instructions.html'></iframe>
     </div>
-  </div>
 
     <div id='iframe-description-parent-div'>
       <div id='iframe-div'>
@@ -233,6 +174,15 @@
 
           return;
         };
+      };
+    };
+
+    function resetBoxes() {
+      let iFrame = document.getElementById('popout-iframe');
+      let checkboxes = iFrame.contentWindow.document.getElementsByTagName('input');
+
+      for (let i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = false;
       };
     };
 
