@@ -69,13 +69,13 @@
 				width: 74901,
         height: 3856,
         tileSize :254,
-        maxNativeZoom: 18,
-        maxZoom: 18,
+        maxNativeZoom: 16,
+        maxZoom: 16,
         overlap: 1,
         pixelsPerMillimeter: 480, //(NEW)
         lineColor: 'blue'
     }).addTo(map);
-		
+
     //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
 		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
 		var treering = new LTreering(map, "", {'savePermission': true, 'saveURL': '/test', 'ppm':
