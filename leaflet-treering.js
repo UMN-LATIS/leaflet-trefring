@@ -166,16 +166,7 @@ function LTreering (viewer, basePath, options) {
 
     // right and left click controls
     this.viewer.on('contextmenu', () => {
-      if (!this.createPoint.active && this.data.points[0] !== undefined &&
-          this.createTools.btn._currentState.stateName === 'expand') {
-        this.disableTools();
-        this.createPoint.startPoint = false;
-        this.createPoint.active = true;
-        this.createPoint.enable();
-        this.mouseLine.from(this.data.points[this.data.index - 1].latLng);
-      } else {
-        this.disableTools();
-      }
+      this.disableTools();
     });
 
     this.scaleBarCanvas.load();
@@ -2863,17 +2854,24 @@ function CreatePoint(Lt) {
     () => { this.disable() }
   );
 
+  // create measurement
   L.DomEvent.on(window, 'keydown', (e) => {
      if (e.keyCode == 77 && e.getModifierState("Control")) {
-       if (!this.active) {
-         Lt.disableTools();
-         this.enable();
-       } else {
-         this.disable();
-       }
+       Lt.disableTools();
+       this.enable();
      }
   }, this);
 
+  // resume measurement
+  L.DomEvent.on(window, 'keydown', (e) => {
+     if (e.keyCode == 75 && e.getModifierState("Control")) {
+       Lt.disableTools();
+       this.startPoint = false;
+       this.active = true;
+       this.enable();
+       Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
+     }
+  }, this);
 
   /**
    * Enable creating new points on click events
@@ -5019,7 +5017,7 @@ function KeyboardShortCutDialog (Lt) {
     let anchor = this.anchor || [1, 350];
 
     this.dialog = L.control.dialog ({
-      'size': [310, 290],
+      'size': [310, 300],
       'anchor': anchor,
       'initOpen': true
     }).addTo(Lt.viewer);
@@ -5035,6 +5033,10 @@ function KeyboardShortCutDialog (Lt) {
       {
        'key': 'Ctrl-m',
        'use': 'Toggle measurement tool on/off',
+      },
+      {
+       'key': 'Ctrl-k',
+       'use': 'Resume measurement path',
       },
       {
        'key': 'Ctrl-i',
@@ -5061,8 +5063,8 @@ function KeyboardShortCutDialog (Lt) {
        'use': 'Pan slowly up/down/left/right',
       },
       {
-       'key': 'Right click or Ctrl-click',
-       'use': 'End measurement path OR resume measuring from last point',
+       'key': 'Right click',
+       'use': 'Disable current tool',
       },
     ];
 
