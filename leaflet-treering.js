@@ -172,7 +172,7 @@ function LTreering (viewer, basePath, options) {
         this.createPoint.startPoint = false;
         this.createPoint.active = true;
         this.createPoint.enable();
-        this.mouseLine.from(points[index - 1].latLng);
+        this.mouseLine.from(this.data.points[this.data.index - 1].latLng);
       } else {
         this.disableTools();
       }
