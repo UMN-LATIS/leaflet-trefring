@@ -55,18 +55,8 @@
     }).setView([0, 0], 0);
 
     var baseLayer = L.tileLayer.elevator(function(coords, tile, done) {
-    var error;
     var params = {Bucket: 'elevator-assets', Key: "sample_cores/ccs134a/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
-    tile.onload = (function(done, error, tile) {
-            return function() {
-                done(error, tile);
-            }
-        })(done, error, tile);
-				tile.crossOrigin = "";
-        tile.src = "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
-        //tile.src = params.Key;
-        src = tile.src;
-        return tile.src;
+    return "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
     },
     {
 				width: 74901,
