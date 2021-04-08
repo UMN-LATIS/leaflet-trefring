@@ -5016,7 +5016,7 @@ function KeyboardShortCutDialog (Lt) {
       this.dialog.close();
     };
 
-    let anchor = this.anchor || [1, 350];
+    let anchor = this.anchor || [1, 400];
 
     this.dialog = L.control.dialog ({
       'size': [310, 290],
