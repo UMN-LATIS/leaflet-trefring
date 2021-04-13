@@ -95,43 +95,44 @@
       font-family: sans-serif;
     }
 
-    #instructions {
-      margin-left: 2%;
-      margin-top: 50px;
-    }
+    </style>
+    <style id='instructions-style'>
+      #instructions {
+        margin-left: 2%;
+        margin-top: 50px;
+      }
 
-    #instructions h3 {
-      font-family: Arial;
-      margin: 0;
-      margin-top: 6px;
-    }
+      #instructions h3 {
+        font-family: Arial;
+        margin: 0;
+        margin-top: 6px;
+      }
 
-    #instructions input {
-      margin-left: 10px;
-    }
+      #instructions input {
+        margin-left: 10px;
+      }
 
-    #instructions label {
-      font-family: Arial;
-      font-size: 14px;
-      display: inline-block;
-    }
+      #instructions label {
+        font-family: Arial;
+        font-size: 14px;
+        display: inline-block;
+      }
 
-    .type-checkbox {
-      margin: 0 2px;
-    }
+      .type-checkbox {
+        margin: 0 2px;
+      }
 
-    #instructions p {
-      margin: 0;
-      color: #8c8c8c;
-      font-family: Arial;
-      font-size: 14px;
-    }
+      #instructions p {
+        margin: 0;
+        color: #8c8c8c;
+        font-family: Arial;
+        font-size: 14px;
+      }
 
-    #instructions button {
-      border: none;
-      background-color: inherit;
-    }
-
+      #instructions button {
+        border: none;
+        background-color: inherit;
+      }
     </style>
 
   </head>
@@ -269,6 +270,9 @@
       };
     };
 
+    </script>
+    <script id='instructions-script'>
+
     function resetBoxes(measurementBoxes) {
       if (measurementBoxes) {
         var checkboxes = document.getElementsByClassName('measurement-checkbox');
@@ -284,8 +288,8 @@
     function openInstructions() {
       var instructionsDiv = document.getElementById('instructions').outerHTML;
       var newWindow = window.open('', '', 'width=600, height=600');
-      var stylesheet = document.getElementsByTagName('style')[0].outerHTML;
-      var script = document.getElementsByTagName('script')[0].outerHTML;
+      var stylesheet = document.getElementById('instructions-style').outerHTML;
+      var script = document.getElementById('instructions-script').outerHTML;
       newWindow.document.open();
       newWindow.document.write(stylesheet);
       newWindow.document.write('<link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">');
