@@ -1,5 +1,8 @@
 <html>
   <head>
+
+    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">
+
     <style>
 
     body {
@@ -92,6 +95,43 @@
       font-family: sans-serif;
     }
 
+    #instructions {
+      margin-left: 2%;
+      margin-top: 50px;
+    }
+
+    #instructions h3 {
+      font-family: Arial;
+      margin: 0;
+      margin-top: 6px;
+    }
+
+    #instructions input {
+      margin-left: 10px;
+    }
+
+    #instructions label {
+      font-family: Arial;
+      font-size: 14px;
+      display: inline-block;
+    }
+
+    .type-checkbox {
+      margin: 0 2px;
+    }
+
+    #instructions p {
+      margin: 0;
+      color: #8c8c8c;
+      font-family: Arial;
+      font-size: 14px;
+    }
+
+    #instructions button {
+      border: none;
+      background-color: inherit;
+    }
+
     </style>
 
   </head>
@@ -106,9 +146,60 @@
     </div>
 
     <div id='instructions-div'>
-      <button id='popout-btn' class='tabBtns' onclick='window.open("instructions.html")'>Popout Instructions</button>
-      <button id='reset-btn' class='tabBtns' onclick='resetBoxes()'>Reset Instructions</button>
-      <iframe id='popout-iframe' src='instructions.html'></iframe>
+      <button id='popout-btn' class='tabBtns' onclick='openInstructions()'>Popout Instructions</button>
+      <button id='reset-btn' class='tabBtns' onclick='resetBoxes(false)'>Reset Instructions</button>
+
+      <div id='instructions'>
+        <h3>Annotations</h3>
+          <input type="checkbox" id="item1">
+          <label for="item1"> Create an annotation</label><br>
+          <input type="checkbox" id="item2">
+          <label for="item2"> Add text</label><br>
+          <input type="checkbox" id="item3">
+          <label for="item3"> Create and select attributes</label><br>
+          <input type="checkbox" id="item4">
+          <label for="item4"> Change color</label><br>
+          <input type="checkbox" id="item5">
+          <label for="item5"> Drag an annotation</label><br>
+          <input type="checkbox" id="item6">
+          <label for="item6"> Edit an annotation by clicking it then selecting the ‘Edit’ tab</label><br>
+          <input type="checkbox" id="item7">
+          <label for="item7"> Delete an annotation</label><br>
+          <input type="checkbox" id="item8">
+          <label for="item8"> Check hover text to see if it aligns with inputted annotation</label><br>
+          <input type="checkbox" id="item9">
+          <label for="item9"> Use GeoLink in ‘Summary’ annotation location in another window</label><br>
+        <h3>Change date of end year</h3>
+          <input type="checkbox" id="item8">
+          <label for="item8"> Check if it changed rest of core</label><br>
+          <input type="checkbox" id="item9">
+          <label for="item9"> Check if it changed the associated years of the annotations </label><br>
+        <h3 style='display:inline;'>Create measurements in all types</h3>
+          <!-- 4 checkboxes for each measurement type (forward / backward) (annual / subannual) -->
+          <button onclick='resetBoxes(true)'><i class="fa fa-refresh" aria-hidden="true"></i></button>
+          <input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'>
+          <br>
+          <p> Measure forward/backward annually/subannually </p>
+          <!-- options -->
+          <input type="checkbox" id="item10" class='measurement-checkbox'>
+          <label for="item10"> Create measurement line</label><br>
+          <input type="checkbox" id="item11" class='measurement-checkbox'>
+          <label for="item11"> Create zero growth year</label><br>
+          <input type="checkbox" id="item12" class='measurement-checkbox'>
+          <label for="item12"> Create breakpoint</label><br>
+        <h3>Edit measurements</h3>
+          <input type="checkbox" id="item19">
+          <label for="item19"> Delete point</label><br>
+          <input type="checkbox" id="item20">
+          <label for="item20"> Cut section of points</label><br>
+          <input type="checkbox" id="item21">
+          <label for="item21"> Add point</label><br>
+          <input type="checkbox" id="item22">
+          <label for="item22"> Add zero growth year</label><br>
+          <input type="checkbox" id="item23">
+          <label for="item23"> Check if it changed the associated years of the annotations</label>
+      </div>
+
     </div>
 
     <div id='iframe-description-parent-div'>
@@ -178,13 +269,28 @@
       };
     };
 
-    function resetBoxes() {
-      let iFrame = document.getElementById('popout-iframe');
-      let checkboxes = iFrame.contentWindow.document.getElementsByTagName('input');
+    function resetBoxes(measurementBoxes) {
+      if (measurementBoxes) {
+        var checkboxes = document.getElementsByClassName('measurement-checkbox');
+      } else {
+        var checkboxes = document.getElementsByTagName('input');
+      };
 
       for (let i = 0; i < checkboxes.length; i++) {
         checkboxes[i].checked = false;
       };
+    };
+
+    function openInstructions() {
+      var instructionsDiv = document.getElementById('instructions').outerHTML;
+      var newWindow = window.open('', '', 'width=600, height=600');
+      var stylesheet = document.getElementsByTagName('style')[0].outerHTML;
+      var script = document.getElementsByTagName('script')[0].outerHTML;
+      newWindow.document.open();
+      newWindow.document.write(stylesheet);
+      newWindow.document.write('<link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">');
+      newWindow.document.write(instructionsDiv);
+      newWindow.document.write(script);
     };
 
     document.getElementById('left-btn').click();
