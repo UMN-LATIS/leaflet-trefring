@@ -569,8 +569,12 @@ function MeasurementData (dataObject, Lt) {
     if (measurementOptions.subAnnual) {
       this.earlywood = !this.earlywood;
     };
-    if (!this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) {
-      this.year++;
+    if (!this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) { // add year if forward
+      if (direction == forwardInTime) {
+        this.year++
+      } else {
+        this.year--
+      };
     };
 
     Lt.metaDataText.updateText(); // updates after a single point is inserted
@@ -1782,7 +1786,7 @@ function AnnotationAsset(Lt) {
 
       if (!previousPt) { // case 2: inital start point
         closestYear = nextPt.year
-      } else if (!nextPt.year) { // case 3: break point & next point is a start point
+      } else if (nextPt && !nextPt.year) { // case 3: break point & next point is a start point
         closestYear = Lt.data.points[closestI + 2].year;
       } else if (!previousPt.year) { // case 4: start point & previous point is a break point
         closestYear = Lt.data.points[closestI + 1].year;
@@ -2606,7 +2610,6 @@ function Undo(Lt) {
    */
   Undo.prototype.pop = function() {
     if (this.stack.length > 0) {
-      console.log(Lt.data.points[Lt.data.index - 1]);
       if (Lt.data.points[Lt.data.index - 1].start) {
         Lt.createPoint.disable();
       } else {
@@ -4618,7 +4621,6 @@ function SaveCloud(Lt) {
   );
 
   L.DomEvent.on(window, 'keydown', (e) => {
-    console.log('pushed')
      if (e.keyCode == 83 && e.getModifierState("Control") && window.name.includes('popout')) { // 83 refers to 's'
        e.preventDefault();
        e.stopPropagation();
