@@ -1773,7 +1773,11 @@ function AnnotationAsset(Lt) {
   };
 
   AnnotationAsset.prototype.nearestYear = function (latLng) {
-    var closestI = Lt.helper.closestPointIndex(latLng)
+    var closestI = Lt.helper.closestPointIndex(latLng);
+    if (Lt.measurementOptions.forwardDirection == false) {
+      // correct index when measuring backwards
+      closestI--;
+    };
     var closestPt = Lt.data.points[closestI];
     var closestYear;
 
