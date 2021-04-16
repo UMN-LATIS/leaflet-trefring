@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+    <link rel="stylesheet" href="../node_modules/font-awesome/css/font-awesome.css">
+
+    <style>
+
+    head {
+      height: 0;
+      margin: 0;
+    }
+
+    body {
+      height: 100%;
+      margin: 0;
+      overflow-y: hidden;
+    }
+
+    #tabs-div {
+      margin: auto;
+      margin-top: 0;
+      width: 100%;
+      height: 5%;
+    }
+
+    .tabBtns {
+    	float: left;
+    	border: none;
+    	outline: none;
+    	cursor: pointer;
+    	padding: 1% 3%;
+      font-family: Arial;
+    	font-size: 16px;
+    	font-weight: bold;
+    	background-color: #e8e8e8;
+    	color: #636363;
+    	width: 20%;
+    }
+
+    button:hover {
+      background-color: #d1d1d1 !important;
+    }
+
+    #instructions-div {
+      display: inline-block;
+      width: 30%;
+      height: 100%;
+      margin-top: 10px;
+    }
+
+    #popout-btn {
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+      margin-left: 10%;
+      width: 40%;
+    }
+
+    #reset-btn {
+      float: left;
+      margin: 0;
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+      width: 40%;
+    }
+
+    #iframe-div {
+      margin-right: 1%;
+      float: right;
+      width: 70%;
+      height: 100%;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 6px;
+    }
+
+    </style>
+    <style id='instructions-style'>
+      #instructions {
+        margin-left: 2%;
+        margin-top: 50px;
+      }
+
+      #instructions h3 {
+        font-family: Arial;
+        margin: 0;
+        margin-top: 6px;
+      }
+
+      #instructions input {
+        margin-left: 10px;
+      }
+
+      #instructions label {
+        font-family: Arial;
+        font-size: 14px;
+        display: inline-block;
+      }
+
+      .type-checkbox {
+        margin: 0 2px;
+      }
+
+      #instructions p {
+        margin: 0;
+        color: #8c8c8c;
+        font-family: Arial;
+        font-size: 14px;
+      }
+
+      #instructions button {
+        border: none;
+        background-color: inherit;
+      }
+    </style>
+
+  </head>
+  <body>
+
+    <div id='tabs-div'>
+      <button class='tabBtns' id='default' onclick='openTab(event, "CCS130A")'>CCS130A</button>
+      <button class='tabBtns' onclick='openTab(event, "SpRln07c1")'>SpRln07c1</button>
+      <button class='tabBtns' onclick='openTab(event, "CCS134A")'>CCS134A</button>
+      <button class='tabBtns' onclick='openTab(event, "BSK06")'>BSK06</button>
+      <button class='tabBtns' onclick='openTab(event, "CCL01A")'>CCL01A</button>
+    </div>
+
+    <div id='instructions-div'>
+      <button id='popout-btn' class='tabBtns' onclick='openInstructions()'>Popout Instructions</button>
+      <button id='reset-btn' class='tabBtns' onclick='resetBoxes(false)'>Reset Instructions</button>
+
+      <div id='instructions'>
+        <h3>Annotations</h3>
+          <input type="checkbox" id="item1">
+          <label for="item1"> Create an annotation</label><br>
+          <input type="checkbox" id="item2">
+          <label for="item2"> Add text</label><br>
+          <input type="checkbox" id="item3">
+          <label for="item3"> Create and select attributes</label><br>
+          <input type="checkbox" id="item4">
+          <label for="item4"> Change color</label><br>
+          <input type="checkbox" id="item5">
+          <label for="item5"> Drag an annotation</label><br>
+          <input type="checkbox" id="item6">
+          <label for="item6"> Edit an annotation by clicking it then selecting the ‘Edit’ tab</label><br>
+          <input type="checkbox" id="item7">
+          <label for="item7"> Delete an annotation</label><br>
+          <input type="checkbox" id="item8">
+          <label for="item8"> Check hover text to see if it aligns with inputted annotation</label><br>
+          <input type="checkbox" id="item9">
+          <label for="item9"> Use GeoLink in ‘Summary’ annotation location in another window</label><br>
+        <h3>Change date of end year</h3>
+          <input type="checkbox" id="item8">
+          <label for="item8"> Check if it changed rest of core</label><br>
+          <input type="checkbox" id="item9">
+          <label for="item9"> Check if it changed the associated years of the annotations </label><br>
+        <h3 style='display:inline;'>Create measurements in all types</h3>
+          <!-- 4 checkboxes for each measurement type (forward / backward) (annual / subannual) -->
+          <button onclick='resetBoxes(true)'><i class="fa fa-refresh" aria-hidden="true"></i></button>
+          <input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'><input class='type-checkbox' type='checkbox'>
+          <br>
+          <p> Measure forward/backward annually/subannually </p>
+          <!-- options -->
+          <input type="checkbox" id="item10" class='measurement-checkbox'>
+          <label for="item10"> Create measurement line</label><br>
+          <input type="checkbox" id="item11" class='measurement-checkbox'>
+          <label for="item11"> Create zero growth year</label><br>
+          <input type="checkbox" id="item12" class='measurement-checkbox'>
+          <label for="item12"> Create breakpoint</label><br>
+        <h3>Edit measurements</h3>
+          <input type="checkbox" id="item19">
+          <label for="item19"> Delete point</label><br>
+          <input type="checkbox" id="item20">
+          <label for="item20"> Cut section of points</label><br>
+          <input type="checkbox" id="item21">
+          <label for="item21"> Add point</label><br>
+          <input type="checkbox" id="item22">
+          <label for="item22"> Add zero growth year</label><br>
+          <input type="checkbox" id="item23">
+          <label for="item23"> Check if it changed the associated years of the annotations</label>
+      </div>
+
+    </div>
+
+    <div id='iframe-div'>
+      <iframe id='asset-iframe' src='asset.html'></iframe>
+    </div>
+
+    <script>
+
+    const coreArray = [
+      {'assetName': 'CCS130A',
+       'description': 'Core with no measurements or annotations.',
+      },
+      {'assetName': 'SpRln07c1',
+       'description': 'Core measured forward annually.',
+      },
+      {'assetName': 'CCS134A',
+       'description': 'Core measured backwards annually.',
+      },
+      {'assetName': 'BSK06',
+       'description': 'Core measure forward subannually.',
+      },
+      {'assetName': 'CCL01A',
+       'description': 'Core measured backwards subannually.',
+      },
+    ];
+
+    function openTab (e, assetName) {
+      // reset color of all tabs
+      var tabClass = document.getElementsByClassName('tabBtns');
+      let i = 0;
+      for (i; i < tabClass.length; i++) {
+        tabClass[i].style.backgroundColor = '#e8e8e8';
+      };
+
+      // change tab color to show it was selected
+      e.currentTarget.style.backgroundColor = '#d1d1d1';
+
+      var iframe = document.getElementById('asset-iframe');
+    };
+
+    </script>
+    <script id='instructions-script'>
+
+    function resetBoxes(measurementBoxes) {
+      if (measurementBoxes) {
+        var checkboxes = document.getElementsByClassName('measurement-checkbox');
+      } else {
+        var checkboxes = document.getElementsByTagName('input');
+      };
+
+      for (let i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = false;
+      };
+    };
+
+    function openInstructions() {
+      var instructionsDiv = document.getElementById('instructions').outerHTML;
+      var newWindow = window.open('', '', 'width=600, height=600');
+      var stylesheet = document.getElementById('instructions-style').outerHTML;
+      var script = document.getElementById('instructions-script').outerHTML;
+      newWindow.document.open();
+      newWindow.document.write(stylesheet);
+      newWindow.document.write('<link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">');
+      newWindow.document.write(instructionsDiv);
+      newWindow.document.write(script);
+    };
+
+    document.getElementById('default').click();
+
+    </script>
+
+  </body>
+</html>
