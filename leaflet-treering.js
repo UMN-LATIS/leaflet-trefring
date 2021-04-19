@@ -166,17 +166,15 @@ function LTreering (viewer, basePath, options) {
 
     // right and left click controls
     this.viewer.on('contextmenu', () => {
-      if (!this.createPoint.active && this.data.points[0] !== undefined &&
-          this.createTools.btn._currentState.stateName === 'expand') {
-        this.disableTools();
-        this.createPoint.startPoint = false;
-        this.createPoint.active = true;
-        this.createPoint.enable();
-        this.mouseLine.from(points[index - 1].latLng);
-      } else {
-        this.disableTools();
-      }
+      this.disableTools();
     });
+
+    // disable tools w/ esc
+    L.DomEvent.on(window, 'keydown', (e) => {
+       if (e.keyCode == 27) {
+         this.disableTools();
+       }
+    }, this);
 
     this.scaleBarCanvas.load();
 
@@ -1188,15 +1186,10 @@ function AnnotationAsset(Lt) {
   // crtl-a to activate createBtn
   L.DomEvent.on(window, 'keydown', (e) => {
     if (e.keyCode == 65 && e.getModifierState("Control") && window.name.includes('popout')) { // 65 refers to 'a'
-      if(!this.active) {
-        e.preventDefault();
-        e.stopPropagation();
-        Lt.disableTools();
-        this.enable(this.createBtn);
-      }
-      else {
-        this.disable(this.createBtn);
-      }
+      e.preventDefault();
+      e.stopPropagation();
+      Lt.disableTools();
+      this.enable(this.createBtn);
     }
   }, this);
 
@@ -2870,17 +2863,28 @@ function CreatePoint(Lt) {
     () => { this.disable() }
   );
 
+  // create measurement w. ctrl-m
   L.DomEvent.on(window, 'keydown', (e) => {
      if (e.keyCode == 77 && e.getModifierState("Control")) {
-       if (!this.active) {
-         Lt.disableTools();
-         this.enable();
-       } else {
-         this.disable();
-       }
+       e.preventDefault();
+       e.stopPropagation();
+       Lt.disableTools();
+       this.enable();
      }
   }, this);
 
+  // resume measurement w. ctrl-k
+  L.DomEvent.on(window, 'keydown', (e) => {
+     if (e.keyCode == 75 && e.getModifierState("Control")) {
+       e.preventDefault();
+       e.stopPropagation();
+       Lt.disableTools();
+       this.startPoint = false;
+       this.active = true;
+       this.enable();
+       Lt.mouseLine.from(Lt.data.points[Lt.data.index - 1].latLng);
+     }
+  }, this);
 
   /**
    * Enable creating new points on click events
@@ -3218,16 +3222,13 @@ function InsertPoint(Lt) {
     () => { this.disable() }
   );
 
+  // enable w. ctrl-i
   L.DomEvent.on(window, 'keydown', (e) => {
-     if (e.keyCode == 73 && !(e.getModifierState("Shift")) && e.getModifierState("Control")) { // 73 refers to 'i'
-       if (!this.active && window.name.includes('popout')) {
-         e.preventDefault();
-         e.stopPropagation();
-         Lt.disableTools();
-         this.enable();
-       } else {
-         this.disable();
-       }
+     if (e.keyCode == 73 && !(e.getModifierState("Shift")) && e.getModifierState("Control") && window.name.includes('popout')) { // 73 refers to 'i'
+       e.preventDefault();
+       e.stopPropagation();
+       Lt.disableTools();
+       this.enable();
      }
   }, this);
 
@@ -4624,6 +4625,7 @@ function SaveCloud(Lt) {
     () => { this.action() }
   );
 
+  // save w. ctrl-s
   L.DomEvent.on(window, 'keydown', (e) => {
      if (e.keyCode == 83 && e.getModifierState("Control") && window.name.includes('popout')) { // 83 refers to 's'
        e.preventDefault();
@@ -5022,10 +5024,10 @@ function KeyboardShortCutDialog (Lt) {
       this.dialog.close();
     };
 
-    let anchor = this.anchor || [1, 350];
+    let anchor = this.anchor || [1, 400];
 
     this.dialog = L.control.dialog ({
-      'size': [310, 290],
+      'size': [310, 300],
       'anchor': anchor,
       'initOpen': true
     }).addTo(Lt.viewer);
@@ -5040,11 +5042,15 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Ctrl-m',
-       'use': 'Toggle measurement tool on/off',
+       'use': 'Create new measurement path',
+      },
+      {
+       'key': 'Ctrl-k',
+       'use': 'Resume measurement path',
       },
       {
        'key': 'Ctrl-i',
-       'use': 'Toggle insert point tool on/off',
+       'use': 'Insert measurement point',
       },
       {
        'key': 'Ctrl-a',
@@ -5067,8 +5073,8 @@ function KeyboardShortCutDialog (Lt) {
        'use': 'Pan slowly up/down/left/right',
       },
       {
-       'key': 'Right click or Ctrl-click',
-       'use': 'End measurement path OR resume measuring from last point',
+       'key': 'Right click or esc',
+       'use': 'Disable current tool',
       },
     ];
 
