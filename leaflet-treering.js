@@ -5037,7 +5037,7 @@ function KeyboardShortCutDialog (Lt) {
 
     const shortcutGuide = [
       {
-       'key': 'Ctrl-z',
+       'key': 'Ctrl-l',
        'use': 'Toggle magnification loupe on/off',
       },
       {
@@ -5046,7 +5046,7 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Ctrl-k',
-       'use': 'Resume measurement path',
+       'use': 'Resume last measurement path',
       },
       {
        'key': 'Ctrl-i',
