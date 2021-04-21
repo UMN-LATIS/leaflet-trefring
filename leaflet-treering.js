@@ -1767,10 +1767,11 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.nearestYear = function (latLng) {
     var closestI = Lt.helper.closestPointIndex(latLng);
-    if (Lt.measurementOptions.forwardDirection == false) {
-      // correct index when measuring backwards
-      closestI--;
-    };
+    if ((Lt.measurementOptions.forwardDirection == false) || (closestI == Lt.data.points.length)) {
+     // correct index when measuring backwards or if closest point is last point
+     closestI--;
+   };
+
     var closestPt = Lt.data.points[closestI];
     var closestYear;
 
@@ -1783,11 +1784,13 @@ function AnnotationAsset(Lt) {
 
       if (!previousPt) { // case 2: inital start point
         closestYear = nextPt.year
-      } else if (nextPt && !nextPt.year) { // case 3: break point & next point is a start point
+      } else if (!nextPt) { // case 3: last point is a start point
+        closestYear = previousPt.year
+      } else if (nextPt && !nextPt.year) { // case 4: break point & next point is a start point
         closestYear = Lt.data.points[closestI + 2].year;
-      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+      } else if (!previousPt.year) { // case 5: start point & previous point is a break point
         closestYear = Lt.data.points[closestI + 1].year;
-      } else { // case 5: start point in middle of point path
+      } else { // case 6: start point in middle of point path
         var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
         var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
 
