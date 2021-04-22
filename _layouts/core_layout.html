@@ -85,3 +85,53 @@ void main(void){
 </script>
 
 {{ content }}
+
+<script>
+	var src;
+    var map = L.map('imageMap', {
+        fullscreenControl: true,
+        zoomSnap: 0,
+        crs: L.CRS.Simple,
+        drawControl: true,
+        layers: [],
+        doubleClickZoom: false,
+        zoomControl: false,
+        trackResize: true
+    }).setView([0, 0], 0);
+
+    var baseLayer = L.tileLayer.elevator(function(coords, tile, done) {
+    	var params = {Bucket: 'elevator-assets', Key: "sample_cores/" + corePath+ "/tiledBase_files/" + coords.z + "/" + coords.x + "_" + coords.y + ".jpeg"};
+
+		return "https://s3.amazonaws.com/" + params.Bucket + "/" + params.Key;
+    },
+    {
+				width: width,
+        height: height,
+        tileSize :254,
+		maxNativeZoom: maxNativeZoom,
+        maxZoom: maxNativeZoom + 1,
+        overlap: 1,
+				detectRetina: false,
+        pixelsPerMillimeter: 480, //(NEW)
+        lineColor: 'blue'
+    }).addTo(map);
+
+		
+		var layer = L.tileLayer.gl({
+				uniforms: {
+						uSharpenStrength: 0
+				},
+						crs: L.CRS.Simple,
+						noWrap: true,
+						infinite: false,
+						tileSize: 256,
+						detectRetina: false,
+			fragmentShader: fragmentShader2,
+			tileLayers: [baseLayer],
+		}).addTo(map);
+
+    //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
+		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
+		var treering = new LTreering(map, "", coreData);
+treering.loadInterface();
+</script>
