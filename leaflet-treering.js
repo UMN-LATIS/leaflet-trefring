@@ -1875,7 +1875,8 @@ function AnnotationAsset(Lt) {
       var popupYear = document.createElement('span');
       popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
-      popupYear.innerHTML = this.nearestYear(Lt.aData.annotations[index].latLng) + Lt.aData.annotations[index].yearAdjustment;
+      Lt.aData.annotations[index].calculatedYear = this.nearestYear(Lt.aData.annotations[index].latLng);
+      popupYear.innerHTML = Lt.aData.annotations[index].calculatedYear + Lt.aData.annotations[index].yearAdjustment;
       popupDiv.appendChild(popupYear);
     });
 
@@ -1990,7 +1991,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearSpan = document.createElement('span');
     associatedYearSpan.className = 'text-content';
-    associatedYearSpan.innerHTML = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearSpan.innerHTML = this.calculatedYear + this.yearAdjustment;
     summaryAssociatedYearDiv.appendChild(associatedYearSpan);
 
     summaryDiv.appendChild(summaryAssociatedYearDiv);
@@ -2104,7 +2106,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearInput = document.createElement('input');
     associatedYearInput.type = 'number';
-    associatedYearInput.value = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearInput.value = this.calculatedYear + this.yearAdjustment;
     $(associatedYearInput).change(() => {
       this.year = associatedYearInput.value;
       this.yearAdjustment = associatedYearInput.value - this.calculatedYear;
