@@ -129,8 +129,8 @@ void main(void){
 			tileLayers: [baseLayer],
 		}).addTo(map);
 
-    //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
-		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
-		var treering = new LTreering(map, "", coreData);
+    // map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
+		// basepath is the local image folder location
+		var treering = new LTreering(map, "../", coreData);
 		treering.loadInterface();
 	</script>
