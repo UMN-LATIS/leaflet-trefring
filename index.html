@@ -215,23 +215,23 @@
 
     const coreArray = [
       {'assetName': 'CCS130A',
-       'src': 'CCS130A_blank_core.html',
+       'src': 'testassets/ccs130a.html',
        'description': 'Core with no measurements or annotations.',
       },
       {'assetName': 'SpRln07c1',
-       'src': 'SpRln07c1_forward_annual.html',
+       'src': 'testassets/sprln07c1.html',
        'description': 'Core measured forward annually.',
       },
       {'assetName': 'CCS134A',
-       'src': 'CCS134A_backwards_annual.html',
+       'src': 'testassets/ccs134a.html',
        'description': 'Core measured backwards annually.',
       },
       {'assetName': 'BSK06',
-       'src': 'BSK06_forward_subannual.html',
+       'src': 'testassets/bsk06.html',
        'description': 'Core measure forward subannually.',
       },
       {'assetName': 'CCL01A',
-       'src': 'CCL01A_backward_subannual.html',
+       'src': 'testassets/ccl01a.html',
        'description': 'Core measured backwards subannually.',
       },
     ];
@@ -292,7 +292,7 @@
       var script = document.getElementById('instructions-script').outerHTML;
       newWindow.document.open();
       newWindow.document.write(stylesheet);
-      newWindow.document.write('<link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.css">');
+      newWindow.document.write('<link rel="stylesheet" href="assets/font-awesome/css/font-awesome.css">');
       newWindow.document.write(instructionsDiv);
       newWindow.document.write(script);
     };

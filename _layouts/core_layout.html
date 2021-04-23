@@ -7,39 +7,39 @@
 
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
-	<link rel="stylesheet" href="assets/font-awesome/css/font-awesome.css">
+	<link rel="stylesheet" href="../assets/font-awesome/css/font-awesome.css">
 
-	<link rel="stylesheet" href="assets/bootstrap/dist/css/bootstrap.min.css">
-	<link rel="stylesheet" href="assets/bootstrap/dist/css/bootstrap-theme.min.css" >
+	<link rel="stylesheet" href="../assets/bootstrap/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="../assets/bootstrap/dist/css/bootstrap-theme.min.css" >
 
-	<link rel="stylesheet" href="assets/leaflet/dist/leaflet.css">
-	<link rel="stylesheet" href="assets/leaflet-fullscreen/dist/leaflet.fullscreen.css">
-	<link rel="stylesheet" href="assets/leaflet-minimap/dist/Control.MiniMap.min.css" />
-	<link rel="stylesheet" href="assets/leaflet-easybutton/src/easy-button.css" />
-	<link rel="stylesheet" href="assets/leaflet-dialog/Leaflet.Dialog.css">
+	<link rel="stylesheet" href="../assets/leaflet/dist/leaflet.css">
+	<link rel="stylesheet" href="../assets/leaflet-fullscreen/dist/leaflet.fullscreen.css">
+	<link rel="stylesheet" href="../assets/leaflet-minimap/dist/Control.MiniMap.min.css" />
+	<link rel="stylesheet" href="../assets/leaflet-easybutton/src/easy-button.css" />
+	<link rel="stylesheet" href="../assets/leaflet-dialog/Leaflet.Dialog.css">
 
-	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../style.css">
 
-	<script src="assets/jquery/dist/jquery.min.js"></script>
-	<script src="assets/jszip/dist/jszip.min.js"></script>
-	<script src="assets/file-saver/FileSaver.min.js"></script>
+	<script src="../assets/jquery/dist/jquery.min.js"></script>
+	<script src="../assets/jszip/dist/jszip.min.js"></script>
+	<script src="../assets/file-saver/FileSaver.min.js"></script>
 
-	<script src="assets/leaflet/dist/leaflet.js"></script>
-	<script src="assets/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
-	<script src="assets/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
-	<script src="assets/leaflet-easybutton/src/easy-button.js"></script>
-	<script src="assets/leaflet-dialog/Leaflet.Dialog.js"></script>
-    <script src="Leaflet.TileLayer.GL.js"></script>
+	<script src="../assets/leaflet/dist/leaflet.js"></script>
+	<script src="../assets/leaflet-fullscreen/dist/Leaflet.fullscreen.js"></script>
+	<script src="../assets/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
+	<script src="../assets/leaflet-easybutton/src/easy-button.js"></script>
+	<script src="../assets/leaflet-dialog/Leaflet.Dialog.js"></script>
+    <script src="../Leaflet.TileLayer.GL.js"></script>
 
-	<script src="Leaflet.elevator.js"></script>
+	<script src="../Leaflet.elevator.js"></script>
 </head>
 
 <body>
     <div id="map_container"><div id="imageMap"></div></div>
 </body>
 </html>
-<script type="application/javascript" src="leaflet-treering.js"></script>
-<script type="text/javascript" src="leaflet-treering.js"></script>
+<script type="application/javascript" src="../leaflet-treering.js"></script>
+<script type="text/javascript" src="../leaflet-treering.js"></script>
 
 <script>
 
@@ -108,7 +108,7 @@ void main(void){
 				width: width,
         height: height,
         tileSize :254,
-		maxNativeZoom: maxNativeZoom,
+				maxNativeZoom: maxNativeZoom,
         maxZoom: maxNativeZoom + 1,
         overlap: 1,
 				detectRetina: false,
@@ -116,7 +116,6 @@ void main(void){
         lineColor: 'blue'
     }).addTo(map);
 
-		
 		var layer = L.tileLayer.gl({
 				uniforms: {
 						uSharpenStrength: 0
@@ -133,5 +132,5 @@ void main(void){
     //map, basepath, {ppm: int, saveURL: string, savePermission: bool, popoutUrl: string, assetName: string, hasLatewood: bool, initialData: json}
 		//basepath is the local image folder location (i.e. replace "" with "file:///C:/Users/.../leaflet-treering")
 		var treering = new LTreering(map, "", coreData);
-treering.loadInterface();
-</script>
+		treering.loadInterface();
+	</script>
