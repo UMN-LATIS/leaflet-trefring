@@ -105,6 +105,8 @@ function LTreering (viewer, basePath, options) {
 
   this.keyboardShortCutDialog = new KeyboardShortCutDialog(this);
 
+  this.popoutPlots = new PopoutPlots(this);
+
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
@@ -142,6 +144,9 @@ function LTreering (viewer, basePath, options) {
     $(map.getContainer()).css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+
+    // test placement
+    this.popoutPlots.btn.addTo(this.viewer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -2582,7 +2587,69 @@ function Popout(Lt) {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
-}
+};
+
+/** A popout with time series plots
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+ function PopoutPlots (Lt) {
+   this.btn = new Button('launch',
+                         'Open time series plots in a new window',
+                         () => {
+                           plotWindow = window.open('', '', 'height=600,width=800');
+                           this.createPlots(plotWindow);
+                         });
+
+  PopoutPlots.prototype.distance = function(p1, p2) {
+    var lastPoint = Lt.viewer.project(p1, Lt.getMaxNativeZoom());
+    var newPoint = Lt.viewer.project(p2, Lt.getMaxNativeZoom());
+    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
+        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
+    var pixelsPerMillimeter = 1;
+    Lt.viewer.eachLayer((layer) => {
+      if (layer.options.pixelsPerMillimeter > 0 || Lt.meta.ppm > 0) {
+        pixelsPerMillimeter = Lt.meta.ppm;
+      }
+    });
+    length = length / pixelsPerMillimeter;
+    var retinaFactor = 1;
+    return length * retinaFactor;
+  };
+
+  PopoutPlots.prototype.createPlots = function (win) {
+    var doc = win.document;
+    var canvas = doc.createElement('canvas');
+    doc.body.appendChild(canvas);
+
+    var ctx = canvas.getContext("2d");
+
+    labels = [];
+    datalist = [];
+    var pts = Lt.data.points;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i - 1]) {
+        labels.push(pts[i].year);
+        datalist.push(this.distance(pts[i - 1].latLng, pts[i].latLng));
+      };
+    };
+
+    var data = {
+      labels: labels,
+      datasets: [{
+        data: datalist
+      }]
+    }
+
+    var plot = new Chart (ctx, {
+      type: 'line',
+      data: data
+
+    });
+
+  };
+
+};
 
 /**
  * Undo actions

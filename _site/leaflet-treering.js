@@ -105,6 +105,8 @@ function LTreering (viewer, basePath, options) {
 
   this.keyboardShortCutDialog = new KeyboardShortCutDialog(this);
 
+  this.popoutPlots = new PopoutPlots(this);
+
   this.undoRedoBar = new L.easyBar([this.undo.btn, this.redo.btn]);
   this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
@@ -142,6 +144,9 @@ function LTreering (viewer, basePath, options) {
     $(map.getContainer()).css('cursor', 'default');
 
     L.control.layers(this.baseLayer, this.overlay).addTo(this.viewer);
+
+    // test placement
+    this.popoutPlots.btn.addTo(this.viewer);
 
     // if popout is opened display measuring tools
     if (window.name.includes('popout')) {
@@ -1767,10 +1772,11 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.nearestYear = function (latLng) {
     var closestI = Lt.helper.closestPointIndex(latLng);
-    if (Lt.measurementOptions.forwardDirection == false) {
-      // correct index when measuring backwards
-      closestI--;
-    };
+    if ((Lt.measurementOptions.forwardDirection == false) || (closestI == Lt.data.points.length)) {
+     // correct index when measuring backwards or if closest point is last point
+     closestI--;
+   };
+
     var closestPt = Lt.data.points[closestI];
     var closestYear;
 
@@ -1783,11 +1789,13 @@ function AnnotationAsset(Lt) {
 
       if (!previousPt) { // case 2: inital start point
         closestYear = nextPt.year
-      } else if (nextPt && !nextPt.year) { // case 3: break point & next point is a start point
+      } else if (!nextPt) { // case 3: last point is a start point
+        closestYear = previousPt.year
+      } else if (nextPt && !nextPt.year) { // case 4: break point & next point is a start point
         closestYear = Lt.data.points[closestI + 2].year;
-      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+      } else if (!previousPt.year) { // case 5: start point & previous point is a break point
         closestYear = Lt.data.points[closestI + 1].year;
-      } else { // case 5: start point in middle of point path
+      } else { // case 6: start point in middle of point path
         var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
         var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
 
@@ -1872,7 +1880,8 @@ function AnnotationAsset(Lt) {
       var popupYear = document.createElement('span');
       popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
-      popupYear.innerHTML = this.nearestYear(Lt.aData.annotations[index].latLng) + Lt.aData.annotations[index].yearAdjustment;
+      Lt.aData.annotations[index].calculatedYear = this.nearestYear(Lt.aData.annotations[index].latLng);
+      popupYear.innerHTML = Lt.aData.annotations[index].calculatedYear + Lt.aData.annotations[index].yearAdjustment;
       popupDiv.appendChild(popupYear);
     });
 
@@ -1987,7 +1996,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearSpan = document.createElement('span');
     associatedYearSpan.className = 'text-content';
-    associatedYearSpan.innerHTML = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearSpan.innerHTML = this.calculatedYear + this.yearAdjustment;
     summaryAssociatedYearDiv.appendChild(associatedYearSpan);
 
     summaryDiv.appendChild(summaryAssociatedYearDiv);
@@ -2101,7 +2111,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearInput = document.createElement('input');
     associatedYearInput.type = 'number';
-    associatedYearInput.value = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearInput.value = this.calculatedYear + this.yearAdjustment;
     $(associatedYearInput).change(() => {
       this.year = associatedYearInput.value;
       this.yearAdjustment = associatedYearInput.value - this.calculatedYear;
@@ -2576,7 +2587,69 @@ function Popout(Lt) {
     window.open(Lt.meta.popoutUrl, 'popout' + Math.round(Math.random()*10000),
                 'location=yes,height=600,width=800,scrollbars=yes,status=yes');
   });
-}
+};
+
+/** A popout with time series plots
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+ function PopoutPlots (Lt) {
+   this.btn = new Button('launch',
+                         'Open time series plots in a new window',
+                         () => {
+                           plotWindow = window.open('', '', 'height=600,width=800');
+                           this.createPlots(plotWindow);
+                         });
+
+  PopoutPlots.prototype.distance = function(p1, p2) {
+    var lastPoint = Lt.viewer.project(p1, Lt.getMaxNativeZoom());
+    var newPoint = Lt.viewer.project(p2, Lt.getMaxNativeZoom());
+    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
+        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
+    var pixelsPerMillimeter = 1;
+    Lt.viewer.eachLayer((layer) => {
+      if (layer.options.pixelsPerMillimeter > 0 || Lt.meta.ppm > 0) {
+        pixelsPerMillimeter = Lt.meta.ppm;
+      }
+    });
+    length = length / pixelsPerMillimeter;
+    var retinaFactor = 1;
+    return length * retinaFactor;
+  };
+
+  PopoutPlots.prototype.createPlots = function (win) {
+    var doc = win.document;
+    var canvas = doc.createElement('canvas');
+    doc.body.appendChild(canvas);
+
+    var ctx = canvas.getContext("2d");
+
+    labels = [];
+    datalist = [];
+    var pts = Lt.data.points;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i - 1]) {
+        labels.push(pts[i].year);
+        datalist.push(this.distance(pts[i - 1].latLng, pts[i].latLng));
+      };
+    };
+
+    var data = {
+      labels: labels,
+      datasets: [{
+        data: datalist
+      }]
+    }
+
+    var plot = new Chart (ctx, {
+      type: 'line',
+      data: data
+
+    });
+
+  };
+
+};
 
 /**
  * Undo actions
@@ -5037,7 +5110,7 @@ function KeyboardShortCutDialog (Lt) {
 
     const shortcutGuide = [
       {
-       'key': 'Ctrl-z',
+       'key': 'Ctrl-l',
        'use': 'Toggle magnification loupe on/off',
       },
       {
@@ -5046,7 +5119,7 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Ctrl-k',
-       'use': 'Resume measurement path',
+       'use': 'Resume last measurement path',
       },
       {
        'key': 'Ctrl-i',
