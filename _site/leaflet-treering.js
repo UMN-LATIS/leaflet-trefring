@@ -2626,7 +2626,11 @@ function Popout(Lt) {
 
     labels = [];
     datalist = [];
-    var pts = Lt.data.points;
+    if (Lt.preferences.forwardDirection) {
+      var pts = Lt.data.points;
+    } else {
+      var pts = Lt.helper.reverseData();
+    };
     for (var i = 0; i < pts.length; i++) {
       if (pts[i - 1]) {
         labels.push(pts[i].year);
@@ -2637,7 +2641,8 @@ function Popout(Lt) {
     var data = {
       labels: labels,
       datasets: [{
-        data: datalist
+        data: datalist,
+        spanGaps: true
       }]
     }
 
@@ -3658,88 +3663,6 @@ function ViewData(Lt) {
   }
 
   /**
-   * Format data to have years ascending
-   * @function reverseData
-   */
-  ViewData.prototype.reverseData = function() {
-    var pref = Lt.measurementOptions; // preferences
-    var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
-
-    var i; // index
-    var lastIndex = pts.length - 1;
-    var before_lastIndex = pts.length - 2;
-
-    // reformatting done in seperate for-statements for code clarity/simplicity
-
-    if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
-      for (i = 0; i < pts.length; i++) {
-        if (pts[i]) {
-          if (pts[i].earlywood) {
-            pts[i].earlywood = false;
-          } else {
-            pts[i].earlywood = true;
-          };
-        };
-      };
-    };
-
-    for (i = 0; i < pts.length; i++) { // swap start & break point cycle
-      if (pts[i + 1] && pts[i]) {
-        if (pts[i].break && pts[i + 1].start) {
-          pts[i].start = true;
-          pts[i].break = false;
-          pts[i + 1].start = false;
-          pts[i + 1].break = true;
-        };
-      };
-    };
-
-    for (i = 0; i < pts.length; i++) { // swap start & end point cycle
-      if (pts[i + 2] && pts[i + 1] && pts[i]) {
-        if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // many conditions so prior cycle is not undone
-          pts[i + 1].start = false;
-          pts[i + 1].year = pts[i].year;
-          pts[i + 1].earlywood = pts[i].earlywood;
-          pts[i].start = true;
-          delete pts[i].year;
-          delete pts[i].earlywood;
-        };
-      };
-    };
-
-    // reverse array order so years ascending
-    pts.reverse();
-
-    // change last point from start to end point
-    if (pts[lastIndex] && pts[before_lastIndex]) {
-      pts[lastIndex].start = false;
-
-      if (pts[before_lastIndex].earlywood) {
-        pts[lastIndex].year = pts[before_lastIndex].year;
-        pts[lastIndex].earlywood = false;
-      } else { // otherwise latewood or annual increment
-        pts[lastIndex].year = pts[before_lastIndex].year + 1
-        pts[lastIndex].earlywood = true;
-      };
-    };
-
-    for (i = lastIndex; i >= 0; i--) { // remove any null points
-      if (pts[i] == null) {
-        pts.splice(i, 1);
-      };
-    };
-
-    // change first point to start point
-    if (pts.length > 0) {
-      pts[0].start = true;
-      delete pts[0].year;
-      delete pts[0].earlywood;
-    };
-
-    return pts;
-  }
-
-  /**
    * Format and download data in Dan's archaic format
    * @function download
    */
@@ -3820,7 +3743,7 @@ function ViewData(Lt) {
     if (Lt.measurementOptions.forwardDirection) { // years ascend in value
       var pts = Lt.data.points;
     } else { // otherwise years descend in value
-      var pts = this.reverseData();
+      var pts = Lt.helper.reverseData();
     }
 
     if (Lt.data.points != undefined && Lt.data.points[1] != undefined) {
@@ -4100,7 +4023,7 @@ function ViewData(Lt) {
     if (Lt.measurementOptions.forwardDirection) { // years ascend in value
       var pts = Lt.data.points;
     } else { // otherwise years descend in value
-      var pts = this.reverseData();
+      var pts = Lt.helper.reverseData();
     };
 
     if (pts[0] != undefined) {
@@ -5191,6 +5114,89 @@ function KeyboardShortCutDialog (Lt) {
  * @function
  */
 function Helper(Lt) {
+
+  /**
+   * Reverses points data structure so points ascend in time.
+   * @function
+   * @param {leaflet object} - Lt
+   */
+ Helper.prototype.reverseData = function() {
+   var pref = Lt.measurementOptions; // preferences
+   var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
+
+   var i; // index
+   var lastIndex = pts.length - 1;
+   var before_lastIndex = pts.length - 2;
+
+   // reformatting done in seperate for-statements for code clarity/simplicity
+
+   if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
+     for (i = 0; i < pts.length; i++) {
+       if (pts[i]) {
+         if (pts[i].earlywood) {
+           pts[i].earlywood = false;
+         } else {
+           pts[i].earlywood = true;
+         };
+       };
+     };
+   };
+
+   for (i = 0; i < pts.length; i++) { // swap start & break point cycle
+     if (pts[i + 1] && pts[i]) {
+       if (pts[i].break && pts[i + 1].start) {
+         pts[i].start = true;
+         pts[i].break = false;
+         pts[i + 1].start = false;
+         pts[i + 1].break = true;
+       };
+     };
+   };
+
+   for (i = 0; i < pts.length; i++) { // swap start & end point cycle
+     if (pts[i + 2] && pts[i + 1] && pts[i]) {
+       if (pts[i].year && pts[i + 1].start && !pts[i + 2].break) { // many conditions so prior cycle is not undone
+         pts[i + 1].start = false;
+         pts[i + 1].year = pts[i].year;
+         pts[i + 1].earlywood = pts[i].earlywood;
+         pts[i].start = true;
+         delete pts[i].year;
+         delete pts[i].earlywood;
+       };
+     };
+   };
+
+   // reverse array order so years ascending
+   pts.reverse();
+
+   // change last point from start to end point
+   if (pts[lastIndex] && pts[before_lastIndex]) {
+     pts[lastIndex].start = false;
+
+     if (pts[before_lastIndex].earlywood) {
+       pts[lastIndex].year = pts[before_lastIndex].year;
+       pts[lastIndex].earlywood = false;
+     } else { // otherwise latewood or annual increment
+       pts[lastIndex].year = pts[before_lastIndex].year + 1;
+       pts[lastIndex].earlywood = true;
+     };
+   };
+
+   for (i = lastIndex; i >= 0; i--) { // remove any null points
+     if (pts[i] == null) {
+       pts.splice(i, 1);
+     };
+   };
+
+   // change first point to start point
+   if (pts.length > 0) {
+     pts[0].start = true;
+     delete pts[0].year;
+     delete pts[0].earlywood;
+   };
+
+   return pts;
+  };
 
   /**
    * Finds closest points for connection
