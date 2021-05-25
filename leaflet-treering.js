@@ -5130,6 +5130,12 @@ function Helper(Lt) {
 
    // reformatting done in seperate for-statements for code clarity/simplicity
 
+   for (i = 0; i < pts.length; i++) { // subtract 1 from points cycle
+     if (!pref.subAnnual && pts[i] && pts[i].year) { // only need to subtract if annual
+       pts[i].year--;
+     };
+   };
+
    if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
      for (i = 0; i < pts.length; i++) {
        if (pts[i]) {
