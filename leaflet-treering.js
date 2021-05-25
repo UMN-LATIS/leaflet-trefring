@@ -2657,11 +2657,16 @@ function Popout(Lt) {
 
     var plot = new Chart (ctx, {
       type: 'line',
-      data: data
-    },
-    {
-      responsive: true,
+      data: data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+      }
     });
+
+    win.onresize = function() { // for fluid resizing, w/o it will resize after event finishes 
+      plot.update();
+    }
 
   };
 
