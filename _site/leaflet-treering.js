@@ -2601,55 +2601,66 @@ function Popout(Lt) {
                            this.createPlots(plotWindow);
                          });
 
-  PopoutPlots.prototype.distance = function(p1, p2) {
-    var lastPoint = Lt.viewer.project(p1, Lt.getMaxNativeZoom());
-    var newPoint = Lt.viewer.project(p2, Lt.getMaxNativeZoom());
-    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
-        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
-    var pixelsPerMillimeter = 1;
-    Lt.viewer.eachLayer((layer) => {
-      if (layer.options.pixelsPerMillimeter > 0 || Lt.meta.ppm > 0) {
-        pixelsPerMillimeter = Lt.meta.ppm;
-      }
-    });
-    length = length / pixelsPerMillimeter;
-    var retinaFactor = 1;
-    return length * retinaFactor;
-  };
-
   PopoutPlots.prototype.createPlots = function (win) {
     var doc = win.document;
+
+    var div = doc.createElement('div');
+    div.style.width = '100%';
+    div.style.height = '50%';
+    div.style.position = 'relative';
+    doc.body.appendChild(div);
+
     var canvas = doc.createElement('canvas');
-    doc.body.appendChild(canvas);
+    div.appendChild(canvas);
 
     var ctx = canvas.getContext("2d");
 
-    labels = [];
-    datalist = [];
-    if (Lt.preferences.forwardDirection) {
+    if (Lt.preferences.forwardDirection) { // if measuring forward in time...
       var pts = Lt.data.points;
     } else {
       var pts = Lt.helper.reverseData();
     };
-    for (var i = 0; i < pts.length; i++) {
-      if (pts[i - 1]) {
-        labels.push(pts[i].year);
-        datalist.push(this.distance(pts[i - 1].latLng, pts[i].latLng));
-      };
+
+    if (Lt.preferences.subAnnual) { // remove earlywood points if sub annually measured
+      var pts = pts.filter(e => e && !e.earlywood);
     };
 
+    var years = []; // x-axis
+    var widths = []; // y-axis
+    this.breakDis = 0;
+    pts.map((e, i) => { // collect year & width data from points array
+      if (e.start) {
+        if (!pts[i - 1] || !pts[i - 1].break) { // first start point or non break start point
+          this.prevPt = e;
+        } else if (pts[i - 1].break){ // break start point
+          var j = pts[i - 1].latLng;
+          this.breakDis = Lt.helper.trueDistance(pts[i - 1].latLng, e.latLng);
+        };
+      } else if (e.year) { // measurement point
+        years.push(e.year);
+        var width  = Lt.helper.trueDistance(this.prevPt.latLng, e.latLng);
+        widths.push(Lt.helper.trueDistance(this.prevPt.latLng, e.latLng) - this.breakDis);
+
+        this.breakDis = 0;
+        this.prevPt = e;
+      };
+
+    });
+
     var data = {
-      labels: labels,
+      labels: years,
       datasets: [{
-        data: datalist,
-        spanGaps: true
+        data: widths,
+        spanGaps: false
       }]
     }
 
     var plot = new Chart (ctx, {
       type: 'line',
       data: data
-
+    },
+    {
+      responsive: true,
     });
 
   };
@@ -3638,31 +3649,6 @@ function ViewData(Lt) {
     .addTo(Lt.viewer);
 
   /**
-   * Calculate distance from p1 to p2
-   * @function distance
-   * @param p1 leaflet point - first point
-   * @param p2 leaflet point - second point
-   */
-  ViewData.prototype.distance = function(p1, p2) {
-    var lastPoint = Lt.viewer.project(p1, Lt.getMaxNativeZoom());
-    var newPoint = Lt.viewer.project(p2, Lt.getMaxNativeZoom());
-    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
-        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
-    var pixelsPerMillimeter = 1;
-    Lt.viewer.eachLayer((layer) => {
-      if (layer.options.pixelsPerMillimeter > 0 || Lt.meta.ppm > 0) {
-        pixelsPerMillimeter = Lt.meta.ppm;
-      }
-    });
-    length = length / pixelsPerMillimeter;
-    var retinaFactor = 1;
-    // if (L.Browser.retina) {
-    //   retinaFactor = 2; // this is potentially incorrect for 3x+ devices
-    // }
-    return length * retinaFactor;
-  }
-
-  /**
    * Format and download data in Dan's archaic format
    * @function download
    */
@@ -3781,7 +3767,7 @@ function ViewData(Lt) {
             last_latLng = e.latLng;
           } else if (e.break) {
             break_length =
-              Math.round(this.distance(last_latLng, e.latLng) * 1000);
+              Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
               break_point = true;
           } else {
             if (e.year % 10 == 0) {
@@ -3805,7 +3791,7 @@ function ViewData(Lt) {
               last_latLng = e.latLng;
             };
 
-            var length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
+            var length = Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
               break_point = false;
@@ -3850,7 +3836,7 @@ function ViewData(Lt) {
             last_latLng = e.latLng;
           } else if (e.break) {
             break_length =
-              Math.round(this.distance(last_latLng, e.latLng) * 1000);
+              Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
             break_point = true;
           } else {
             if (e.year % 10 == 0) {
@@ -3884,7 +3870,7 @@ function ViewData(Lt) {
               }
             }
 
-            length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
+            length = Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
               break_point = false;
@@ -3945,7 +3931,7 @@ function ViewData(Lt) {
             }
             else if (e.break) {
               break_length =
-                Math.round(this.distance(last_latLng, e.latLng) * 1000);
+                Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
               break_point = true;
             } else {
             if (e.year % 10 == 0) {
@@ -3965,7 +3951,7 @@ function ViewData(Lt) {
               }
             }
 
-            length = Math.round(this.distance(last_latLng, e.latLng) * 1000);
+            length = Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000);
             if (break_point) {
               length += break_length;
               break_point = false;
@@ -4072,7 +4058,7 @@ function ViewData(Lt) {
           last_latLng = e.latLng;
         } else if (e.break) {
           break_length =
-            Math.round(this.distance(last_latLng, e.latLng) * 1000) / 1000;
+            Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000) / 1000;
           break_point = true;
         } else {
           while (e.year > y) {
@@ -4080,7 +4066,7 @@ function ViewData(Lt) {
                 '-</td><td>N/A</td></tr>');
             y++;
           }
-          length = Math.round(this.distance(last_latLng, e.latLng) * 1000) / 1000;
+          length = Math.round(Lt.helper.trueDistance(last_latLng, e.latLng) * 1000) / 1000;
           if (break_point) {
             length += break_length;
             length = Math.round(length * 1000) / 1000;
@@ -5117,8 +5103,29 @@ function Helper(Lt) {
 
   /**
    * Reverses points data structure so points ascend in time.
+   * @function trueDistance
+   * @param {first point.latLng} p1
+   * @param {second point.latLng} p2
+   */
+  Helper.prototype.trueDistance = function(p1, p2) {
+    var lastPoint = Lt.viewer.project(p1, Lt.getMaxNativeZoom());
+    var newPoint = Lt.viewer.project(p2, Lt.getMaxNativeZoom());
+    var length = Math.sqrt(Math.pow(Math.abs(lastPoint.x - newPoint.x), 2) +
+        Math.pow(Math.abs(newPoint.y - lastPoint.y), 2));
+    var pixelsPerMillimeter = 1;
+    Lt.viewer.eachLayer((layer) => {
+      if (layer.options.pixelsPerMillimeter > 0 || Lt.meta.ppm > 0) {
+        pixelsPerMillimeter = Lt.meta.ppm;
+      }
+    });
+    length = length / pixelsPerMillimeter;
+    var retinaFactor = 1;
+    return length * retinaFactor;
+  };
+
+  /**
+   * Reverses points data structure so points ascend in time.
    * @function
-   * @param {leaflet object} - Lt
    */
  Helper.prototype.reverseData = function() {
    var pref = Lt.measurementOptions; // preferences
