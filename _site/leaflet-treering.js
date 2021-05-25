@@ -1767,10 +1767,11 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.nearestYear = function (latLng) {
     var closestI = Lt.helper.closestPointIndex(latLng);
-    if (Lt.measurementOptions.forwardDirection == false) {
-      // correct index when measuring backwards
-      closestI--;
-    };
+    if ((Lt.measurementOptions.forwardDirection == false) || (closestI == Lt.data.points.length)) {
+     // correct index when measuring backwards or if closest point is last point
+     closestI--;
+   };
+
     var closestPt = Lt.data.points[closestI];
     var closestYear;
 
@@ -1783,11 +1784,13 @@ function AnnotationAsset(Lt) {
 
       if (!previousPt) { // case 2: inital start point
         closestYear = nextPt.year
-      } else if (nextPt && !nextPt.year) { // case 3: break point & next point is a start point
+      } else if (!nextPt) { // case 3: last point is a start point
+        closestYear = previousPt.year
+      } else if (nextPt && !nextPt.year) { // case 4: break point & next point is a start point
         closestYear = Lt.data.points[closestI + 2].year;
-      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+      } else if (!previousPt.year) { // case 5: start point & previous point is a break point
         closestYear = Lt.data.points[closestI + 1].year;
-      } else { // case 5: start point in middle of point path
+      } else { // case 6: start point in middle of point path
         var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
         var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
 
@@ -1872,7 +1875,8 @@ function AnnotationAsset(Lt) {
       var popupYear = document.createElement('span');
       popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
-      popupYear.innerHTML = this.nearestYear(Lt.aData.annotations[index].latLng) + Lt.aData.annotations[index].yearAdjustment;
+      Lt.aData.annotations[index].calculatedYear = this.nearestYear(Lt.aData.annotations[index].latLng);
+      popupYear.innerHTML = Lt.aData.annotations[index].calculatedYear + Lt.aData.annotations[index].yearAdjustment;
       popupDiv.appendChild(popupYear);
     });
 
@@ -1987,7 +1991,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearSpan = document.createElement('span');
     associatedYearSpan.className = 'text-content';
-    associatedYearSpan.innerHTML = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearSpan.innerHTML = this.calculatedYear + this.yearAdjustment;
     summaryAssociatedYearDiv.appendChild(associatedYearSpan);
 
     summaryDiv.appendChild(summaryAssociatedYearDiv);
@@ -2101,7 +2106,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearInput = document.createElement('input');
     associatedYearInput.type = 'number';
-    associatedYearInput.value = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearInput.value = this.calculatedYear + this.yearAdjustment;
     $(associatedYearInput).change(() => {
       this.year = associatedYearInput.value;
       this.yearAdjustment = associatedYearInput.value - this.calculatedYear;
@@ -3598,6 +3604,12 @@ function ViewData(Lt) {
 
     // reformatting done in seperate for-statements for code clarity/simplicity
 
+    for (i = 0; i < pts.length; i++) { // subtract 1 from points cycle
+      if (!pref.subAnnual && pts[i] && pts[i].year) { // only need to subtract if annual
+        pts[i].year--;
+      }
+    }
+
     if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
       for (i = 0; i < pts.length; i++) {
         if (pts[i]) {
@@ -4769,7 +4781,7 @@ function MetaDataText (Lt) {
         startYear = firstYear;
         endYear = lastYear;
       } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
-        startYear = lastYear;
+        startYear = lastYear + 1; // last point considered a start point when measuring backwards
         endYear = firstYear;
       };
 
@@ -5037,7 +5049,7 @@ function KeyboardShortCutDialog (Lt) {
 
     const shortcutGuide = [
       {
-       'key': 'Ctrl-z',
+       'key': 'Ctrl-l',
        'use': 'Toggle magnification loupe on/off',
       },
       {
@@ -5046,7 +5058,7 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Ctrl-k',
-       'use': 'Resume measurement path',
+       'use': 'Resume last measurement path',
       },
       {
        'key': 'Ctrl-i',

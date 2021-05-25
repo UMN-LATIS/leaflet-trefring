@@ -3604,6 +3604,12 @@ function ViewData(Lt) {
 
     // reformatting done in seperate for-statements for code clarity/simplicity
 
+    for (i = 0; i < pts.length; i++) { // subtract 1 from points cycle
+      if (!pref.subAnnual && pts[i] && pts[i].year) { // only need to subtract if annual
+        pts[i].year--;
+      }
+    }
+
     if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
       for (i = 0; i < pts.length; i++) {
         if (pts[i]) {
@@ -4775,7 +4781,7 @@ function MetaDataText (Lt) {
         startYear = firstYear;
         endYear = lastYear;
       } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
-        startYear = lastYear;
+        startYear = lastYear + 1; // last point considered a start point when measuring backwards
         endYear = firstYear;
       };
 
