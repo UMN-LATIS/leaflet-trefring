@@ -2507,7 +2507,7 @@ function Button(icon, toolTip, enable, disable) {
       var title = 'Disable h-bar path guide';
     } else {
       var icon = 'clear';
-      var title = 'Cancel';
+      var title = 'cancel';
     }
     states.push({
       stateName: 'active',
@@ -2604,34 +2604,88 @@ function Popout(Lt) {
                            fileInput.type = 'file';
                            fileInput.setAttribute('accept', '.txt,.json');
                            fileInput.setAttribute('multiple', '');
-                           fileInput.addEventListener('input', () => {this.createPlots(plotWindow, fileInput.files)});
+                           fileInput.addEventListener('input', () => {this.readFiles(plotWindow, fileInput.files)});
                            plotWindow.document.body.appendChild(fileInput);
 
                            this.createPlots(plotWindow);
 
                          });
 
-  PopoutPlots.prototype.createPlots = function (win, files) {
+  PopoutPlots.prototype.parsePts = function (pts) {
+    var years = []; // x-axis
+    var widths = []; // y-axis
+    this.breakDis = 0;
+    pts.map((e, i) => { // collect year & width data from points array
+      if (e.start) {
+        if (!pts[i - 1] || !pts[i - 1].break) { // first start point or non break start point
+          this.prevPt = e;
+        } else if (pts[i - 1].break){ // start point after break point
+          var j = pts[i - 1].latLng;
+          this.breakDis = Lt.helper.trueDistance(pts[i - 1].latLng, e.latLng);
+        };
+      } else if (e.year) { // measurement point
+        years.push(e.year);
+        var width  = Lt.helper.trueDistance(this.prevPt.latLng, e.latLng);
+        widths.push(Lt.helper.trueDistance(this.prevPt.latLng, e.latLng) - this.breakDis);
+
+        this.breakDis = 0;
+        this.prevPt = e;
+
+      };
+    });
+
+    return {years: years, widths: widths};
+
+  };
+
+  PopoutPlots.prototype.readFiles = function (win, files) {
+    if (files && files.length > 0) {
+      var converted_json_files = [];
+      // parse text data (CSV, TSV, space delimited, RWL) to JSON w/ papaparse
+      for (file of files) {
+          if (file.type == 'application/json') {
+            converted_json_files.push(file);
+          } else {
+            var parsedFile = Papa.parse(file, {delimiter: '\t'});
+            console.log(parsedFile);
+          };
+      };
+
+      var datasets = [];
+      converted_json_files.forEach((file, i) => {
+        var fr = new FileReader();
+        fr.onload = function(e) {
+          var jsonData = fr.result;
+          var pts = JSON.parse(jsonData).points;
+
+          if (JSON.parse(jsonData).forwardDirection == false) { // if measured backwards in time, reverse
+            var pts = Lt.helper.reverseData(pts);
+          };
+
+          if (JSON.parse(jsonData).subAnnual == true) { // remove all earlywood points
+            var pts = pts.filter(e => e && !e.earlywood);
+          }
+
+          var ptsSet = Lt.popoutPlots.parsePts(pts);
+          datasets.push(ptsSet);
+
+          if (i == converted_json_files.length - 1) {
+            Lt.popoutPlots.createPlots(win, datasets);
+          };
+        };
+
+        fr.readAsText(file);
+      });
+    };
+
+  };
+
+  PopoutPlots.prototype.createPlots = function (win, allData) {
     var doc = win.document;
 
     try { // if canvas div exists, remove it
       doc.getElementsByTagName('div')[0].remove()
     } catch {};
-
-    if (files && files.length > 0){
-      var converted_json_files = [];
-    // parse text data (CSV, TSV, space delimited, RWL) to JSON w/ papaparse
-    for (file of files) {
-        if (file.type == 'application/json') {
-          converted_json_files.push(file);
-        } else {
-          var parsedFile = Papa.parse(file, {delimitersToGuess: [',', '\t']});
-          console.log(parsedFile);
-        }
-    };
-
-    var fr = new FileReader();
-  };
 
     var div = doc.createElement('div');
     div.style.width = '100%';
@@ -2654,47 +2708,44 @@ function Popout(Lt) {
       var pts = pts.filter(e => e && !e.earlywood);
     };
 
-    var years = []; // x-axis
-    var widths = []; // y-axis
-    this.breakDis = 0;
-    pts.map((e, i) => { // collect year & width data from points array
-      if (e.start) {
-        if (!pts[i - 1] || !pts[i - 1].break) { // first start point or non break start point
-          this.prevPt = e;
-        } else if (pts[i - 1].break){ // start point after break point
-          var j = pts[i - 1].latLng;
-          this.breakDis = Lt.helper.trueDistance(pts[i - 1].latLng, e.latLng);
-        };
-      } else if (e.year) { // measurement point
-        years.push(e.year);
-        var width  = Lt.helper.trueDistance(this.prevPt.latLng, e.latLng);
-        widths.push(Lt.helper.trueDistance(this.prevPt.latLng, e.latLng) - this.breakDis);
-
-        this.breakDis = 0;
-        this.prevPt = e;
-      };
-
-    });
-
-    var data = {
-      labels: years,
-      datasets: [{
-        data: widths,
-      }]
+    if (!allData) {
+      allData = [];
     }
 
-    var plot = new Chart (ctx, {
-      type: 'line',
-      data: data,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    });
+    var coreData = this.parsePts(pts);
+    allData.push(coreData);
 
-    win.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
-      plot.update();
+    /*
+    datasets: [{
+            data: [10, 20, 30, 40]
+        }, {
+            data: [50, 50, 50, 50],
+        }],
+*/
+  var datasets = [];
+  for (set of allData) {
+    let dataObj = new Object();
+    dataObj.data = set.widths;
+    datasets.push(dataObj);
+  };
+
+  var data = {
+    labels: coreData.years,
+    datasets: datasets
+  };
+
+  var plot = new Chart (ctx, {
+    type: 'line',
+    data: data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
     }
+  });
+
+  win.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
+    plot.update();
+  }
 
   };
 
@@ -5160,9 +5211,13 @@ function Helper(Lt) {
    * Reverses points data structure so points ascend in time.
    * @function
    */
- Helper.prototype.reverseData = function() {
+ Helper.prototype.reverseData = function(inputPts) {
    var pref = Lt.measurementOptions; // preferences
-   var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
+   if (inputPts) {
+     var pts = inputPts;
+   } else {
+     var pts = JSON.parse(JSON.stringify(Lt.data.points)); // deep copy of points
+   };
 
    var i; // index
    var lastIndex = pts.length - 1;
