@@ -2632,7 +2632,7 @@ function Popout(Lt) {
       if (e.start) {
         if (!pts[i - 1] || !pts[i - 1].break) { // first start point or non break start point
           this.prevPt = e;
-        } else if (pts[i - 1].break){ // break start point
+        } else if (pts[i - 1].break){ // start point after break point
           var j = pts[i - 1].latLng;
           this.breakDis = Lt.helper.trueDistance(pts[i - 1].latLng, e.latLng);
         };
@@ -2651,7 +2651,6 @@ function Popout(Lt) {
       labels: years,
       datasets: [{
         data: widths,
-        spanGaps: false
       }]
     }
 
@@ -2664,7 +2663,7 @@ function Popout(Lt) {
       }
     });
 
-    win.onresize = function() { // for fluid resizing, w/o it will resize after event finishes 
+    win.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
       plot.update();
     }
 
