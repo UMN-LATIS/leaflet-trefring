@@ -2598,11 +2598,40 @@ function Popout(Lt) {
                          'Open time series plots in a new window',
                          () => {
                            plotWindow = window.open('', '', 'height=600,width=800');
+
+                           // file input
+                           var fileInput = plotWindow.document.createElement('input');
+                           fileInput.type = 'file';
+                           fileInput.setAttribute('accept', '.txt,.json');
+                           fileInput.setAttribute('multiple', '');
+                           fileInput.addEventListener('input', () => {this.createPlots(plotWindow, fileInput.files)});
+                           plotWindow.document.body.appendChild(fileInput);
+
                            this.createPlots(plotWindow);
+
                          });
 
-  PopoutPlots.prototype.createPlots = function (win) {
+  PopoutPlots.prototype.createPlots = function (win, files) {
     var doc = win.document;
+
+    try { // if canvas div exists, remove it
+      doc.getElementsByTagName('div')[0].remove()
+    } catch {};
+
+    if (files && files.length > 0){
+      var converted_json_files = [];
+    // parse text data (CSV, TSV, space delimited, RWL) to JSON w/ papaparse
+    for (file of files) {
+        if (file.type == 'application/json') {
+          converted_json_files.push(file);
+        } else {
+          var parsedFile = Papa.parse(file, {delimitersToGuess: [',', '\t']});
+          console.log(parsedFile);
+        }
+    };
+
+    var fr = new FileReader();
+  };
 
     var div = doc.createElement('div');
     div.style.width = '100%';
