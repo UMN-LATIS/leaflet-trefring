@@ -2507,7 +2507,7 @@ function Button(icon, toolTip, enable, disable) {
       var title = 'Disable h-bar path guide';
     } else {
       var icon = 'clear';
-      var title = 'cancel';
+      var title = 'Cancel';
     }
     states.push({
       stateName: 'active',
@@ -2611,7 +2611,7 @@ function Popout(Lt) {
 
                          });
 
-  PopoutPlots.prototype.parsePts = function (pts) {
+  PopoutPlots.prototype.parseJSONPts = function (pts, name) {
     var years = []; // x-axis
     var widths = []; // y-axis
     this.breakDis = 0;
@@ -2634,47 +2634,84 @@ function Popout(Lt) {
       };
     });
 
-    return {years: years, widths: widths};
+    return {years: years, widths: widths, name: name};
 
   };
 
   PopoutPlots.prototype.readFiles = function (win, files) {
     if (files && files.length > 0) {
-      var converted_json_files = [];
+      var parsedFiles = [];
       // parse text data (CSV, TSV, space delimited, RWL) to JSON w/ papaparse
       for (file of files) {
           if (file.type == 'application/json') {
-            converted_json_files.push(file);
+            parsedFiles.push(file);
           } else {
-            var parsedFile = Papa.parse(file, {delimiter: '\t'});
-            console.log(parsedFile);
+            let fr = new FileReader();
+            fr.onload = function(event) {
+              var parsedFile = Papa.parse(event.target.result, {delimitersToGuess: [',', '\t', '&nbsp;&nbsp;&nbsp;&nbsp;']});
+              console.log(parsedFile);
+              parsedFiles.push(parsedFile);
+            };
+            fr.readAsText(file);
           };
       };
 
       var datasets = [];
-      converted_json_files.forEach((file, i) => {
-        var fr = new FileReader();
-        fr.onload = function(e) {
-          var jsonData = fr.result;
-          var pts = JSON.parse(jsonData).points;
+      // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
+      function addToDataset (set, lastSet) {
+        datasets.push(set);
 
-          if (JSON.parse(jsonData).forwardDirection == false) { // if measured backwards in time, reverse
-            var pts = Lt.helper.reverseData(pts);
-          };
+        if (lastSet) {
+          console.log(datasets);
+          Lt.popoutPlots.createPlots(win, datasets);
+        }
+      };
 
-          if (JSON.parse(jsonData).subAnnual == true) { // remove all earlywood points
-            var pts = pts.filter(e => e && !e.earlywood);
-          }
-
-          var ptsSet = Lt.popoutPlots.parsePts(pts);
-          datasets.push(ptsSet);
-
-          if (i == converted_json_files.length - 1) {
-            Lt.popoutPlots.createPlots(win, datasets);
-          };
+      // format data to use with chart.js
+      parsedFiles.forEach((file, i) => {
+        var lastSet = false;
+        if (i == parsedFiles.length - 1) {
+          lastSet = true;
         };
 
-        fr.readAsText(file);
+        if (file.type) { // only data not parsed is JSON files
+          let fr = new FileReader();
+          fr.onload = function(e) { // use callback function b/c file reading is slow
+            var jsonData = fr.result;
+            var pts = JSON.parse(jsonData).points;
+
+            if (JSON.parse(jsonData).forwardDirection == false) { // if measured backwards in time, reverse
+              var pts = Lt.helper.reverseData(pts);
+            };
+
+            if (JSON.parse(jsonData).subAnnual == true) { // remove all earlywood points
+              var pts = pts.filter(e => e && !e.earlywood);
+            }
+
+            var name = file.name.split('.')[0]; // removes .type
+            var ptsSet = Lt.popoutPlots.parseJSONPts(pts, name);
+
+            addToDataset(ptsSet, lastSet);
+          };
+
+          fr.readAsText(file);
+        } else { // data formatted by papaparse
+          // format = [[year, name], [1900, 1], [1901, 2], ...]
+          var name = file[0][1];
+          var yearData = [];
+          var widthData = [];
+          for (array of file) {
+            yearData.push(array[0]);
+            widthData.push(array[1]);
+          };
+          ptsSet = new Object();
+          ptsSet.name = name;
+          ptsSet.years = yearData;
+          ptsSet.widths = widthData;
+
+          addToDataset(ptsSet, lastSet);
+        };
+
       });
     };
 
@@ -2712,20 +2749,41 @@ function Popout(Lt) {
       allData = [];
     }
 
-    var coreData = this.parsePts(pts);
+    var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
     allData.push(coreData);
 
     /*
     datasets: [{
-            data: [10, 20, 30, 40]
+            data: [10, 20, 30, 40],
+            label: name,
+            ...
         }, {
             data: [50, 50, 50, 50],
+            label: name,
+            ...
         }],
-*/
+    */
+
+  function randColor () {
+    var rgb = '';
+    for (var i = 0; i < 3; i++) {
+      rgb += String(Math.round(Math.random() * 255))
+      if (i < 2) {
+        rgb += ',';
+      };
+    };
+    return rgb
+  }
+
   var datasets = [];
   for (set of allData) {
     let dataObj = new Object();
-    dataObj.data = set.widths;
+    dataObj.data = set.widths; // y-axis data
+    dataObj.label = set.name; // line label
+    dataObj.pointRadius = 0; // points on line radius
+
+    var colorIndex = allData.indexOf(set);
+    dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
     datasets.push(dataObj);
   };
 
