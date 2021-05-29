@@ -116,7 +116,12 @@
        -2, -1,  0,
        -1,  1,  1,
         0,  1,  2
-    ]
+    ],
+	emboss2: [
+		0, -1, -2,
+		1,  1, -1,
+		2,  1,  0
+	]
   };
 
   var effects = [
@@ -133,6 +138,7 @@
     { name: "unsharpen", },
     { name: "unsharpen", },
     { name: "emboss", on: true },
+	{ name: "emboss2", on: true},
     { name: "edgeDetect", },
     { name: "edgeDetect", },
     { name: "edgeDetect3", },

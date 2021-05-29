@@ -4296,11 +4296,13 @@ function ImageAdjustment(Lt) {
     <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">Emboss</label> \
     <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">Emboss Direction</label> \
+    <input class="imageSlider" id="emboss-direction-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">edgeDetect</label> \
     <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">unsharpen</label> \
     <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
+    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
     <button id="reset-button" style="margin-left:auto; margin-right:auto; margin-top: 5px;display:block;" class="mdc-button mdc-button--unelevated mdc-button-compact">reset</button></div>').addTo(Lt.viewer);
 
   /**
@@ -4315,6 +4317,7 @@ function ImageAdjustment(Lt) {
     var invert = $("#invert-checkbox").prop('checked')?1:0;
     var sharpnessSlider = document.getElementById("sharpness-slider").value;
     var embossSlider = document.getElementById("emboss-slider").value;
+    var embossDirection = document.getElementById("emboss-direction-slider");
     var edgeDetect = document.getElementById("edgeDetect-slider").value;
     var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     document.getElementsByClassName("leaflet-pane")[0].style.filter =
@@ -4323,9 +4326,19 @@ function ImageAdjustment(Lt) {
       "saturate(" + saturationSlider.value + "%) " +
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
+    var embossName;
+    if(embossDirection.value <= 0.50)
+    {
+      embossName = "emboss";
+    }
+    else
+    {
+      embossName = "emboss2"
+    }
+    console.log(embossName);
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
       {
-			"name":"emboss",
+			"name": embossName,
 			"strength": embossSlider
       },
       {
@@ -4356,6 +4369,7 @@ function ImageAdjustment(Lt) {
     var hueSlider = document.getElementById("hue-slider");
     var sharpnessSlider = document.getElementById("sharpness-slider");
     var embossSlider = document.getElementById("emboss-slider");
+    var embossDirection = document.getElementById("emboss-direction-slider");
     var edgeDetect = document.getElementById("edgeDetect-slider");
     var unsharpnessSlider = document.getElementById("unsharpness-slider");
     //Close view if user clicks anywhere outside of slider window
@@ -4370,6 +4384,9 @@ function ImageAdjustment(Lt) {
     $("#invert-checkbox").change(() => {
       this.updateFilters();
     });
+    $("#emboss-direction-slider").change(() => {
+      this.updateFilters();
+    });
     $("#reset-button").click(() => {
       $(brightnessSlider).val(100);
       $(contrastSlider).val(100);
@@ -4377,6 +4394,7 @@ function ImageAdjustment(Lt) {
       $(hueSlider).val(0);
       $(sharpnessSlider).val(0);
       $(embossSlider).val(0);
+      $(embossDirection).val(0);
       $(edgeDetect).val(0);
       $(unsharpnessSlider).val(0);
       this.updateFilters();

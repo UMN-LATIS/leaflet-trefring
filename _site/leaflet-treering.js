@@ -1767,10 +1767,11 @@ function AnnotationAsset(Lt) {
 
   AnnotationAsset.prototype.nearestYear = function (latLng) {
     var closestI = Lt.helper.closestPointIndex(latLng);
-    if (Lt.measurementOptions.forwardDirection == false) {
-      // correct index when measuring backwards
-      closestI--;
-    };
+    if ((Lt.measurementOptions.forwardDirection == false) || (closestI == Lt.data.points.length)) {
+     // correct index when measuring backwards or if closest point is last point
+     closestI--;
+   };
+
     var closestPt = Lt.data.points[closestI];
     var closestYear;
 
@@ -1783,11 +1784,13 @@ function AnnotationAsset(Lt) {
 
       if (!previousPt) { // case 2: inital start point
         closestYear = nextPt.year
-      } else if (nextPt && !nextPt.year) { // case 3: break point & next point is a start point
+      } else if (!nextPt) { // case 3: last point is a start point
+        closestYear = previousPt.year
+      } else if (nextPt && !nextPt.year) { // case 4: break point & next point is a start point
         closestYear = Lt.data.points[closestI + 2].year;
-      } else if (!previousPt.year) { // case 4: start point & previous point is a break point
+      } else if (!previousPt.year) { // case 5: start point & previous point is a break point
         closestYear = Lt.data.points[closestI + 1].year;
-      } else { // case 5: start point in middle of point path
+      } else { // case 6: start point in middle of point path
         var distanceToPreviousPt = Math.sqrt(Math.pow((closestPt.lng - previousPt.lng), 2) + Math.pow((closestPt.lat - previousPt.lat), 2));
         var distanceToNextPt = Math.sqrt(Math.pow((closestPt.lng - nextPt.lng), 2) + Math.pow((closestPt.lat - nextPt.lat), 2));
 
@@ -1872,7 +1875,8 @@ function AnnotationAsset(Lt) {
       var popupYear = document.createElement('span');
       popupYear.className = 'text-content';
       popupYear.style.cssFloat = 'right';
-      popupYear.innerHTML = this.nearestYear(Lt.aData.annotations[index].latLng) + Lt.aData.annotations[index].yearAdjustment;
+      Lt.aData.annotations[index].calculatedYear = this.nearestYear(Lt.aData.annotations[index].latLng);
+      popupYear.innerHTML = Lt.aData.annotations[index].calculatedYear + Lt.aData.annotations[index].yearAdjustment;
       popupDiv.appendChild(popupYear);
     });
 
@@ -1987,7 +1991,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearSpan = document.createElement('span');
     associatedYearSpan.className = 'text-content';
-    associatedYearSpan.innerHTML = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearSpan.innerHTML = this.calculatedYear + this.yearAdjustment;
     summaryAssociatedYearDiv.appendChild(associatedYearSpan);
 
     summaryDiv.appendChild(summaryAssociatedYearDiv);
@@ -2101,7 +2106,8 @@ function AnnotationAsset(Lt) {
 
     var associatedYearInput = document.createElement('input');
     associatedYearInput.type = 'number';
-    associatedYearInput.value = this.nearestYear(this.latLng) + this.yearAdjustment;
+    this.calculatedYear = this.nearestYear(this.latLng);
+    associatedYearInput.value = this.calculatedYear + this.yearAdjustment;
     $(associatedYearInput).change(() => {
       this.year = associatedYearInput.value;
       this.yearAdjustment = associatedYearInput.value - this.calculatedYear;
@@ -4290,11 +4296,13 @@ function ImageAdjustment(Lt) {
     <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">Emboss</label> \
     <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <label style="text-align:center;display:block;">Emboss Direction</label> \
+    <input class="imageSlider" id="emboss-direction-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">edgeDetect</label> \
     <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">unsharpen</label> \
     <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
+    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
     <button id="reset-button" style="margin-left:auto; margin-right:auto; margin-top: 5px;display:block;" class="mdc-button mdc-button--unelevated mdc-button-compact">reset</button></div>').addTo(Lt.viewer);
 
   /**
@@ -4309,6 +4317,7 @@ function ImageAdjustment(Lt) {
     var invert = $("#invert-checkbox").prop('checked')?1:0;
     var sharpnessSlider = document.getElementById("sharpness-slider").value;
     var embossSlider = document.getElementById("emboss-slider").value;
+    var embossDirection = document.getElementById("emboss-direction-slider");
     var edgeDetect = document.getElementById("edgeDetect-slider").value;
     var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     document.getElementsByClassName("leaflet-pane")[0].style.filter =
@@ -4317,9 +4326,19 @@ function ImageAdjustment(Lt) {
       "saturate(" + saturationSlider.value + "%) " +
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
+    var embossName;
+    if(embossDirection.value <= 0.50)
+    {
+      embossName = "emboss";
+    }
+    else
+    {
+      embossName = "emboss2"
+    }
+    console.log(embossName);
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
       {
-			"name":"emboss",
+			"name": embossName,
 			"strength": embossSlider
       },
       {
@@ -4350,6 +4369,7 @@ function ImageAdjustment(Lt) {
     var hueSlider = document.getElementById("hue-slider");
     var sharpnessSlider = document.getElementById("sharpness-slider");
     var embossSlider = document.getElementById("emboss-slider");
+    var embossDirection = document.getElementById("emboss-direction-slider");
     var edgeDetect = document.getElementById("edgeDetect-slider");
     var unsharpnessSlider = document.getElementById("unsharpness-slider");
     //Close view if user clicks anywhere outside of slider window
@@ -4364,6 +4384,9 @@ function ImageAdjustment(Lt) {
     $("#invert-checkbox").change(() => {
       this.updateFilters();
     });
+    $("#emboss-direction-slider").change(() => {
+      this.updateFilters();
+    });
     $("#reset-button").click(() => {
       $(brightnessSlider).val(100);
       $(contrastSlider).val(100);
@@ -4371,6 +4394,7 @@ function ImageAdjustment(Lt) {
       $(hueSlider).val(0);
       $(sharpnessSlider).val(0);
       $(embossSlider).val(0);
+      $(embossDirection).val(0);
       $(edgeDetect).val(0);
       $(unsharpnessSlider).val(0);
       this.updateFilters();
@@ -5037,7 +5061,7 @@ function KeyboardShortCutDialog (Lt) {
 
     const shortcutGuide = [
       {
-       'key': 'Ctrl-z',
+       'key': 'Ctrl-l',
        'use': 'Toggle magnification loupe on/off',
       },
       {
@@ -5046,7 +5070,7 @@ function KeyboardShortCutDialog (Lt) {
       },
       {
        'key': 'Ctrl-k',
-       'use': 'Resume measurement path',
+       'use': 'Resume last measurement path',
       },
       {
        'key': 'Ctrl-i',
