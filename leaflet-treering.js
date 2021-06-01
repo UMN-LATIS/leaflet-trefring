@@ -4327,13 +4327,21 @@ function ImageAdjustment(Lt) {
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
     var embossName;
-    if(embossDirection.value <= 0.50)
+    if(embossDirection.value <= 0.25)
     {
       embossName = "emboss";
     }
-    else
+    else if (embossDirection.value <= 0.50)
     {
       embossName = "emboss2"
+    }
+    else if (embossDirection.value <= 0.75)
+    {
+      embossName = "emboss3"
+    }
+    else
+    {
+      embossName = "emboss4"
     }
     console.log(embossName);
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([

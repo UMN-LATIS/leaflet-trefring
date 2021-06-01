@@ -121,6 +121,16 @@
 		0, -1, -2,
 		1,  1, -1,
 		2,  1,  0
+	],
+	emboss3: [
+		 2,  1,  0,
+		 1,  1, -1,
+		 0, -1, -2
+	],
+	emboss4: [
+		 0,  1,  2,
+		-1,  1,  1,
+		-2, -1,  0
 	]
   };
 
@@ -139,6 +149,8 @@
     { name: "unsharpen", },
     { name: "emboss", on: true },
 	{ name: "emboss2", on: true},
+	{name: "emboss3", on: true},
+	{name: "emboss4", on: true},
     { name: "edgeDetect", },
     { name: "edgeDetect", },
     { name: "edgeDetect3", },
