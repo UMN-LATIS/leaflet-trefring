@@ -2737,7 +2737,6 @@ function Popout(Lt) {
             }
           }
 
-          console.log(rwlSplitData)
           // format of rwlSplitData = [[name, 1928, width, width],[name, 1930, width, width, ...], ...]
           // change to format = [[year, name], [1928, width], [1929, width], ...]
           if (rwlSplitData.length > 0) {
@@ -2754,7 +2753,6 @@ function Popout(Lt) {
                 adjustment++;
               }
             }
-            console.log(formattedData);
           };
 
           var data = formattedData;
@@ -2844,50 +2842,99 @@ function Popout(Lt) {
         }],
     */
 
-  function randColor () {
-    var rgb = '';
-    for (var i = 0; i < 3; i++) {
-      rgb += String(Math.round(Math.random() * 255))
-      if (i < 2) {
-        rgb += ',';
+    function randColor () {
+      var rgb = '';
+      for (var i = 0; i < 3; i++) {
+        rgb += String(Math.round(Math.random() * 255))
+        if (i < 2) {
+          rgb += ',';
+        };
       };
-    };
-    return rgb
-  }
-
-  var datasets = [];
-  for (set of allData) {
-    let dataObj = new Object();
-    dataObj.data = set.widths; // y-axis data
-    dataObj.label = set.name; // line label
-    dataObj.pointRadius = 0; // points on line radius
-
-    var colorIndex = allData.indexOf(set);
-    dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
-    datasets.push(dataObj);
-  };
-
-  var data = {
-    labels: coreData.years,
-    datasets: datasets
-  };
-
-  var plot = new Chart (ctx, {
-    type: 'line',
-    data: data,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      return rgb
     }
-  });
 
-  this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
-    plot.update();
-  }
+    var datasets = [];
+    for (set of allData) {
+      let dataObj = new Object();
+      dataObj.data = set.widths; // y-axis data
+      dataObj.label = set.name; // line label
+      dataObj.pointRadius = 0; // points on line radius
+
+      var colorIndex = allData.indexOf(set);
+      dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
+      datasets.push(dataObj);
+    };
+
+    var labels = [];
+    if (coreData.years.length <= 150) {
+      for (year of coreData.years) {
+        if (parseInt(year, 10) % 10 == 0) {
+          labels.push(year);
+        } else {
+          labels.push('');
+        }
+      }
+    } else { // core data longer than 150 years
+      for (year of coreData.years) {
+        if (parseInt(year, 10) % 50 == 0 || parseInt(year, 10) % 100 == 0) {
+          labels.push(year);
+        } else {
+          labels.push('');
+        }
+      }
+    }
+
+    var data = {
+      labels: labels,
+      datasets: datasets
+    };
+
+    var plot = new Chart (ctx, {
+      type: 'line',
+      data: data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            display: true,
+            title: {
+              text: 'Width (mm)',
+              display: true
+            },
+            grid: {
+              display: false,
+              borderColor: 'black',
+            }
+          },
+          x: {
+            display: true,
+            title: {
+              text: 'Year',
+              display: true
+            },
+            grid: {
+              display: false,
+              borderColor: 'black',
+            },
+            ticks: {
+              display: true,
+              major: {
+                enabled: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
+      plot.update();
+    }
+
+    };
 
   };
-
-};
 
 /**
  * Undo actions
