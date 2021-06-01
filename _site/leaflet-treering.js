@@ -2859,7 +2859,7 @@ function Popout(Lt) {
       dataObj.data = set.widths; // y-axis data
       dataObj.label = set.name; // line label
       dataObj.pointRadius = 0; // points on line radius
-
+      dataObj.pointHitRadius = 10;
       var colorIndex = allData.indexOf(set);
       dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
       datasets.push(dataObj);
@@ -2883,54 +2883,57 @@ function Popout(Lt) {
         }
       }
     }
-
+    console.log(labels);
     var data = {
       labels: labels,
       datasets: datasets
     };
 
-    var plot = new Chart (ctx, {
-      type: 'line',
-      data: data,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            display: true,
-            title: {
-              text: 'Width (mm)',
-              display: true
-            },
-            grid: {
-              display: false,
-              borderColor: 'black',
-            }
-          },
-          x: {
-            display: true,
-            title: {
-              text: 'Year',
-              display: true
-            },
-            grid: {
-              display: false,
-              borderColor: 'black',
-            },
-            ticks: {
-              display: true,
-              major: {
-                enabled: true
+    setTimeout(() => {
+         var plot = new Chart (ctx, {
+          type: 'line',
+          data: data,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                display: true,
+                title: {
+                  text: 'Width (mm)',
+                  display: true
+                },
+                grid: {
+                  display: false,
+                  borderColor: 'black',
+                }
+              },
+              x: {
+                display: true,
+                title: {
+                  text: 'Year',
+                  display: true
+                },
+                grid: {
+                  display: false,
+                  borderColor: 'black',
+                },
+                ticks: {
+                  display: true,
+                  major: {
+                    enabled: true
+                  }
+                }
               }
             }
           }
-        }
-      }
-    });
+        });
 
-    this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
-      plot.update();
-    }
+        this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
+          plot.update();
+        }
+    }, 1);
+   
 
     };
 
