@@ -2607,7 +2607,7 @@ function Popout(Lt) {
                            fileInput.addEventListener('input', () => {this.parseFiles(fileInput.files)});
                            this.plotWindow.document.body.appendChild(fileInput);
 
-                           this.createPlots(this.plotWindow);
+                           this.createPlots();
 
                          });
 
@@ -2703,27 +2703,76 @@ function Popout(Lt) {
           var name = file.name.split('.')[0]; // removes .type
           var ptsSet = Lt.popoutPlots.parseJSONPts(pts, name);
           addToDataset(ptsSet, lastSet, i);
-
         };
-
         fr.readAsText(file);
+
       } else { // data formatted by papaparse
         // format = [[year, name], [1900, 1], [1901, 2], ...]
+        var data = file.data;
         if (file.errors.length > 0) { // RWL or space delimited
-          console.log('error');
-        } else { // CSV or TSV
-          var name = file.data[0][1];
-          var yearData = [];
-          var widthData = [];
-          for (array of file.data) {
-            yearData.push(array[0]);
-            widthData.push(array[1]);
+          var formattedData = [];
+          var rwlSplitData = [];
+          for (array of data) {
+            var splitData = array[0].split(/[\s]+/);
+            if (splitData.length == 2) { // space delimitted has only 2 columns
+              formattedData.push(splitData);
+            } else { // RWL has 3+ columns
+              rwlSplitData.push(splitData);
+            };
           };
-          ptsSet = new Object();
-          ptsSet.name = name;
-          ptsSet.years = yearData;
-          ptsSet.widths = widthData;
+
+          function toMM (num) {
+            if (num.length == 4) {
+              // 1234 => 1.234
+              return num.slice(0, 1) + '.' + num.slice(1);
+            } else if (num.length == 3) {
+              // 123 => 0.123
+              return '0.' + num
+            } else if (num.length == 2) {
+              // 12 => 0.012
+              return '0.0' + num
+            } else {
+              // 1 => 0.001
+              return '0.00' + num
+            }
+          }
+
+          console.log(rwlSplitData)
+          // format of rwlSplitData = [[name, 1928, width, width],[name, 1930, width, width, ...], ...]
+          // change to format = [[year, name], [1928, width], [1929, width], ...]
+          if (rwlSplitData.length > 0) {
+            var rwlName  = rwlSplitData[0][0];
+            formattedData.push(['Year', rwlName]);
+            for (array of rwlSplitData) {
+              var startingYear = array[1];
+              var adjustment = 0;
+              var widthArray = array.splice(2);
+              for (width of widthArray) {
+                var year = startingYear + adjustment;
+                var fixedWidth = toMM(width);
+                formattedData.push([year, fixedWidth])
+                adjustment++;
+              }
+            }
+            console.log(formattedData);
+          };
+
+          var data = formattedData;
+
         };
+
+        var name = data[0][1];
+        var yearData = [];
+        var widthData = [];
+        for (array of data) {
+          yearData.push(array[0]);
+          widthData.push(array[1]);
+        };
+        ptsSet = new Object();
+        ptsSet.name = name;
+        ptsSet.years = yearData;
+        ptsSet.widths = widthData;
+
         addToDataset(ptsSet, lastSet, i);
 
       };
@@ -2735,7 +2784,7 @@ function Popout(Lt) {
       datasets.push(set);
 
       if (lastSet) {
-        Lt.popoutPlots.createPlots(Lt.popoutPlots.plotWindow, datasets);
+        Lt.popoutPlots.createPlots(datasets);
       } else {
         i++;
         parseFile(i);
@@ -2748,8 +2797,8 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.createPlots = function (win, allData) {
-    var doc = win.document;
+  PopoutPlots.prototype.createPlots = function (allData) {
+    var doc = this.plotWindow.document;
 
     try { // if canvas div exists, remove it
       doc.getElementsByTagName('div')[0].remove()
@@ -2832,7 +2881,7 @@ function Popout(Lt) {
     }
   });
 
-  win.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
+  this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
     plot.update();
   }
 
