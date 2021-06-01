@@ -2597,17 +2597,17 @@ function Popout(Lt) {
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
-                           plotWindow = window.open('', '', 'height=600,width=800');
+                           this.plotWindow = window.open('', '', 'height=600,width=800');
 
                            // file input
-                           var fileInput = plotWindow.document.createElement('input');
+                           var fileInput = this.plotWindow.document.createElement('input');
                            fileInput.type = 'file';
                            fileInput.setAttribute('accept', '.txt,.json');
                            fileInput.setAttribute('multiple', '');
-                           fileInput.addEventListener('input', () => {this.readFiles(plotWindow, fileInput.files)});
-                           plotWindow.document.body.appendChild(fileInput);
+                           fileInput.addEventListener('input', () => {this.parseFiles(fileInput.files)});
+                           this.plotWindow.document.body.appendChild(fileInput);
 
-                           this.createPlots(plotWindow);
+                           this.createPlots(this.plotWindow);
 
                          });
 
@@ -2638,69 +2638,84 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.readFiles = function (win, files) {
+  PopoutPlots.prototype.parseFiles = function (files) {
+    var parsedFiles = [];
+    function addToParsedFiles (file, lastFile) {
+      parsedFiles.push(file);
+
+      if (lastFile) {
+        Lt.popoutPlots.parseData(parsedFiles);
+      };
+    };
+
     if (files && files.length > 0) {
-      var parsedFiles = [];
-      // parse text data (CSV, TSV, space delimited, RWL) to JSON w/ papaparse
-      for (file of files) {
+      var lastFile = false;
+      for (var i = 0; i < files.length; i++) {
+          if (i == files.length - 1) {
+            lastFile = true;
+          };
+
+          let file = files[i];
+
           if (file.type == 'application/json') {
-            parsedFiles.push(file);
+            addToParsedFiles(file, lastFile);
           } else {
             let fr = new FileReader();
             fr.onload = function(event) {
-              var parsedFile = Papa.parse(event.target.result, {delimitersToGuess: [',', '\t', '&nbsp;&nbsp;&nbsp;&nbsp;']});
-              console.log(parsedFile);
-              parsedFiles.push(parsedFile);
+              var parsedFile = Papa.parse(event.target.result, {delimitersToGuess: [',', '\t']});
+              addToParsedFiles(parsedFile, lastFile);
             };
             fr.readAsText(file);
+        };
+      };
+    };
+  };
+
+  PopoutPlots.prototype.parseData = function (files) {
+    // need functions to regulate file reading order since FileReader() is slower than JS line execution
+    // ie. FileReader called first but finishes after code called below it
+
+    // function call order: parseFile => addToDataset => last file? no => parseFile => ...
+    //                                                              yes => createPlots
+
+    function parseFile (i) {
+      var file = files[i];
+
+      var lastSet = false;
+      if (i == files.length - 1) {
+        lastSet = true;
+      };
+
+      if (file.type) { // only data not parsed is JSON files
+        let fr = new FileReader();
+        fr.onload = function(e) { // use callback function b/c file reading is slow
+          var jsonData = fr.result;
+          var pts = JSON.parse(jsonData).points;
+
+          if (JSON.parse(jsonData).forwardDirection == false) { // if measured backwards in time, reverse
+            var pts = Lt.helper.reverseData(pts);
           };
-      };
 
-      var datasets = [];
-      // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
-      function addToDataset (set, lastSet) {
-        datasets.push(set);
+          if (JSON.parse(jsonData).subAnnual == true) { // remove all earlywood points
+            var pts = pts.filter(e => e && !e.earlywood);
+          }
 
-        if (lastSet) {
-          console.log(datasets);
-          Lt.popoutPlots.createPlots(win, datasets);
-        }
-      };
+          var name = file.name.split('.')[0]; // removes .type
+          var ptsSet = Lt.popoutPlots.parseJSONPts(pts, name);
+          addToDataset(ptsSet, lastSet, i);
 
-      // format data to use with chart.js
-      parsedFiles.forEach((file, i) => {
-        var lastSet = false;
-        if (i == parsedFiles.length - 1) {
-          lastSet = true;
         };
 
-        if (file.type) { // only data not parsed is JSON files
-          let fr = new FileReader();
-          fr.onload = function(e) { // use callback function b/c file reading is slow
-            var jsonData = fr.result;
-            var pts = JSON.parse(jsonData).points;
-
-            if (JSON.parse(jsonData).forwardDirection == false) { // if measured backwards in time, reverse
-              var pts = Lt.helper.reverseData(pts);
-            };
-
-            if (JSON.parse(jsonData).subAnnual == true) { // remove all earlywood points
-              var pts = pts.filter(e => e && !e.earlywood);
-            }
-
-            var name = file.name.split('.')[0]; // removes .type
-            var ptsSet = Lt.popoutPlots.parseJSONPts(pts, name);
-
-            addToDataset(ptsSet, lastSet);
-          };
-
-          fr.readAsText(file);
-        } else { // data formatted by papaparse
-          // format = [[year, name], [1900, 1], [1901, 2], ...]
-          var name = file[0][1];
+        fr.readAsText(file);
+      } else { // data formatted by papaparse
+        // format = [[year, name], [1900, 1], [1901, 2], ...]
+        if (file.errors.length > 0) { // RWL or space delimited
+          console.log('error');
+        } else { // CSV or TSV
+          var name = file.data[0][1];
           var yearData = [];
           var widthData = [];
-          for (array of file) {
+          for (array of file.data) {
             yearData.push(array[0]);
             widthData.push(array[1]);
           };
@@ -2708,12 +2723,28 @@ function Popout(Lt) {
           ptsSet.name = name;
           ptsSet.years = yearData;
           ptsSet.widths = widthData;
-
-          addToDataset(ptsSet, lastSet);
         };
+        addToDataset(ptsSet, lastSet, i);
 
-      });
+      };
     };
+
+    var datasets = [];
+    // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
+    function addToDataset (set, lastSet, i) {
+      datasets.push(set);
+
+      if (lastSet) {
+        Lt.popoutPlots.createPlots(Lt.popoutPlots.plotWindow, datasets);
+      } else {
+        i++;
+        parseFile(i);
+      };
+    };
+
+    // start function call chain
+    var i = 0;
+    parseFile(i);
 
   };
 
