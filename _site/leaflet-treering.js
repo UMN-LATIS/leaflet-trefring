@@ -2935,17 +2935,12 @@ function Popout(Lt) {
                   display: true,
                   stepSize: 1,
                   maxTicksLimit: Number.MAX_SAFE_INTEGER,
-                  major: {
-                    enabled: true,
-                  },
                   callback: function(v, i) { // value, index
                     console.log(this);
                     if (Math.abs(this._range.max - this._range.min) <= 150) {
-                      v % 5 === 0 ? this.ticks[i].major = true : this.ticks[i].major = false; // major ticks: 5 years
                       return v % 10 === 0 ? v : ''; // only show decades
                     } else {
-                      this.chart.config._config.options.scales.x.ticks.stepSize = 5;
-                      v % 10 === 0 ? this.ticks[i].major = true : this.ticks[i].major = false; // major ticks: 10 years
+                      this.chart.config._config.options.scales.x.ticks.stepSize = 5; // ticks every 5 years
                       return v % 50 === 0 ? v : ''; // only show midcenturies & centuries
                     }
                   }
