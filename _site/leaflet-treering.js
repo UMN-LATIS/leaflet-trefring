@@ -2798,13 +2798,14 @@ function Popout(Lt) {
   PopoutPlots.prototype.createPlots = function (allData) {
     var doc = this.plotWindow.document;
 
-    try { // if canvas div exists, remove it
-      doc.getElementsByTagName('div')[0].remove()
+    try { // if canvas or color div exists, remove them
+      doc.getElementsByTagName('div')[0].remove();
+      doc.getElementById('color').remove();
     } catch {};
 
     var div = doc.createElement('div');
     div.style.width = '100%';
-    div.style.height = '50%';
+    div.style.height = '80%';
     div.style.position = 'relative';
     doc.body.appendChild(div);
 
@@ -2843,14 +2844,8 @@ function Popout(Lt) {
     */
 
     function randColor () {
-      var rgb = '';
-      for (var i = 0; i < 3; i++) {
-        rgb += String(Math.round(Math.random() * 255))
-        if (i < 2) {
-          rgb += ',';
-        };
-      };
-      return rgb
+      var hex = Math.floor(Math.random()*16777215).toString(16);
+      return '#' + hex
     }
 
     var datasets = [];
@@ -2861,7 +2856,7 @@ function Popout(Lt) {
       dataObj.pointRadius = 0; // points on line radius
       dataObj.pointHitRadius = 50;
       var colorIndex = allData.indexOf(set);
-      dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
+      dataObj.borderColor = randColor(); // line color
       datasets.push(dataObj);
     };
 
@@ -2890,7 +2885,7 @@ function Popout(Lt) {
     };
 
     setTimeout(() => {
-         var plot = new Chart (ctx, {
+        Lt.popoutPlots.plot = new Chart (ctx, {
           type: 'line',
           data: data,
           options: {
@@ -2936,7 +2931,6 @@ function Popout(Lt) {
                   stepSize: 1,
                   maxTicksLimit: Number.MAX_SAFE_INTEGER,
                   callback: function(v, i) { // value, index
-                    console.log(this);
                     if (Math.abs(this._range.max - this._range.min) <= 150) {
                       return v % 10 === 0 ? v : ''; // only show decades
                     } else {
@@ -2951,14 +2945,46 @@ function Popout(Lt) {
         });
 
         this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
-          plot.update();
+          Lt.popoutPlots.plot.update();
+          console.log(Lt.popoutPlots.plot)
         }
     }, 1);
 
+    var colorDiv = doc.createElement('div');
+    colorDiv.style.width = '100%';
+    colorDiv.style.height = '20%';
+    colorDiv.style.position = 'relative';
+    colorDiv.id = 'color';
+    doc.body.appendChild(colorDiv);
 
-    };
+    var inputTable = doc.createElement('table');
+    inputTable.style.margin = 'auto';
+    var inputRow = inputTable.insertRow(0);
+
+    // create color inputs to change line colors
+    datasets.forEach((set, i) => {
+            let input = doc.createElement('input');
+      input.type = 'color';
+      input.value = set.borderColor;
+      input.style.margin = 'auto';
+      input.style.display = 'block';
+      input.style.padding = '0';
+      input.style.border = '0';
+      $(input).on('change', () => {
+          Lt.popoutPlots.plot.config.data.datasets[i].borderColor = input.value;
+          Lt.popoutPlots.plot.update();
+      })
+      var inputCell = inputRow.insertCell(-1);
+      inputCell.style.width = '10%';
+      inputCell.appendChild(input);
+
+    })
+
+    colorDiv.appendChild(inputTable);
 
   };
+
+};
 
 /**
  * Undo actions
