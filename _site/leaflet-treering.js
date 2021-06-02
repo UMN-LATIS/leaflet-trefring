@@ -2913,6 +2913,7 @@ function Popout(Lt) {
                 ticks: {
                   display: true,
                   stepSize: 1,
+                  maxTicksLimit: Number.MAX_SAFE_INTEGER,
                 }
               },
               x: {
@@ -2933,6 +2934,7 @@ function Popout(Lt) {
                 ticks: {
                   display: true,
                   stepSize: 1,
+                  maxTicksLimit: Number.MAX_SAFE_INTEGER,
                   major: {
                     enabled: true,
                   },
