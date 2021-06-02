@@ -2883,7 +2883,7 @@ function Popout(Lt) {
         }
       }
     }
-    console.log(labels);
+
     var data = {
       labels: labels,
       datasets: datasets
@@ -2911,7 +2911,7 @@ function Popout(Lt) {
               x: {
                 display: true,
                 title: {
-                  text: 'Year',
+                  text: 'Years',
                   display: true
                 },
                 grid: {
@@ -2933,7 +2933,7 @@ function Popout(Lt) {
           plot.update();
         }
     }, 1);
-   
+
 
     };
 
