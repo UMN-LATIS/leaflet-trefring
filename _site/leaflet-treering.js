@@ -2597,7 +2597,7 @@ function Popout(Lt) {
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
-                           this.plotWindow = window.open('', '', 'height=600,width=800');
+                           this.plotWindow = window.open('', '', 'height=600,width=' + String(screen.width));
 
                            // file input
                            var fileInput = this.plotWindow.document.createElement('input');
@@ -2859,7 +2859,7 @@ function Popout(Lt) {
       dataObj.data = set.widths; // y-axis data
       dataObj.label = set.name; // line label
       dataObj.pointRadius = 0; // points on line radius
-      dataObj.pointHitRadius = 10;
+      dataObj.pointHitRadius = 50;
       var colorIndex = allData.indexOf(set);
       dataObj.borderColor = 'rgb(' + randColor() + ')'; // line color
       datasets.push(dataObj);
@@ -2885,7 +2885,7 @@ function Popout(Lt) {
     }
 
     var data = {
-      labels: labels,
+      labels: coreData.years,
       datasets: datasets
     };
 
@@ -2904,24 +2904,48 @@ function Popout(Lt) {
                   display: true
                 },
                 grid: {
-                  display: false,
+                  display: true,
+                  color: 'white',
                   borderColor: 'black',
+                  tickColor: 'black',
+                  tickWidth: 1,
+                },
+                ticks: {
+                  display: true,
+                  stepSize: 1,
                 }
               },
               x: {
                 display: true,
+                type: 'linear',
+                axis: 'x',
                 title: {
                   text: 'Years',
                   display: true
                 },
                 grid: {
-                  display: false,
+                  display: true,
+                  color: 'white',
                   borderColor: 'black',
+                  tickColor: 'black',
+                  tickWidth: 1,
                 },
                 ticks: {
                   display: true,
+                  stepSize: 1,
                   major: {
-                    enabled: true
+                    enabled: true,
+                  },
+                  callback: function(v, i) { // value, index
+                    console.log(this);
+                    if (Math.abs(this._range.max - this._range.min) <= 150) {
+                      v % 5 === 0 ? this.ticks[i].major = true : this.ticks[i].major = false; // major ticks: 5 years
+                      return v % 10 === 0 ? v : ''; // only show decades
+                    } else {
+                      this.chart.config._config.options.scales.x.ticks.stepSize = 5;
+                      v % 10 === 0 ? this.ticks[i].major = true : this.ticks[i].major = false; // major ticks: 10 years
+                      return v % 50 === 0 ? v : ''; // only show midcenturies & centuries
+                    }
                   }
                 }
               }
