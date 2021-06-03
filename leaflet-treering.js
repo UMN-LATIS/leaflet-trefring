@@ -2626,7 +2626,7 @@ function Popout(Lt) {
       } else if (e.year) { // measurement point
         years.push(e.year);
         var width  = Lt.helper.trueDistance(this.prevPt.latLng, e.latLng);
-        widths.push(Lt.helper.trueDistance(this.prevPt.latLng, e.latLng) - this.breakDis);
+        widths.push(width - this.breakDis);
 
         this.breakDis = 0;
         this.prevPt = e;
@@ -2881,7 +2881,7 @@ function Popout(Lt) {
                 },
                 grid: {
                   display: true,
-                  color: 'white',
+                  color: '#8b8c8f',
                   borderColor: 'black',
                   tickColor: 'black',
                   tickWidth: 1,
@@ -2902,20 +2902,20 @@ function Popout(Lt) {
                 },
                 grid: {
                   display: true,
-                  color: 'white',
+                  color: '#8b8c8f',
                   borderColor: 'black',
                   tickColor: 'black',
                   tickWidth: 1,
                 },
                 ticks: {
                   display: true,
-                  stepSize: 1,
+                  stepSize: 5,
                   maxTicksLimit: Number.MAX_SAFE_INTEGER,
                   callback: function(v, i) { // value, index
                     if (Math.abs(this._range.max - this._range.min) <= 150) {
                       return v % 10 === 0 ? v : ''; // only show decades
                     } else {
-                      this.chart.config._config.options.scales.x.ticks.stepSize = 5; // ticks every 5 years
+                      this.chart.config._config.options.scales.x.ticks.stepSize = 10; // ticks every 5 years
                       return v % 50 === 0 ? v : ''; // only show midcenturies & centuries
                     }
                   }
