@@ -2860,25 +2860,6 @@ function Popout(Lt) {
       datasets.push(dataObj);
     };
 
-    var labels = [];
-    if (coreData.years.length <= 150) {
-      for (year of coreData.years) {
-        if (parseInt(year, 10) % 10 == 0) {
-          labels.push(year);
-        } else {
-          labels.push('');
-        }
-      }
-    } else { // core data longer than 150 years
-      for (year of coreData.years) {
-        if (parseInt(year, 10) % 50 == 0 || parseInt(year, 10) % 100 == 0) {
-          labels.push(year);
-        } else {
-          labels.push('');
-        }
-      }
-    }
-
     var data = {
       labels: coreData.years,
       datasets: datasets
