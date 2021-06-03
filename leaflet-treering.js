@@ -2747,10 +2747,14 @@ function Popout(Lt) {
               var adjustment = 0;
               var widthArray = array.splice(2);
               for (width of widthArray) {
-                var year = startingYear + adjustment;
-                var fixedWidth = toMM(width);
-                formattedData.push([year, fixedWidth])
-                adjustment++;
+                var year = String(parseInt(startingYear) + adjustment);
+                if (width == '-9999') {
+                  break
+                } else {
+                  var fixedWidth = toMM(width);
+                  formattedData.push([year, fixedWidth])
+                  adjustment++;
+                }
               }
             }
           };
@@ -2799,7 +2803,7 @@ function Popout(Lt) {
     var doc = this.plotWindow.document;
 
     try { // if canvas or color div exists, remove them
-      doc.getElementsByTagName('div')[0].remove();
+      doc.getElementById('plot').remove();
       doc.getElementById('color').remove();
     } catch {};
 
@@ -2807,6 +2811,7 @@ function Popout(Lt) {
     div.style.width = '100%';
     div.style.height = '80%';
     div.style.position = 'relative';
+    div.id = 'plot';
     doc.body.appendChild(div);
 
     var canvas = doc.createElement('canvas');
@@ -2851,85 +2856,27 @@ function Popout(Lt) {
     var datasets = [];
     for (set of allData) {
       let dataObj = new Object();
-      dataObj.data = set.widths; // y-axis data
-      dataObj.label = set.name; // line label
-      dataObj.pointRadius = 0; // points on line radius
-      dataObj.pointHitRadius = 50;
-      var colorIndex = allData.indexOf(set);
-      dataObj.borderColor = randColor(); // line color
+      dataObj.y = set.widths;
+      dataObj.x = set.years;
+      dataObj.type = 'lines';
+      dataObj.name = set.name;
+      dataObj.line = { color: randColor() };
       datasets.push(dataObj);
     };
 
-    var data = {
-      labels: coreData.years,
-      datasets: datasets
-    };
+    var layout = {
+      autosize: true,
+    }
 
-    setTimeout(() => {
-        Lt.popoutPlots.plot = new Chart (ctx, {
-          type: 'line',
-          data: data,
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                display: true,
-                title: {
-                  text: 'Width (mm)',
-                  display: true
-                },
-                grid: {
-                  display: true,
-                  color: '#8b8c8f',
-                  borderColor: 'black',
-                  tickColor: 'black',
-                  tickWidth: 1,
-                },
-                ticks: {
-                  display: true,
-                  stepSize: 1,
-                  maxTicksLimit: Number.MAX_SAFE_INTEGER,
-                }
-              },
-              x: {
-                display: true,
-                type: 'linear',
-                axis: 'x',
-                title: {
-                  text: 'Years',
-                  display: true
-                },
-                grid: {
-                  display: true,
-                  color: '#8b8c8f',
-                  borderColor: 'black',
-                  tickColor: 'black',
-                  tickWidth: 1,
-                },
-                ticks: {
-                  display: true,
-                  stepSize: 5,
-                  maxTicksLimit: Number.MAX_SAFE_INTEGER,
-                  callback: function(v, i) { // value, index
-                    if (Math.abs(this._range.max - this._range.min) <= 150) {
-                      return v % 10 === 0 ? v : ''; // only show decades
-                    } else {
-                      this.chart.config._config.options.scales.x.ticks.stepSize = 10; // ticks every 5 years
-                      return v % 50 === 0 ? v : ''; // only show midcenturies & centuries
-                    }
-                  }
-                }
-              }
-            }
-          }
-        });
+    var config = {
+      responsive: true,
+      scrollZoom: true,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
+    }
 
-        this.plotWindow.onresize = function() { // for fluid resizing, w/o it will resize after resizing finishes
-          Lt.popoutPlots.plot.update();
-          console.log(Lt.popoutPlots.plot)
-        }
-    }, 1);
+    // create plot
+    Plotly.newPlot(div, datasets, layout, config);
 
     var colorDiv = doc.createElement('div');
     colorDiv.style.width = '100%';
@@ -2944,16 +2891,18 @@ function Popout(Lt) {
 
     // create color inputs to change line colors
     datasets.forEach((set, i) => {
-            let input = doc.createElement('input');
+      let input = doc.createElement('input');
       input.type = 'color';
-      input.value = set.borderColor;
+      input.value = set.line.color;
       input.style.margin = 'auto';
       input.style.display = 'block';
       input.style.padding = '0';
       input.style.border = '0';
       $(input).on('change', () => {
-          Lt.popoutPlots.plot.config.data.datasets[i].borderColor = input.value;
-          Lt.popoutPlots.plot.update();
+        colorChange = {
+          'line.color': input.value,
+        }
+        Plotly.restyle(div, colorChange, [i]);
       })
       var inputCell = inputRow.insertCell(-1);
       inputCell.style.width = '10%';
