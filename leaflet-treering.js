@@ -2642,35 +2642,43 @@ function Popout(Lt) {
   };
 
   PopoutPlots.prototype.parseFiles = function (files) {
+    // FileReader is slow, so need to have seperate functions to keep file order
+
+    var i = 0
     var parsedFiles = [];
     function addToParsedFiles (file, lastFile) {
       parsedFiles.push(file);
 
       if (lastFile) {
         Lt.popoutPlots.parseData(parsedFiles);
+      } else {
+        i++;
+        nextFile(i)
       };
     };
 
-    if (files && files.length > 0) {
+    function nextFile (i) {
       var lastFile = false;
-      for (var i = 0; i < files.length; i++) {
-          if (i == files.length - 1) {
-            lastFile = true;
-          };
+      if (i == files.length - 1) {
+        lastFile = true;
+      }
 
-          let file = files[i];
+      let file = files[i];
 
-          if (file.type == 'application/json') {
-            addToParsedFiles(file, lastFile);
-          } else {
-            let fr = new FileReader();
-            fr.onload = function(event) {
-              var parsedFile = Papa.parse(event.target.result, {delimitersToGuess: [',', '\t']});
-              addToParsedFiles(parsedFile, lastFile);
-            };
-            fr.readAsText(file);
+      if (file.type == 'application/json') {
+        addToParsedFiles(file, lastFile);
+      } else {
+        let fr = new FileReader();
+        fr.onload = function(event, i) {
+          var parsedFile = Papa.parse(event.target.result, {delimitersToGuess: [',', '\t']});
+          addToParsedFiles(parsedFile, lastFile);
         };
+        fr.readAsText(file);
       };
+    }
+
+    if (files && files.length > 0) { // start function call chain
+      nextFile(i);
     };
   };
 
