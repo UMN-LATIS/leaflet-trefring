@@ -13,35 +13,40 @@
     <script id="script">
       var div = document.getElementById('plot');
 
-      Plotly.newPlot(div, data, layout, config);
+      function createPlot (data, layout, config) {
+        Plotly.newPlot(div, data, layout, config);
 
-      var colorDiv = document.getElementById('color')
+        var colorDiv = document.getElementById('color');
+        for (child of colorDiv.childNodes) {
+          colorDiv.removeChild(child);
+        }
 
-      var inputTable = document.createElement('table');
-      inputTable.style.margin = 'auto';
-      var inputRow = inputTable.insertRow(0);
+        var inputTable = document.createElement('table');
+        inputTable.style.margin = 'auto';
+        var inputRow = inputTable.insertRow(0);
 
-      // create color inputs to change line colors
-      datasets.forEach((set, i) => {
-        let input = document.createElement('input');
-        input.type = 'color';
-        input.value = set.line.color;
-        input.style.margin = 'auto';
-        input.style.display = 'block';
-        input.style.padding = '0';
-        input.style.border = '0';
-        $(input).on('change', () => {
-          colorChange = {
-            'line.color': input.value,
-          }
-          Plotly.restyle(div, colorChange, [i]);
+        // create color inputs to change line colors
+        data.forEach((set, i) => {
+          let input = document.createElement('input');
+          input.type = 'color';
+          input.value = set.line.color;
+          input.style.margin = 'auto';
+          input.style.display = 'block';
+          input.style.padding = '0';
+          input.style.border = '0';
+          input.addEventListener('change', () => {
+            colorChange = {
+              'line.color': input.value,
+            }
+            Plotly.restyle(div, colorChange, [i]);
+          })
+          var inputCell = inputRow.insertCell(-1);
+          inputCell.style.width = '10%';
+          inputCell.appendChild(input);
         })
-        var inputCell = inputRow.insertCell(-1);
-        inputCell.style.width = '10%';
-        inputCell.appendChild(input);
-      })
 
-      colorDiv.appendChild(inputTable);
+        colorDiv.appendChild(inputTable);
+      };
 
     </script>
 

@@ -2597,24 +2597,21 @@ function Popout(Lt) {
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
-                           var dlc = this.prepData(); // data, layout, config
-                           var data = dlc[0];
-                           var layout = dlc[1];
-                           var config = dlc[2];
+                           this.win = window.open('plot.html', '', 'height=600,width=' + String(screen.width));
 
-                           this.plotWindow = window.open('plot.html', '', 'height=600,width=' + String(screen.width));
-
-                           this.plotWindow.onload = () => {
+                           this.win.onload = () => {
                              // file input
-                             var fileInput = this.plotWindow.document.createElement('input');
+                             var fileInput = this.win.document.createElement('input');
                              fileInput.type = 'file';
                              fileInput.setAttribute('accept', '.txt,.json');
                              fileInput.setAttribute('multiple', '');
-                             fileInput.addEventListener('input', () => {this.parseFiles(fileInput.files)});
-                             this.plotWindow.document.body.insertBefore(fileInput, this.plotWindow.document.getElementById('plot'));
+                             fileInput.addEventListener('input', () => {
+                               this.parseFiles(fileInput.files);
+                             });
+                             this.win.document.body.insertBefore(fileInput, this.win.document.getElementById('plot'));
+                             var dlc = this.prepData(); // data, layout, config
 
                            }
-
                          });
 
   PopoutPlots.prototype.parseJSONPts = function (pts, name) {
@@ -2722,7 +2719,7 @@ function Popout(Lt) {
             var splitData = array[0].split(/[\s]+/);
             if (splitData.length == 2) { // space delimitted has only 2 columns
               formattedData.push(splitData);
-            } else { // RWL has 3+ columns
+            } else if (splitData.length > 2){ // RWL has 3+ columns
               rwlSplitData.push(splitData);
             };
           };
@@ -2770,6 +2767,7 @@ function Popout(Lt) {
         };
 
         var name = data[0][1];
+        data.splice(0, 1); // remove category titles
         var yearData = [];
         var widthData = [];
         for (array of data) {
@@ -2792,7 +2790,7 @@ function Popout(Lt) {
       datasets.push(set);
 
       if (lastSet) {
-        Lt.popoutPlots.prepData(datasets);
+        return Lt.popoutPlots.prepData(datasets);
       } else {
         i++;
         parseFile(i);
@@ -2850,7 +2848,7 @@ function Popout(Lt) {
       modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
     }
 
-    return [datasets, layout, config]
+    this.win.createPlot(datasets, layout, config);
   }
 
 };
