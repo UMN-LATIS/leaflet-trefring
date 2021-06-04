@@ -2597,17 +2597,23 @@ function Popout(Lt) {
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
-                           this.plotWindow = window.open('', '', 'height=600,width=' + String(screen.width));
+                           var dlc = this.prepData(); // data, layout, config
+                           var data = dlc[0];
+                           var layout = dlc[1];
+                           var config = dlc[2];
 
-                           // file input
-                           var fileInput = this.plotWindow.document.createElement('input');
-                           fileInput.type = 'file';
-                           fileInput.setAttribute('accept', '.txt,.json');
-                           fileInput.setAttribute('multiple', '');
-                           fileInput.addEventListener('input', () => {this.parseFiles(fileInput.files)});
-                           this.plotWindow.document.body.appendChild(fileInput);
+                           this.plotWindow = window.open('plot.html', '', 'height=600,width=' + String(screen.width));
 
-                           this.createPlots();
+                           this.plotWindow.onload = () => {
+                             // file input
+                             var fileInput = this.plotWindow.document.createElement('input');
+                             fileInput.type = 'file';
+                             fileInput.setAttribute('accept', '.txt,.json');
+                             fileInput.setAttribute('multiple', '');
+                             fileInput.addEventListener('input', () => {this.parseFiles(fileInput.files)});
+                             this.plotWindow.document.body.insertBefore(fileInput, this.plotWindow.document.getElementById('plot'));
+
+                           }
 
                          });
 
@@ -2786,7 +2792,7 @@ function Popout(Lt) {
       datasets.push(set);
 
       if (lastSet) {
-        Lt.popoutPlots.createPlots(datasets);
+        Lt.popoutPlots.prepData(datasets);
       } else {
         i++;
         parseFile(i);
@@ -2799,26 +2805,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.createPlots = function (allData) {
-    var doc = this.plotWindow.document;
-
-    try { // if canvas or color div exists, remove them
-      doc.getElementById('plot').remove();
-      doc.getElementById('color').remove();
-    } catch {};
-
-    var div = doc.createElement('div');
-    div.style.width = '100%';
-    div.style.height = '80%';
-    div.style.position = 'relative';
-    div.id = 'plot';
-    doc.body.appendChild(div);
-
-    var canvas = doc.createElement('canvas');
-    div.appendChild(canvas);
-
-    var ctx = canvas.getContext("2d");
-
+  PopoutPlots.prototype.prepData = function (allData) {
     if (Lt.preferences.forwardDirection) { // if measuring forward in time...
       var pts = Lt.data.points;
     } else {
@@ -2835,18 +2822,6 @@ function Popout(Lt) {
 
     var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
     allData.push(coreData);
-
-    /*
-    datasets: [{
-            data: [10, 20, 30, 40],
-            label: name,
-            ...
-        }, {
-            data: [50, 50, 50, 50],
-            label: name,
-            ...
-        }],
-    */
 
     function randColor () {
       var hex = Math.floor(Math.random()*16777215).toString(16);
@@ -2875,44 +2850,8 @@ function Popout(Lt) {
       modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
     }
 
-    // create plot
-    Plotly.newPlot(div, datasets, layout, config);
-
-    var colorDiv = doc.createElement('div');
-    colorDiv.style.width = '100%';
-    colorDiv.style.height = '20%';
-    colorDiv.style.position = 'relative';
-    colorDiv.id = 'color';
-    doc.body.appendChild(colorDiv);
-
-    var inputTable = doc.createElement('table');
-    inputTable.style.margin = 'auto';
-    var inputRow = inputTable.insertRow(0);
-
-    // create color inputs to change line colors
-    datasets.forEach((set, i) => {
-      let input = doc.createElement('input');
-      input.type = 'color';
-      input.value = set.line.color;
-      input.style.margin = 'auto';
-      input.style.display = 'block';
-      input.style.padding = '0';
-      input.style.border = '0';
-      $(input).on('change', () => {
-        colorChange = {
-          'line.color': input.value,
-        }
-        Plotly.restyle(div, colorChange, [i]);
-      })
-      var inputCell = inputRow.insertCell(-1);
-      inputCell.style.width = '10%';
-      inputCell.appendChild(input);
-
-    })
-
-    colorDiv.appendChild(inputTable);
-
-  };
+    return [datasets, layout, config]
+  }
 
 };
 

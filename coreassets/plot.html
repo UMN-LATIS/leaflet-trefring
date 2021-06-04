@@ -1,0 +1,49 @@
+<html>
+  <head>
+
+    <script src="https://cdn.plot.ly/plotly-2.0.0-rc.2.min.js"></script>
+    <script src="../assets/leaflet/dist/leaflet.js"></script>
+
+  </head>
+  <body>
+
+    <div id="plot" style="width:100%;height:80%;"></div>
+    <div id='color' style='width: 100%; height:20%'></div>
+
+    <script id="script">
+      var div = document.getElementById('plot');
+
+      Plotly.newPlot(div, data, layout, config);
+
+      var colorDiv = document.getElementById('color')
+
+      var inputTable = document.createElement('table');
+      inputTable.style.margin = 'auto';
+      var inputRow = inputTable.insertRow(0);
+
+      // create color inputs to change line colors
+      datasets.forEach((set, i) => {
+        let input = document.createElement('input');
+        input.type = 'color';
+        input.value = set.line.color;
+        input.style.margin = 'auto';
+        input.style.display = 'block';
+        input.style.padding = '0';
+        input.style.border = '0';
+        $(input).on('change', () => {
+          colorChange = {
+            'line.color': input.value,
+          }
+          Plotly.restyle(div, colorChange, [i]);
+        })
+        var inputCell = inputRow.insertCell(-1);
+        inputCell.style.width = '10%';
+        inputCell.appendChild(input);
+      })
+
+      colorDiv.appendChild(inputTable);
+
+    </script>
+
+  </body>
+</html>
