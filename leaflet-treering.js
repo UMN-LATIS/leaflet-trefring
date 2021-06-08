@@ -2600,6 +2600,7 @@ function Popout(Lt) {
                            this.win = window.open('plot.html', '', 'height=600,width=' + String(screen.width));
 
                            this.win.onload = () => {
+
                              // file input
                              var fileInput = this.win.document.createElement('input');
                              fileInput.type = 'file';
@@ -2608,7 +2609,7 @@ function Popout(Lt) {
                              fileInput.addEventListener('input', () => {
                                this.parseFiles(fileInput.files);
                              });
-                             this.win.document.body.insertBefore(fileInput, this.win.document.getElementById('plot'));
+                             this.win.document.getElementById('files').insertBefore(fileInput, this.win.document.getElementById('instructions'));
                              var dlc = this.prepData(); // data, layout, config
 
                            }
@@ -2846,7 +2847,17 @@ function Popout(Lt) {
     };
 
     var layout = {
+      title: Lt.meta.assetName + ' Time Series',
       autosize: true,
+      xaxis: {
+        title: 'Year',
+      },
+      yaxis: {
+        title: 'Width (mm)',
+      },
+      legend: {
+        orientation: 'h',
+      },
     }
 
     var config = {
