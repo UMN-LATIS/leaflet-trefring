@@ -2665,7 +2665,7 @@ function Popout(Lt) {
 
                              // clear all data except core data from plot
                              var clearButton = this.win.document.createElement('button');
-                             clearButton.innerHTML = 'Clear files...'
+                             clearButton.innerHTML = 'Clear files & reset plot...'
                              clearButton.addEventListener('click', () => {
                                fileInput.value = null;
                                this.prepData();

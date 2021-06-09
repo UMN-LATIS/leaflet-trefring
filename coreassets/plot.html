@@ -74,14 +74,11 @@
 
         k = 0
         data.forEach((obj, i) => {
-          if (i > 9) { // loop i over default colors
-            if (i % 10 == 0) {
-              k++;
-            }
-
-            i = i - k * defaultColors.length;
+          if (k > 9) { // loop i over default colors
+            k = 0;
           }
-          obj.line = { color: defaultColors[i] }
+          obj.line = { color: defaultColors[k] }
+          k++;
         });
 
 
@@ -132,6 +129,21 @@
               data.forEach((obj, i) => {
                 if (obj.name == span.innerHTML) { // if data name = name of span in same table row
                   data.splice(i, 1); // remove data & re-render plot
+
+                  // remove file from input
+                  let dt = new DataTransfer()
+                  let files = document.getElementById('fileInput').files;
+                  for (file of files) {
+                    let nameLength = span.innerHTML.length;
+                    let nickname = file.name.slice(0, nameLength);
+                    console.log(nickname, span.innerHTML)
+
+                    if (nickname != span.innerHTML) {
+                      dt.items.add(file)
+                    }
+                  }
+                  document.getElementById('fileInput').files = dt.files;
+
                   createPlot (data, layout, config);
                 }
               });
