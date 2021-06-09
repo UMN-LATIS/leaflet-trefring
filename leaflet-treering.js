@@ -2642,7 +2642,7 @@ function Popout(Lt) {
  */
  function PopoutPlots (Lt) {
    /* To build:
-    - 
+    -
    */
 
    this.btn = new Button('launch',
@@ -2656,7 +2656,7 @@ function Popout(Lt) {
                              var fileInput = this.win.document.createElement('input');
                              fileInput.id = 'fileInput';
                              fileInput.type = 'file';
-                             fileInput.setAttribute('accept', '.txt,.json');
+                             fileInput.setAttribute('accept', '.txt,.json, .csv');
                              fileInput.setAttribute('multiple', '');
                              fileInput.addEventListener('input', () => {
                                this.parseFiles(fileInput.files);
