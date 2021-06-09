@@ -307,8 +307,19 @@ function MeasurementData (dataObject, Lt) {
 
 
     this.index++;
-    Lt.metaDataText.updateText(); // update every time a point is placed
+
+    // update every time a point is placed
+    Lt.metaDataText.updateText();
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
   };
 
   /**
@@ -393,6 +404,15 @@ function MeasurementData (dataObject, Lt) {
 
     Lt.metaDataText.updateText(); // updates after a point is deleted
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
   };
 
   /**
@@ -474,6 +494,15 @@ function MeasurementData (dataObject, Lt) {
 
     Lt.metaDataText.updateText(); // updates after points are cut
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
   };
 
   /**
@@ -582,6 +611,15 @@ function MeasurementData (dataObject, Lt) {
 
     Lt.metaDataText.updateText(); // updates after a single point is inserted
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
     return tempK;
   };
 
@@ -651,6 +689,15 @@ function MeasurementData (dataObject, Lt) {
 
     Lt.metaDataText.updateText(); // updates after a single point is inserted
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
     return tempK;
   };
 
@@ -2594,6 +2641,10 @@ function Popout(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
  function PopoutPlots (Lt) {
+   /* To build:
+    - 
+   */
+
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
@@ -2603,6 +2654,7 @@ function Popout(Lt) {
 
                              // file input
                              var fileInput = this.win.document.createElement('input');
+                             fileInput.id = 'fileInput';
                              fileInput.type = 'file';
                              fileInput.setAttribute('accept', '.txt,.json');
                              fileInput.setAttribute('multiple', '');
@@ -2610,7 +2662,18 @@ function Popout(Lt) {
                                this.parseFiles(fileInput.files);
                              });
                              this.win.document.getElementById('files').insertBefore(fileInput, this.win.document.getElementById('instructions'));
-                             var dlc = this.prepData(); // data, layout, config
+
+                             // clear all data except core data from plot
+                             var clearButton = this.win.document.createElement('button');
+                             clearButton.innerHTML = 'Clear files...'
+                             clearButton.addEventListener('click', () => {
+                               fileInput.value = null;
+                               this.prepData();
+                             });
+                             this.win.document.getElementById('files').insertBefore(clearButton, this.win.document.getElementById('instructions'));
+
+                             // load data into plot
+                             this.prepData();
 
                            }
                          });
@@ -2793,7 +2856,7 @@ function Popout(Lt) {
       };
     };
 
-    var datasets = [];
+    datasets = [];
     // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
     function addToDataset (set, lastSet, i) {
       datasets.push(set);
@@ -2828,7 +2891,7 @@ function Popout(Lt) {
     }
 
     var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
-    allData.push(coreData);
+    allData.unshift(coreData); // add data to front of array so it's color is consistent
 
     function randColor () {
       var hex = Math.floor(Math.random()*16777215).toString(16);
@@ -2842,7 +2905,7 @@ function Popout(Lt) {
       dataObj.x = set.years;
       dataObj.type = 'lines';
       dataObj.name = set.name;
-      dataObj.line = { color: randColor() };
+      dataObj.line = { };
       datasets.push(dataObj);
     };
 
@@ -2879,7 +2942,19 @@ function Popout(Lt) {
  */
 function Undo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('undo', 'Undo', () => { this.pop(); Lt.metaDataText.updateText() });
+  this.btn = new Button('undo', 'Undo', () => {
+    this.pop();
+    Lt.metaDataText.updateText();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
+  });
   this.btn.disable();
 
   /**
@@ -2935,7 +3010,19 @@ function Undo(Lt) {
  */
 function Redo(Lt) {
   this.stack = new Array();
-  this.btn = new Button('redo', 'Redo', () => { this.pop(); Lt.metaDataText.updateText();});
+  this.btn = new Button('redo', 'Redo', () => {
+    this.pop();
+    Lt.metaDataText.updateText();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
+  });
   this.btn.disable();
 
   /**
@@ -3134,6 +3221,15 @@ function Dating(Lt) {
   Dating.prototype.disable = function() {
     Lt.metaDataText.updateText(); // updates once user hits enter
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
 
     this.btn.state('inactive');
     $(Lt.viewer.getContainer()).off('click');
@@ -3322,6 +3418,15 @@ function CreateZeroGrowth(Lt) {
 
       Lt.metaDataText.updateText(); // updates after point is inserted
       Lt.annotationAsset.reloadAssociatedYears();
+      if (Lt.popoutPlots.win) {
+        var win = Lt.popoutPlots.win;
+        var inputtedFiles = win.document.getElementById('fileInput');
+        if (inputtedFiles.files.length > 0) {
+          Lt.popoutPlots.parseFiles(inputtedFiles.files);
+        } else {
+          Lt.popoutPlots.prepData();
+        }
+      }
 
     } else {
       alert('First year cannot be missing!');
@@ -3636,6 +3741,15 @@ function ConvertToStartPoint(Lt) {
     Lt.visualAsset.reload();
     Lt.metaDataText.updateText();
     Lt.annotationAsset.reloadAssociatedYears();
+    if (Lt.popoutPlots.win) {
+      var win = Lt.popoutPlots.win;
+      var inputtedFiles = win.document.getElementById('fileInput');
+      if (inputtedFiles.files.length > 0) {
+        Lt.popoutPlots.parseFiles(inputtedFiles.files);
+      } else {
+        Lt.popoutPlots.prepData();
+      }
+    }
   };
 
   ConvertToStartPoint.prototype.enable = function () {
