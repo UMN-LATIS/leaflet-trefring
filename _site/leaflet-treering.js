@@ -317,7 +317,7 @@ function MeasurementData (dataObject, Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   };
@@ -410,7 +410,7 @@ function MeasurementData (dataObject, Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   };
@@ -500,7 +500,7 @@ function MeasurementData (dataObject, Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   };
@@ -617,7 +617,7 @@ function MeasurementData (dataObject, Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
     return tempK;
@@ -695,7 +695,7 @@ function MeasurementData (dataObject, Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
     return tempK;
@@ -2642,7 +2642,7 @@ function Popout(Lt) {
  */
  function PopoutPlots (Lt) {
    /* To build:
-    -
+    - Drop down & highlight inputted data sets
    */
 
    this.btn = new Button('launch',
@@ -2668,12 +2668,18 @@ function Popout(Lt) {
                              clearButton.innerHTML = 'Clear files & reset plot...'
                              clearButton.addEventListener('click', () => {
                                fileInput.value = null;
-                               this.prepData();
+                               this.createPlot();
                              });
                              this.win.document.getElementById('files').insertBefore(clearButton, this.win.document.getElementById('instructions'));
 
+                             // auto-spaghetti plot number limit
+                             var numberLimit = this.win.document.getElementById('auto-spaghetti-number')
+                             numberLimit.addEventListener('change', () => {
+                               this.parseFiles(fileInput.files);
+                             });
+
                              // load data into plot
-                             this.prepData();
+                             this.createPlot();
 
                            }
                          });
@@ -2862,7 +2868,7 @@ function Popout(Lt) {
       datasets.push(set);
 
       if (lastSet) {
-        return Lt.popoutPlots.prepData(datasets);
+        return Lt.popoutPlots.createPlot(datasets);
       } else {
         i++;
         parseFile(i);
@@ -2875,7 +2881,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.prepData = function (allData) {
+  PopoutPlots.prototype.createPlot = function (allData) {
     if (Lt.preferences.forwardDirection) { // if measuring forward in time...
       var pts = Lt.data.points;
     } else {
@@ -2893,19 +2899,123 @@ function Popout(Lt) {
     var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
     allData.unshift(coreData); // add data to front of array so it's color is consistent
 
-    function randColor () {
-      var hex = Math.floor(Math.random()*16777215).toString(16);
-      return '#' + hex
+    var n = this.win.document.getElementById('auto-spaghetti-number').value;
+    if (allData.length < n) { // limit of cores before it turns into spagetti plot
+      var colors = [
+      '#1f78b4', // blue
+      '#e31a1c', // red
+      '#33a02c', // green
+      '#6a3d9a', // purple
+      '#ff7f00', // orange
+      '#a6cee3', // light blue
+      '#fb9a99', // light red
+      '#b2df8a', // light green
+      '#cab2d6', // light purple
+      '#fdbf6f' // light orange
+
+    /* Plotly default:
+      '#1f77b4',  // muted blue
+      '#ff7f0e',  // safety orange
+      '#2ca02c',  // cooked asparagus green
+      '#d62728',  // brick red
+      '#9467bd',  // muted purple
+      '#8c564b',  // chestnut brown
+      '#e377c2',  // raspberry yogurt pink
+      '#7f7f7f',  // middle gray
+      '#bcbd22',  // curry yellow-green
+      '#17becf'   // blue-teal
+    */
+    ];
+  } else {
+    var colors = [ '4d4d4d' ]; // black
+
+    // auto spaghetti plot
+    // 1) find median width (across all data) per year
+    var longestDataLength = 0;
+    for (set of allData) {
+      var setLength = set.widths.length;
+      if (setLength > longestDataLength) {
+        longestDataLength = setLength;
+      }
     }
 
+    var medianYears = [];
+    var medianWidths = [];
+    var year_to_find_median_width_for = Number.MAX_SAFE_INTEGER;
+    var last_year_to_account_for = -1 * (Number.MAX_SAFE_INTEGER);
+
+    for (set of allData) {
+      let years = set.years.filter(Boolean);
+
+      var sets_first_year = parseInt(years[0])
+      if (sets_first_year < year_to_find_median_width_for) { // find oldest (smallest) year in all sets of data
+        year_to_find_median_width_for = sets_first_year;
+      }
+
+      var sets_last_year = parseInt(years[years.length - 1])
+      if (sets_last_year > last_year_to_account_for) { // find most recent (largest) year in all sets of data
+        last_year_to_account_for = sets_last_year;
+      }
+    }
+
+    while (year_to_find_median_width_for <= last_year_to_account_for) {
+      var single_year_widths = []
+      for (set of allData) { // loop through data sets
+        for (let i = 0; i < set.years.length; i++) { // loop through years & widths of each data set
+          if ((set.years.length > 0) && (parseInt(set.years[i]) == year_to_find_median_width_for)) {
+            single_year_widths.push(parseFloat(set.widths[i]));
+          }
+        }
+      }
+
+      single_year_widths.sort( (a, b) => { return a - b} ); // sort into asscending order
+      if (single_year_widths.length == 0) {
+        medianWidths.push('0');
+      } else if (single_year_widths.length % 2 == 0) { // if even length, need to take average of middle values
+        var midUpper = (single_year_widths.length / 2);
+        var midLower = (single_year_widths.length / 2) - 1;
+        var value = String((single_year_widths[midUpper] + single_year_widths[midLower]) / 2);
+        medianWidths.push(value);
+      } else {
+        var mid = Math.floor(single_year_widths.length / 2);
+        medianWidths.push(String(single_year_widths[mid]));
+      }
+      medianYears.push(String(year_to_find_median_width_for));
+      year_to_find_median_width_for++;
+    }
+
+    // 2) add to allData
+    var medianSet = new Object();
+    medianSet.widths = medianWidths;
+    medianSet.years = medianYears;
+    medianSet.name = 'Median';
+    medianSet.color = '#ff0000'; // red
+    allData.push(medianSet);
+
+  }
+
     var datasets = [];
+    var k = 0;
     for (set of allData) {
       let dataObj = new Object();
       dataObj.y = set.widths;
       dataObj.x = set.years;
       dataObj.type = 'lines';
       dataObj.name = set.name;
-      dataObj.line = { };
+
+      if (!set.color) {
+        if (k >= colors.length) { // loop k over default colors (variable length)
+        k = 0;
+        }
+        dataObj.line = { color: colors[k] };
+        k++;
+      } else {
+        dataObj.line = {
+          color: set.color,
+          width: 4
+        };
+      }
+
       datasets.push(dataObj);
     };
 
@@ -2919,7 +3029,7 @@ function Popout(Lt) {
         title: 'Width (mm)',
       },
       legend: {
-        orientation: 'h',
+        orientation: 'v',
       },
     }
 
@@ -2931,6 +3041,72 @@ function Popout(Lt) {
     }
 
     this.win.createPlot(datasets, layout, config);
+
+    // create color inputs to change line colors & other options
+    var doc = this.win.document;
+
+    var colorDiv = doc.getElementById('color');
+    for (child of colorDiv.childNodes) {
+      colorDiv.removeChild(child);
+    }
+
+    var inputTable = doc.createElement('table');
+    datasets.forEach((set, i) => {
+      let inputRow = inputTable.insertRow(-1);
+
+      let span = doc.createElement('span');
+      span.innerHTML = set.name;
+
+      let input = doc.createElement('input');
+      input.className = 'colorInput';
+      input.type = 'color';
+      input.value = set.line.color;
+      input.addEventListener('change', () => {
+        colorChange = {
+          'line.color': input.value,
+        }
+        Plotly.restyle(div, colorChange, [i]);
+      })
+
+      var nameCell = inputRow.insertCell(-1);
+      nameCell.appendChild(span);
+      var colorCell = inputRow.insertCell(-1);
+      colorCell.appendChild(input);
+
+      if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
+        let deleteBtn = doc.createElement('i');
+        deleteBtn.className = 'fa fa-times';
+        deleteBtn.setAttribute('aria-hidden', 'true');
+
+        deleteBtn.addEventListener('click', () => {
+          data.forEach((obj, i) => {
+            if (obj.name == span.innerHTML) { // if data name = name of span in same table row
+              data.splice(i, 1); // remove data & re-render plot
+
+              // remove file from input
+              let dt = new DataTransfer()
+              let files = doc.getElementById('fileInput').files;
+              for (file of files) {
+                let nameLength = span.innerHTML.length;
+                let nickname = file.name.slice(0, nameLength);
+
+                if (nickname != span.innerHTML) {
+                  dt.items.add(file)
+                }
+              }
+              doc.getElementById('fileInput').files = dt.files;
+
+              createPlot (data, layout, config);
+            }
+          });
+        });
+
+        var deleteCell = inputRow.insertCell(-1);
+        deleteCell.appendChild(deleteBtn);
+      };
+    })
+
+    colorDiv.appendChild(inputTable);
   }
 
 };
@@ -2951,7 +3127,7 @@ function Undo(Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   });
@@ -3019,7 +3195,7 @@ function Redo(Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   });
@@ -3227,7 +3403,7 @@ function Dating(Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
 
@@ -3424,7 +3600,7 @@ function CreateZeroGrowth(Lt) {
         if (inputtedFiles.files.length > 0) {
           Lt.popoutPlots.parseFiles(inputtedFiles.files);
         } else {
-          Lt.popoutPlots.prepData();
+          Lt.popoutPlots.createPlot();
         }
       }
 
@@ -3747,7 +3923,7 @@ function ConvertToStartPoint(Lt) {
       if (inputtedFiles.files.length > 0) {
         Lt.popoutPlots.parseFiles(inputtedFiles.files);
       } else {
-        Lt.popoutPlots.prepData();
+        Lt.popoutPlots.createPlot();
       }
     }
   };

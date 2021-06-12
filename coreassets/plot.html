@@ -49,8 +49,10 @@
   <body>
 
     <div id='plot' style='width:100%; height:90%'></div>
+    <hr>
     <div id='files' style='width:100%;'>
-      <p id='instructions'>Files must be .CSV, .JSON, RWL format, tab demlimited, or space demlimited.</p>
+      <p id='instructions'> Files must be .CSV, .JSON, RWL format, tab demlimited, or space demlimited. </p>
+      <p> Number of files until spaghetti plot is rendered: <input type='number' id='auto-spaghetti-number' value='5'></input> </p> 
       <p> Edit selected files: </p>
     </div>
     <div id='color' style='width: 100%;'></div>
@@ -59,102 +61,8 @@
       var div = document.getElementById('plot');
 
       function createPlot (data, layout, config) {
-        var defaultColors = [
-          '#1f77b4',  // muted blue
-          '#ff7f0e',  // safety orange
-          '#2ca02c',  // cooked asparagus green
-          '#d62728',  // brick red
-          '#9467bd',  // muted purple
-          '#8c564b',  // chestnut brown
-          '#e377c2',  // raspberry yogurt pink
-          '#7f7f7f',  // middle gray
-          '#bcbd22',  // curry yellow-green
-          '#17becf'   // blue-teal
-        ];
-
-        k = 0
-        data.forEach((obj, i) => {
-          if (k > 9) { // loop i over default colors
-            k = 0;
-          }
-          obj.line = { color: defaultColors[k] }
-          k++;
-        });
-
-
-        // main plot
+        div.fn = data[0].name + '_timeseries'; // change file name to include viewed core name
         Plotly.newPlot(div, data, layout, config);
-
-        /* To build:
-         - Custom standard colors (10?)
-         - Drop down & highlight inputted data sets
-        */
-
-        var colorDiv = document.getElementById('color');
-        for (child of colorDiv.childNodes) {
-          colorDiv.removeChild(child);
-        }
-
-        var inputTable = document.createElement('table');
-
-        // create color inputs to change line colors
-        data.forEach((set, i) => {
-          let inputRow = inputTable.insertRow(-1);
-
-          let span = document.createElement('span');
-          span.innerHTML = set.name;
-
-          let input = document.createElement('input');
-          input.className = 'colorInput';
-          input.type = 'color';
-          input.value = set.line.color;
-          input.addEventListener('change', () => {
-            colorChange = {
-              'line.color': input.value,
-            }
-            Plotly.restyle(div, colorChange, [i]);
-          })
-
-          var nameCell = inputRow.insertCell(-1);
-          nameCell.appendChild(span);
-          var colorCell = inputRow.insertCell(-1);
-          colorCell.appendChild(input);
-
-          if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
-            let deleteBtn = document.createElement('i');
-            deleteBtn.className = 'fa fa-times';
-            deleteBtn.setAttribute('aria-hidden', 'true');
-
-            deleteBtn.addEventListener('click', () => {
-              data.forEach((obj, i) => {
-                if (obj.name == span.innerHTML) { // if data name = name of span in same table row
-                  data.splice(i, 1); // remove data & re-render plot
-
-                  // remove file from input
-                  let dt = new DataTransfer()
-                  let files = document.getElementById('fileInput').files;
-                  for (file of files) {
-                    let nameLength = span.innerHTML.length;
-                    let nickname = file.name.slice(0, nameLength);
-                    console.log(nickname, span.innerHTML)
-
-                    if (nickname != span.innerHTML) {
-                      dt.items.add(file)
-                    }
-                  }
-                  document.getElementById('fileInput').files = dt.files;
-
-                  createPlot (data, layout, config);
-                }
-              });
-            });
-
-            var deleteCell = inputRow.insertCell(-1);
-            deleteCell.appendChild(deleteBtn);
-          };
-        })
-
-        colorDiv.appendChild(inputTable);
       };
 
     </script>
