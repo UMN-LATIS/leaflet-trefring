@@ -2966,7 +2966,7 @@ function Popout(Lt) {
       span.addEventListener('mouseout', () => {
         // ajax needed so mousout action occurs after plot is reset
         // reseting plot takes longer than mouse out action so without ajax
-        // it will finish after mouseoutAction() 
+        // it will finish after mouseoutAction()
         $.ajax({
           url: resetPlot_and_Options(),
           success: function() {
@@ -3049,6 +3049,7 @@ function Popout(Lt) {
 
       if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
         let deleteBtn = doc.createElement('i');
+        deleteBtn.id = String(i); // i = row index
         deleteBtn.className = 'fa fa-times';
         deleteBtn.setAttribute('aria-hidden', 'true');
 
@@ -3057,17 +3058,17 @@ function Popout(Lt) {
             if (obj.name == span.innerHTML) { // if data name = name of span in same table row
               datasets.splice(i, 1); // remove data & re-render plot
 
+              // files in table in same order as files in input
+              let index_of_del_file = parseInt(deleteBtn.id) - 1;
+
               // remove file from input
               let dt = new DataTransfer()
               let files = doc.getElementById('fileInput').files;
-              for (file of files) {
-                let nameLength = span.innerHTML.length;
-                let nickname = file.name.slice(0, nameLength);
-
-                if (nickname != span.innerHTML) {
-                  dt.items.add(file)
+              for (var i = 0; i < files.length; i++) {
+                if (i != index_of_del_file) {
+                  dt.items.add(files[i]);
                 }
-              }
+              };
               doc.getElementById('fileInput').files = dt.files;
 
               this.parseFiles(dt.files);
