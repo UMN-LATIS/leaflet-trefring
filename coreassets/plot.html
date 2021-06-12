@@ -7,7 +7,12 @@
     <script src="../assets/leaflet/dist/leaflet.js"></script>
 
     <style>
-      #color {
+      #wrapper {
+        overflow: auto;
+        height: 20%;
+      }
+
+      #options {
         margin-left: 4%;
       }
 
@@ -48,14 +53,16 @@
   </head>
   <body>
 
-    <div id='plot' style='width:100%; height:90%'></div>
+    <div id='plot' style='width:100%; height:80%'></div>
     <hr>
-    <div id='files' style='width:100%;'>
-      <p id='instructions'> Files must be .CSV, .JSON, RWL format, tab demlimited, or space demlimited. </p>
-      <p> Number of files until spaghetti plot is rendered: <input type='number' id='auto-spaghetti-number' value='5'></input> </p> 
-      <p> Edit selected files: </p>
+    <div id='wrapper'>
+      <div id='files' style='width:100%;'>
+        <p id='instructions'> Files must be .CSV, .JSON, RWL format, tab demlimited, or space demlimited. </p>
+        <p> Number of files until spaghetti plot is rendered: <input type='number' id='auto-spaghetti-number' value='5'></input> </p>
+        <p> Edit selected files: </p>
+      </div>
+      <div id='options' style='width: 100%;'></div>
     </div>
-    <div id='color' style='width: 100%;'></div>
 
     <script id="script">
       var div = document.getElementById('plot');

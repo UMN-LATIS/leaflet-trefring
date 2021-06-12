@@ -2678,7 +2678,6 @@ function Popout(Lt) {
                                this.parseFiles(fileInput.files);
                              });
 
-                             // load data into plot
                              this.createPlot();
 
                            }
@@ -2927,7 +2926,7 @@ function Popout(Lt) {
     */
     ];
   } else {
-    var colors = [ '4d4d4d' ]; // black
+    var colors = [ '#4d4d4d' ]; // black
 
     // auto spaghetti plot
     // 1) find median width (across all data) per year
@@ -3045,9 +3044,9 @@ function Popout(Lt) {
     // create color inputs to change line colors & other options
     var doc = this.win.document;
 
-    var colorDiv = doc.getElementById('color');
-    for (child of colorDiv.childNodes) {
-      colorDiv.removeChild(child);
+    var optionsDiv = doc.getElementById('options');
+    for (child of optionsDiv.childNodes) {
+      optionsDiv.removeChild(child);
     }
 
     var inputTable = doc.createElement('table');
@@ -3056,22 +3055,88 @@ function Popout(Lt) {
 
       let span = doc.createElement('span');
       span.innerHTML = set.name;
+      span.addEventListener('mouseover', () => {
+        for (set of datasets) {
+          if (span.innerHTML == set.name) {
+            set.line = { color: '#ff0000', width: 4 };
+          } else {
+            set.line = { color: '#4d4d4d' };
+          }
+        }
+        this.win.createPlot(datasets, layout, config);
+      });
+      span.addEventListener('mouseout', () => {
+        if (doc.getElementById('fileInput').files.length > 0) {
+          this.parseFiles(doc.getElementById('fileInput').files);
+        } else {
+          this.createPlot();
+        }
+      })
 
-      let input = doc.createElement('input');
-      input.className = 'colorInput';
-      input.type = 'color';
-      input.value = set.line.color;
-      input.addEventListener('change', () => {
+      let colorInput = doc.createElement('input');
+      colorInput.className = 'colorInput';
+      colorInput.type = 'color';
+      colorInput.value = set.line.color;
+      colorInput.addEventListener('change', () => {
         colorChange = {
-          'line.color': input.value,
+          'line.color': colorInput.value,
         }
         Plotly.restyle(div, colorChange, [i]);
       })
 
-      var nameCell = inputRow.insertCell(-1);
-      nameCell.appendChild(span);
-      var colorCell = inputRow.insertCell(-1);
-      colorCell.appendChild(input);
+      let highlightInput = doc.createElement('input');
+      highlightInput.className = 'highlightInput';
+      highlightInput.type = 'checkbox';
+      highlightInput.addEventListener('change', () => {
+        var highlightInputs = doc.getElementsByClassName('highlightInput');
+        var highlightCount = 0;
+        for (input of highlightInputs) {
+          if (input.checked) {
+            highlightCount++;
+          }
+        }
+
+        if (highlightInput.checked) {
+          if (highlightCount == 1) {
+            for (set of datasets) {
+              set.line = { color: '#4d4d4d' }; // set all lines to black
+            }
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#ff0000', width: 4 };
+              }
+            }
+          } else if (highlightCount > 1) {
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#ff0000', width: 4 };
+              }
+            }
+          }
+
+          this.win.createPlot(datasets, layout, config);
+        } else {
+          if (highlightCount < 1) {
+            this.parseFiles(doc.getElementById('fileInput').files);
+          } else if (highlightCount >= 1) {
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#4d4d4d' };
+              }
+            }
+            this.win.createPlot(datasets, layout, config);
+          }
+        }
+      });
+
+      function addCell (row, htmlNode) {
+        var cell = row.insertCell(-1);
+        cell.appendChild(htmlNode);
+      }
+
+      addCell(inputRow, span);
+      addCell(inputRow, colorInput);
+      addCell(inputRow, highlightInput);
 
       if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
         let deleteBtn = doc.createElement('i');
@@ -3079,9 +3144,9 @@ function Popout(Lt) {
         deleteBtn.setAttribute('aria-hidden', 'true');
 
         deleteBtn.addEventListener('click', () => {
-          data.forEach((obj, i) => {
+          datasets.forEach((obj, i) => {
             if (obj.name == span.innerHTML) { // if data name = name of span in same table row
-              data.splice(i, 1); // remove data & re-render plot
+              datasets.splice(i, 1); // remove data & re-render plot
 
               // remove file from input
               let dt = new DataTransfer()
@@ -3096,7 +3161,7 @@ function Popout(Lt) {
               }
               doc.getElementById('fileInput').files = dt.files;
 
-              createPlot (data, layout, config);
+              this.parseFiles(dt.files);
             }
           });
         });
@@ -3106,7 +3171,7 @@ function Popout(Lt) {
       };
     })
 
-    colorDiv.appendChild(inputTable);
+    optionsDiv.appendChild(inputTable);
   }
 
 };
