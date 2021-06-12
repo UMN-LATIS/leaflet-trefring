@@ -2880,6 +2880,177 @@ function Popout(Lt) {
 
   };
 
+  PopoutPlots.prototype.createOptionsTable = function (datasets) {
+    var layout = {
+      title: Lt.meta.assetName + ' Time Series',
+      autosize: true,
+      xaxis: {
+        title: 'Year',
+      },
+      yaxis: {
+        title: 'Width (mm)',
+      },
+      legend: {
+        orientation: 'v',
+      },
+    }
+
+    var config = {
+      responsive: true,
+      scrollZoom: true,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
+    }
+
+    function resetPlot_and_Options () {
+      if (doc.getElementById('fileInput').files.length > 0) {
+        Lt.popoutPlots.parseFiles(doc.getElementById('fileInput').files);
+      } else {
+        Lt.popoutPlots.createPlot();
+      }
+    }
+
+    // create color inputs to change line colors & other options
+    var doc = this.win.document;
+
+    var optionsDiv = doc.getElementById('options');
+    for (child of optionsDiv.childNodes) {
+      optionsDiv.removeChild(child);
+    }
+
+    var inputTable = doc.createElement('table');
+    datasets.forEach((set, i) => {
+      let inputRow = inputTable.insertRow(-1);
+
+      let span = doc.createElement('span');
+      span.innerHTML = set.name;
+      span.addEventListener('mouseover', () => {
+        for (set of datasets) {
+          if (span.innerHTML == set.name) {
+            set.line = { color: '#ff0000', width: 4 };
+          } else {
+            set.line = { color: '#4d4d4d' };
+          }
+        }
+        this.win.createPlot(datasets, layout, config);
+        var colorInputs = doc.getElementsByClassName('colorInput');
+        for (var i = 0; i < colorInputs.length; i++) {
+          colorInputs[i].value = datasets[i].line.color;
+        }
+      });
+      span.addEventListener('mouseout', () => {
+        resetPlot_and_Options();
+      })
+
+      let colorInput = doc.createElement('input');
+      colorInput.className = 'colorInput';
+      colorInput.type = 'color';
+      colorInput.value = set.line.color;
+      colorInput.addEventListener('change', () => {
+        colorChange = {
+          'line.color': colorInput.value,
+        }
+        Plotly.restyle(div, colorChange, [i]);
+      })
+
+      let highlightInput = doc.createElement('input');
+      highlightInput.className = 'highlightInput';
+      highlightInput.type = 'checkbox';
+      highlightInput.addEventListener('change', () => {
+        var highlightInputs = doc.getElementsByClassName('highlightInput');
+        var highlightCount = 0;
+        for (input of highlightInputs) {
+          if (input.checked) {
+            highlightCount++;
+          }
+        }
+
+        var updateWhole = false;
+        if (highlightInput.checked) {
+          if (highlightCount == 1) {
+            for (set of datasets) {
+              set.line = { color: '#4d4d4d' }; // set all lines to black
+            }
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#ff0000', width: 4 };
+              }
+            }
+          } else if (highlightCount > 1) {
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#ff0000', width: 4 };
+              }
+            }
+          }
+        } else {
+          if (highlightCount >= 1) {
+            for (set of datasets) {
+              if (span.innerHTML == set.name) {
+                set.line = { color: '#4d4d4d' };
+              }
+            }
+          } else {
+            updateWhole = true;
+          }
+        }
+
+        if (updateWhole) {
+          resetPlot_and_Options();
+        } else { // update only plot not all options
+          this.win.createPlot(datasets, layout, config);
+          var colorInputs = doc.getElementsByClassName('colorInput');
+          for (var i = 0; i < colorInputs.length; i++) {
+            colorInputs[i].value = datasets[i].line.color;
+          }
+        }
+      });
+
+      function addCell (row, htmlNode) {
+        var cell = row.insertCell(-1);
+        cell.appendChild(htmlNode);
+      }
+
+      addCell(inputRow, span);
+      addCell(inputRow, colorInput);
+      addCell(inputRow, highlightInput);
+
+      if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
+        let deleteBtn = doc.createElement('i');
+        deleteBtn.className = 'fa fa-times';
+        deleteBtn.setAttribute('aria-hidden', 'true');
+
+        deleteBtn.addEventListener('click', () => {
+          datasets.forEach((obj, i) => {
+            if (obj.name == span.innerHTML) { // if data name = name of span in same table row
+              datasets.splice(i, 1); // remove data & re-render plot
+
+              // remove file from input
+              let dt = new DataTransfer()
+              let files = doc.getElementById('fileInput').files;
+              for (file of files) {
+                let nameLength = span.innerHTML.length;
+                let nickname = file.name.slice(0, nameLength);
+
+                if (nickname != span.innerHTML) {
+                  dt.items.add(file)
+                }
+              }
+              doc.getElementById('fileInput').files = dt.files;
+
+              this.parseFiles(dt.files);
+            }
+          });
+        });
+
+        var deleteCell = inputRow.insertCell(-1);
+        deleteCell.appendChild(deleteBtn);
+      };
+    })
+
+    optionsDiv.appendChild(inputTable);
+  }
+
   PopoutPlots.prototype.createPlot = function (allData) {
     if (Lt.preferences.forwardDirection) { // if measuring forward in time...
       var pts = Lt.data.points;
@@ -3040,138 +3211,7 @@ function Popout(Lt) {
     }
 
     this.win.createPlot(datasets, layout, config);
-
-    // create color inputs to change line colors & other options
-    var doc = this.win.document;
-
-    var optionsDiv = doc.getElementById('options');
-    for (child of optionsDiv.childNodes) {
-      optionsDiv.removeChild(child);
-    }
-
-    var inputTable = doc.createElement('table');
-    datasets.forEach((set, i) => {
-      let inputRow = inputTable.insertRow(-1);
-
-      let span = doc.createElement('span');
-      span.innerHTML = set.name;
-      span.addEventListener('mouseover', () => {
-        for (set of datasets) {
-          if (span.innerHTML == set.name) {
-            set.line = { color: '#ff0000', width: 4 };
-          } else {
-            set.line = { color: '#4d4d4d' };
-          }
-        }
-        this.win.createPlot(datasets, layout, config);
-      });
-      span.addEventListener('mouseout', () => {
-        if (doc.getElementById('fileInput').files.length > 0) {
-          this.parseFiles(doc.getElementById('fileInput').files);
-        } else {
-          this.createPlot();
-        }
-      })
-
-      let colorInput = doc.createElement('input');
-      colorInput.className = 'colorInput';
-      colorInput.type = 'color';
-      colorInput.value = set.line.color;
-      colorInput.addEventListener('change', () => {
-        colorChange = {
-          'line.color': colorInput.value,
-        }
-        Plotly.restyle(div, colorChange, [i]);
-      })
-
-      let highlightInput = doc.createElement('input');
-      highlightInput.className = 'highlightInput';
-      highlightInput.type = 'checkbox';
-      highlightInput.addEventListener('change', () => {
-        var highlightInputs = doc.getElementsByClassName('highlightInput');
-        var highlightCount = 0;
-        for (input of highlightInputs) {
-          if (input.checked) {
-            highlightCount++;
-          }
-        }
-
-        if (highlightInput.checked) {
-          if (highlightCount == 1) {
-            for (set of datasets) {
-              set.line = { color: '#4d4d4d' }; // set all lines to black
-            }
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#ff0000', width: 4 };
-              }
-            }
-          } else if (highlightCount > 1) {
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#ff0000', width: 4 };
-              }
-            }
-          }
-
-          this.win.createPlot(datasets, layout, config);
-        } else {
-          if (highlightCount < 1) {
-            this.parseFiles(doc.getElementById('fileInput').files);
-          } else if (highlightCount >= 1) {
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#4d4d4d' };
-              }
-            }
-            this.win.createPlot(datasets, layout, config);
-          }
-        }
-      });
-
-      function addCell (row, htmlNode) {
-        var cell = row.insertCell(-1);
-        cell.appendChild(htmlNode);
-      }
-
-      addCell(inputRow, span);
-      addCell(inputRow, colorInput);
-      addCell(inputRow, highlightInput);
-
-      if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
-        let deleteBtn = doc.createElement('i');
-        deleteBtn.className = 'fa fa-times';
-        deleteBtn.setAttribute('aria-hidden', 'true');
-
-        deleteBtn.addEventListener('click', () => {
-          datasets.forEach((obj, i) => {
-            if (obj.name == span.innerHTML) { // if data name = name of span in same table row
-              datasets.splice(i, 1); // remove data & re-render plot
-
-              // remove file from input
-              let dt = new DataTransfer()
-              let files = doc.getElementById('fileInput').files;
-              for (file of files) {
-                let nameLength = span.innerHTML.length;
-                let nickname = file.name.slice(0, nameLength);
-
-                if (nickname != span.innerHTML) {
-                  dt.items.add(file)
-                }
-              }
-              doc.getElementById('fileInput').files = dt.files;
-
-              this.parseFiles(dt.files);
-            }
-          });
-        });
-
-        var deleteCell = inputRow.insertCell(-1);
-        deleteCell.appendChild(deleteBtn);
-      };
-    })
-
-    optionsDiv.appendChild(inputTable);
+    this.createOptionsTable(datasets);
   }
 
 };
