@@ -2925,9 +2925,21 @@ function Popout(Lt) {
       let span = doc.createElement('span');
       span.innerHTML = set.name;
       span.addEventListener('mouseover', () => {
+        // get all highlighted (checked) datasets to re activate after mousing out
+        var highlightInputs = doc.getElementsByClassName('highlightInput');
+        this.id_of_lines_to_highlight = [];
+        for (input of highlightInputs) {
+          if (input.checked) {
+            // input id = row index
+            this.id_of_lines_to_highlight.push(input.id)
+          }
+        }
+
         for (set of datasets) {
-          if (span.innerHTML == set.name) {
+          if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
             set.line = { color: '#ff0000', width: 4 };
+          } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
+            set.line = { color: '#0062ff', width: 4 };
           } else {
             set.line = { color: '#4d4d4d' };
           }
@@ -2938,8 +2950,29 @@ function Popout(Lt) {
           colorInputs[i].value = datasets[i].line.color;
         }
       });
+
+      function mouseoutAction () {
+        var doc = Lt.popoutPlots.win.document;
+        if (Lt.popoutPlots.id_of_lines_to_highlight.length > 0) {
+          for (id of Lt.popoutPlots.id_of_lines_to_highlight) {
+            var rows = doc.getElementsByTagName('tr');
+            var row = rows[parseInt(id)];
+            var checkbox = row.childNodes[2].childNodes[0]; // checkbox always 2cd child
+            checkbox.click();
+          }
+        }
+      }
+
       span.addEventListener('mouseout', () => {
-        resetPlot_and_Options();
+        // ajax needed so mousout action occurs after plot is reset
+        // reseting plot takes longer than mouse out action so without ajax
+        // it will finish after mouseoutAction() 
+        $.ajax({
+          url: resetPlot_and_Options(),
+          success: function() {
+            mouseoutAction();
+          }
+        })
       })
 
       let colorInput = doc.createElement('input');
@@ -2951,10 +2984,11 @@ function Popout(Lt) {
           'line.color': colorInput.value,
         }
         Plotly.restyle(div, colorChange, [i]);
-      })
+      });
 
       let highlightInput = doc.createElement('input');
       highlightInput.className = 'highlightInput';
+      highlightInput.id = String(i); // i = row index
       highlightInput.type = 'checkbox';
       highlightInput.addEventListener('change', () => {
         var highlightInputs = doc.getElementsByClassName('highlightInput');
@@ -2967,22 +3001,20 @@ function Popout(Lt) {
 
         var updateWhole = false;
         if (highlightInput.checked) {
-          if (highlightCount == 1) {
+          if (highlightCount == 1) { // behavior different depending on how many lines to be highlighted
             for (set of datasets) {
               set.line = { color: '#4d4d4d' }; // set all lines to black
             }
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#ff0000', width: 4 };
-              }
-            }
-          } else if (highlightCount > 1) {
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#ff0000', width: 4 };
-              }
+          }
+
+          for (set of datasets) {
+            if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
+              set.line = { color: '#ff0000', width: 4 };
+            } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
+              set.line = { color: '#0062ff', width: 4 };
             }
           }
+
         } else {
           if (highlightCount >= 1) {
             for (set of datasets) {
