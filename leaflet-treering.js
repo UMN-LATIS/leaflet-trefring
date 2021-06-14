@@ -2936,7 +2936,13 @@ function CreatePoint(Lt) {
               $(document).keypress(e => {
                 var key = e.which || e.keyCode;
                 if (key === 13) {
-                  Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  if (Lt.measurementOptions.forwardDirection == false && Lt.measurementOptions.subAnnual == false) {
+                    // must subtract one so newest measurment is consistent with measuring forward value
+                    // issue only applies to meauring backwwards annually
+                    Lt.data.year = parseInt(document.getElementById('year_input').value - 1);
+                  } else  {
+                    Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  }
                   popup.remove(Lt.viewer);
                 }
               });
@@ -3603,12 +3609,6 @@ function ViewData(Lt) {
     var before_lastIndex = pts.length - 2;
 
     // reformatting done in seperate for-statements for code clarity/simplicity
-
-    for (i = 0; i < pts.length; i++) { // subtract 1 from points cycle
-      if (!pref.subAnnual && pts[i] && pts[i].year) { // only need to subtract if annual
-        pts[i].year--;
-      }
-    }
 
     if (pref.subAnnual) { // subannual earlywood and latewood values swap cycle
       for (i = 0; i < pts.length; i++) {
@@ -4782,7 +4782,13 @@ function MetaDataText (Lt) {
         endYear = lastYear;
       } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
         startYear = lastYear + 1; // last point considered a start point when measuring backwards
-        endYear = firstYear;
+        if (Lt.measurementOptions.subAnnual == false) {
+          // add 1 to keep points consistent with measuring forwards
+          // only applies to measuring bakcwards annually
+          endYear = firstYear + 1;
+        } else {
+          endYear = firstYear;
+        }
       };
 
       this.years = '';
