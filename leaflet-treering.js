@@ -2941,7 +2941,7 @@ function Popout(Lt) {
           } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
             set.line = { color: '#0062ff', width: 4 };
           } else {
-            set.line = { color: '#4d4d4d' };
+            set.line = { color: '#797979' };
           }
         }
         this.win.createPlot(datasets, layout, config);
@@ -3003,7 +3003,7 @@ function Popout(Lt) {
         if (highlightInput.checked) {
           if (highlightCount == 1) { // behavior different depending on how many lines to be highlighted
             for (set of datasets) {
-              set.line = { color: '#4d4d4d' }; // set all lines to black
+              set.line = { color: '#797979' }; // set all lines to black
             }
           }
 
@@ -3019,7 +3019,7 @@ function Popout(Lt) {
           if (highlightCount >= 1) {
             for (set of datasets) {
               if (span.innerHTML == set.name) {
-                set.line = { color: '#4d4d4d' };
+                set.line = { color: '#797979' };
               }
             }
           } else {
@@ -3130,7 +3130,7 @@ function Popout(Lt) {
     */
     ];
   } else {
-    var colors = [ '#4d4d4d' ]; // black
+    var colors = [ '#797979' ]; // black
 
     // auto spaghetti plot
     // 1) find median width (across all data) per year
