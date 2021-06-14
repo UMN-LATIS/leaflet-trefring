@@ -4231,6 +4231,7 @@ function ViewData(Lt) {
         Lt.data.index = 0;
 
         Lt.visualAsset.reload();
+        Lt.metaDataText.updateText();
 
         this.disable();
       });
