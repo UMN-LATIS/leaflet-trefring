@@ -3644,7 +3644,13 @@ function CreatePoint(Lt) {
               $(document).keypress(e => {
                 var key = e.which || e.keyCode;
                 if (key === 13) {
-                  Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  if (Lt.measurementOptions.forwardDirection == false && Lt.measurementOptions.subAnnual == false) {
+                    // must subtract one so newest measurment is consistent with measuring forward value
+                    // issue only applies to meauring backwwards annually
+                    Lt.data.year = parseInt(document.getElementById('year_input').value) - 1;
+                  } else  {
+                    Lt.data.year = parseInt(document.getElementById('year_input').value);
+                  }
                   popup.remove(Lt.viewer);
                 }
               });
@@ -4844,6 +4850,7 @@ function ViewData(Lt) {
         Lt.data.index = 0;
 
         Lt.visualAsset.reload();
+        Lt.metaDataText.updateText();
 
         this.disable();
       });
@@ -5394,8 +5401,14 @@ function MetaDataText (Lt) {
         startYear = firstYear;
         endYear = lastYear;
       } else if (firstYear > lastYear) { // for measuring backward in time, largest year value first in points array
-        startYear = lastYear;
-        endYear = firstYear;
+        startYear = lastYear + 1; // last point considered a start point when measuring backwards
+        if (Lt.measurementOptions.subAnnual == false) {
+          // add 1 to keep points consistent with measuring forwards
+          // only applies to measuring bakcwards annually
+          endYear = firstYear + 1;
+        } else {
+          endYear = firstYear;
+        }
       };
 
       this.years = '';
