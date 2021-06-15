@@ -3104,17 +3104,18 @@ function Popout(Lt) {
 
     var n = this.win.document.getElementById('auto-spaghetti-number').value;
     if (allData.length < n) { // limit of cores before it turns into spagetti plot
+      var shapes = [
+        'circle',
+        'triangle-up',
+        'x',
+        'diamond',
+      ]
+
       var colors = [
       '#1f78b4', // blue
-      '#e31a1c', // red
       '#33a02c', // green
-      '#6a3d9a', // purple
-      '#ff7f00', // orange
       '#a6cee3', // light blue
-      '#fb9a99', // light red
       '#b2df8a', // light green
-      '#cab2d6', // light purple
-      '#fdbf6f' // light orange
 
     /* Plotly default:
       '#1f77b4',  // muted blue
@@ -3129,7 +3130,8 @@ function Popout(Lt) {
       '#17becf'   // blue-teal
     */
     ];
-  } else {
+  } else { // spaghetti plot & finding median line
+    var shapes = [];
     var colors = [ '#797979' ]; // black
 
     // auto spaghetti plot
@@ -3198,21 +3200,29 @@ function Popout(Lt) {
   }
 
     var datasets = [];
-    var k = 0;
+    var j = 0; // shape index
+    var k = 0; // color index
     for (set of allData) {
       let dataObj = new Object();
       dataObj.y = set.widths;
       dataObj.x = set.years;
-      dataObj.type = 'lines';
+      dataObj.type = 'line';
+      dataObj.mode = 'lines+markers';
       dataObj.name = set.name;
 
-      if (!set.color) {
+      if (!set.color) { // regular plot colors
         if (k >= colors.length) { // loop k over default colors (variable length)
-        k = 0;
+          k = 0;
+          j++; // shapes differentiate lines when colors repeat
         }
         dataObj.line = { color: colors[k] };
         k++;
-      } else {
+
+        if (j >= shapes.length) { // loop j over default shapes
+          j = 0;
+        }
+        dataObj.marker = { symbol: shapes[j], size: 10 };
+      } else { // for spaghetti plots
         dataObj.line = {
           color: set.color,
           width: 4
