@@ -2939,7 +2939,7 @@ function CreatePoint(Lt) {
                   if (Lt.measurementOptions.forwardDirection == false && Lt.measurementOptions.subAnnual == false) {
                     // must subtract one so newest measurment is consistent with measuring forward value
                     // issue only applies to meauring backwwards annually
-                    Lt.data.year = parseInt(document.getElementById('year_input').value - 1);
+                    Lt.data.year = parseInt(document.getElementById('year_input').value) - 1;
                   } else  {
                     Lt.data.year = parseInt(document.getElementById('year_input').value);
                   }
