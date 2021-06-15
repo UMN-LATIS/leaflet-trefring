@@ -4297,7 +4297,7 @@ function ImageAdjustment(Lt) {
     <label style="text-align:center;display:block;">Emboss</label> \
     <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">Emboss Direction</label> \
-    <input class="imageSlider" id="emboss-direction-slider" value=0 min=0 max=1 step=0.05 type=range> \
+    <input class="imageSlider" id="emboss-direction-slider" value=0 min=0 max=1 step=0.005 type=range> \
     <label style="text-align:center;display:block;">edgeDetect</label> \
     <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">unsharpen</label> \
@@ -4327,23 +4327,39 @@ function ImageAdjustment(Lt) {
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
     var embossName;
-    if(embossDirection.value <= 0.25)
+    if(embossDirection.value <= 0.125)
     {
       embossName = "emboss";
     }
-    else if (embossDirection.value <= 0.50)
+    else if (embossDirection.value <= 0.25)
     {
       embossName = "emboss2"
     }
-    else if (embossDirection.value <= 0.75)
+    else if (embossDirection.value <= 0.375)
     {
       embossName = "emboss3"
     }
-    else
+    else if (embossDirection.value <= 0.50)
     {
       embossName = "emboss4"
     }
+    else if (embossDirection.value <= 0.675)
+    {
+      embossName = "emboss5"
+    }
+    else if (embossDirection.value <= 0.75)
+    {
+      embossName = "emboss6"
+    }
+    else if (embossDirection.value <= 0.875)
+    {
+      embossName = "emboss7"
+    }
+    else{
+      embossName = "emboss8"
+    }
     console.log(embossName);
+    console.log(embossDirection.value)
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
       {
 			"name": embossName,
