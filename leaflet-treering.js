@@ -2880,28 +2880,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.createOptionsTable = function (datasets) {
-    var layout = {
-      title: Lt.meta.assetName + ' Time Series',
-      autosize: true,
-      xaxis: {
-        title: 'Year',
-      },
-      yaxis: {
-        title: 'Width (mm)',
-      },
-      legend: {
-        orientation: 'v',
-      },
-    }
-
-    var config = {
-      responsive: true,
-      scrollZoom: true,
-      displayModeBar: true,
-      modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
-    }
-
+  PopoutPlots.prototype.createOptionsTable = function (datasets, layout, config) {
     function resetPlot_and_Options () {
       if (doc.getElementById('fileInput').files.length > 0) {
         Lt.popoutPlots.parseFiles(doc.getElementById('fileInput').files);
@@ -2914,8 +2893,15 @@ function Popout(Lt) {
     var doc = this.win.document;
 
     var optionsDiv = doc.getElementById('options');
-    for (child of optionsDiv.childNodes) {
-      optionsDiv.removeChild(child);
+
+    var i = 0;
+    while (optionsDiv.childNodes.length > 1) { // keep first child since it is the instructions
+      let child = optionsDiv.childNodes[i];
+      if (child.tagName != 'P') {
+        optionsDiv.removeChild(child);
+      } else {
+        i++;
+      }
     }
 
     var inputTable = doc.createElement('table');
@@ -3254,7 +3240,7 @@ function Popout(Lt) {
     }
 
     this.win.createPlot(datasets, layout, config);
-    this.createOptionsTable(datasets);
+    this.createOptionsTable(datasets, layout, config);
   }
 
 };
