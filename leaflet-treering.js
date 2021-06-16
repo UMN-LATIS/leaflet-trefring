@@ -2641,10 +2641,6 @@ function Popout(Lt) {
  * @param {Ltreering} Lt - Leaflet treering object
  */
  function PopoutPlots (Lt) {
-   /* To build:
-    - Drop down & highlight inputted data sets
-   */
-
    this.btn = new Button('launch',
                          'Open time series plots in a new window',
                          () => {
@@ -2904,6 +2900,22 @@ function Popout(Lt) {
       }
     }
 
+    // resize line options & plot
+    $(optionsDiv).resizable({
+      handles: 'e, w'
+    });
+    var plotDiv = doc.getElementById('plot');
+    var wrapperDiv = doc.getElementById('wrapper');
+    $(optionsDiv).resize(() => {
+      $(plotDiv).width( $(wrapperDiv).width() - $(optionsDiv).width() - 5); // subtract 5 so elements don't overlap / displace
+    });
+    // reload plot at end of plot resizing
+    var resizeTimer;
+    $(optionsDiv).resize(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout( () => { Plotly.relayout(plotDiv, layout) }, 100)
+    });
+
     var inputTable = doc.createElement('table');
     datasets.forEach((set, i) => {
       let inputRow = inputTable.insertRow(-1);
@@ -2925,7 +2937,8 @@ function Popout(Lt) {
           if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
             set.line = { color: '#ff0000', width: 4 };
           } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
-            set.line = { color: '#0062ff', width: 4 };
+            set.line = { color: '#1f77b4', width: 4 };
+            set.opacity = 1;
           } else {
             set.line = { color: '#797979' };
           }
@@ -2969,7 +2982,7 @@ function Popout(Lt) {
         colorChange = {
           'line.color': colorInput.value,
         }
-        Plotly.restyle(div, colorChange, [i]);
+        Plotly.restyle(plotDiv, colorChange, [i]);
       });
 
       let highlightInput = doc.createElement('input');
@@ -3093,17 +3106,17 @@ function Popout(Lt) {
       var shapes = [
         'circle',
         'triangle-up',
-        'x',
+        'triangle-down',
+        'square',
         'diamond',
+        'circle-open',
+        'triangle-up-open',
+        'triangle-down-open',
+        'square-open',
+        'diamond-open',
       ]
 
       var colors = [
-      '#1f78b4', // blue
-      '#33a02c', // green
-      '#a6cee3', // light blue
-      '#b2df8a', // light green
-
-    /* Plotly default:
       '#1f77b4',  // muted blue
       '#ff7f0e',  // safety orange
       '#2ca02c',  // cooked asparagus green
@@ -3114,11 +3127,10 @@ function Popout(Lt) {
       '#7f7f7f',  // middle gray
       '#bcbd22',  // curry yellow-green
       '#17becf'   // blue-teal
-    */
     ];
   } else { // spaghetti plot & finding median line
     var shapes = [];
-    var colors = [ '#797979' ]; // black
+    var colors = [ '#1f78b4' ]; // blue
 
     // auto spaghetti plot
     // 1) find median width (across all data) per year
@@ -3180,7 +3192,7 @@ function Popout(Lt) {
     medianSet.widths = medianWidths;
     medianSet.years = medianYears;
     medianSet.name = 'Median';
-    medianSet.color = '#ff0000'; // red
+    medianSet.color = '#000000'; // black
     allData.push(medianSet);
 
   }
@@ -3193,13 +3205,17 @@ function Popout(Lt) {
       dataObj.y = set.widths;
       dataObj.x = set.years;
       dataObj.type = 'line';
-      dataObj.mode = 'lines+markers';
+      if (shapes.length == 0) { // shapes array has length 0 when creating a spaghetti plot
+        dataObj.mode = 'lines';
+        dataObj.opacity = 0.5
+      } else {
+        dataObj.mode = 'lines+markers';
+      }
       dataObj.name = set.name;
 
       if (!set.color) { // regular plot colors
         if (k >= colors.length) { // loop k over default colors (variable length)
           k = 0;
-          j++; // shapes differentiate lines when colors repeat
         }
         dataObj.line = { color: colors[k] };
         k++;
@@ -3208,11 +3224,14 @@ function Popout(Lt) {
           j = 0;
         }
         dataObj.marker = { symbol: shapes[j], size: 10 };
+        j++;
+
       } else { // for spaghetti plots
         dataObj.line = {
           color: set.color,
           width: 4
         };
+        dataObj.opacity = 1;
       }
 
       datasets.push(dataObj);

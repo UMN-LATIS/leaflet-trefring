@@ -2,7 +2,7 @@
   <head>
 
     <link rel="stylesheet" href="../assets/font-awesome/css/font-awesome.css">
-    	<link rel="stylesheet" href="../assets/jquery-ui/jquery-ui.min.css" >
+    <link rel="stylesheet" href="../assets/jquery-ui/jquery-ui.min.css" >
 
     <script src="https://cdn.plot.ly/plotly-2.0.0-rc.2.min.js"></script>
     <script src="../assets/leaflet/dist/leaflet.js"></script>
@@ -10,9 +10,14 @@
     <script src="../assets/jquery-ui/jquery-ui.min.js"></script>
 
     <style>
+      #wrapper {
+
+      }
+
       #options {
         overflow: auto;
-        border-right: 1px solid black;
+        border-right: 2px solid black;
+        float: left;
       }
 
       #plot {
@@ -59,10 +64,10 @@
   </head>
   <body>
     <div id='wrapper' style='height: 80%'>
-      <div id='plot' style='width:90%; height:100%'></div>
-      <div id='options' style='width: 9%; height: 100%'>
+      <div id='options' style='width: 20%; height: 100%'>
         <p>Selected files:</p>
       </div>
+      <div id='plot' style='width: 79%; height: 100%'></div>
     </div>
     <hr>
     <div id='files' style='width:100%;'>
@@ -78,14 +83,6 @@
         plotDiv.fn = data[0].name + '_timeseries'; // change file name to include viewed core name
         Plotly.newPlot(plotDiv, data, layout, config);
       };
-
-      $('#options').resizable({
-        handles: 'e, w'
-      });
-
-      $('#plot').resizable({
-        handles: 'e, w'
-      });
 
     </script>
 
