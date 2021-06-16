@@ -2972,16 +2972,23 @@ function Popout(Lt) {
           }
         }
 
-        for (set of datasets) {
+        var highlightedSet = '';
+        datasets.forEach((set, i) => {
           if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
             set.line = { color: '#ff0000', width: 4 };
+            highlightedSet = set;
           } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
-            set.line = { color: '#1f77b4', width: 4 };
+            set.line = { color: '#00d907', width: 4 }; // green
             set.opacity = 1;
+            highlightedSet = set;
           } else {
             set.line = { color: '#797979' };
           }
-        }
+        });
+
+        // move set to last index of dataset so it renders on top of other lines
+        datasets.push(highlightedSet);
+
         this.win.createPlot(datasets, layout, config);
         var colorInputs = doc.getElementsByClassName('colorInput');
         for (var i = 0; i < colorInputs.length; i++) {
@@ -3045,13 +3052,20 @@ function Popout(Lt) {
             }
           }
 
+          var highlightedSet = '';
           for (set of datasets) {
             if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
               set.line = { color: '#ff0000', width: 4 };
+              highlightedSet = set;
             } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
-              set.line = { color: '#0062ff', width: 4 };
+              set.line = { color: '#00d907', width: 4 }; // green
+              set.opacity = 1;
+              highlightedSet = set;
             }
           }
+
+          // move set to last index of dataset so it renders on top of other lines
+          datasets.push(highlightedSet);
 
         } else {
           if (highlightCount >= 1) {
