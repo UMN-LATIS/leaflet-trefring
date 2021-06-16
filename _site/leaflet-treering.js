@@ -2754,12 +2754,25 @@ function Popout(Lt) {
     // function call order: parseFile => addToDataset => last file? no => parseFile => ...
     //                                                              yes => createPlots
 
+    var datasets = [];
+    // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
+    function addToDataset (set, all_data_parsed, i) {
+      datasets.push(set);
+
+      if (all_data_parsed) {
+        return Lt.popoutPlots.createPlot(datasets);
+      } else {
+        i++;
+        parseFile(i);
+      };
+    };
+
     function parseFile (i) {
       var file = files[i];
 
-      var lastSet = false;
+      var all_data_parsed = false;
       if (i == files.length - 1) {
-        lastSet = true;
+        all_data_parsed = true;
       };
 
       if (file.type) { // only data not parsed is JSON files
@@ -2778,14 +2791,14 @@ function Popout(Lt) {
 
           var name = file.name.split('.')[0]; // removes .type
           var ptsSet = Lt.popoutPlots.parseJSONPts(pts, name);
-          addToDataset(ptsSet, lastSet, i);
+          addToDataset(ptsSet, all_data_parsed, i);
         };
         fr.readAsText(file);
 
       } else { // data formatted by papaparse
         // format = [[year, name], [1900, 1], [1901, 2], ...]
         var data = file.data;
-        if (file.errors.length > 0) { // RWL or space delimited
+        if (file.errors.length > 0) { // RWL or space delimited result in errors
           var formattedData = [];
           var rwlSplitData = [];
           for (array of data) {
@@ -2839,34 +2852,57 @@ function Popout(Lt) {
 
         };
 
-        var name = data[0][1];
-        data.splice(0, 1); // remove category titles
-        var yearData = [];
-        var widthData = [];
-        for (array of data) {
-          yearData.push(array[0]);
-          widthData.push(array[1]);
+        // formatted data from above or data from papaparse (CSV, tab demlimited)
+        // files could have multiple data sets
+        // format = [[year 1, width 1, width 2], [year 2, width 3, width 4]... ]
+        // data[i][j]: i = row index, j = column index
+        // empty cells are empty strings ""
+        // assumptions: 1) first column = years, 2) following columns = new data set widths
+
+        var headers = [];
+        for (header of data[0]) {
+          let fixedHeader = header.split(/[\s]+/).join(''); // remove spaces befor eor after header name
+          headers.push(fixedHeader);
+        }
+        headers.splice(0, 1); // remove "Year" header from array so only dataset headers/names remain
+
+        // create X objects for X headers to denote each point set
+        var pointSets = [];
+        for (header of headers) {
+          let set = new Object();
+          set.name = header;
+          set.years = [];
+          set.widths = [];
+          pointSets.push(set);
         };
-        ptsSet = new Object();
-        ptsSet.name = name;
-        ptsSet.years = yearData;
-        ptsSet.widths = widthData;
 
-        addToDataset(ptsSet, lastSet, i);
+        data.splice(0, 1); // remove headers
+        data.forEach((row, j) => {
+          row.forEach((col, k) => {
+            if (k != 0) { // assume first column is years, skip year now, use later
+              // 1) check if width is a measurment or a sentinel for missing data
+              // sentinel is a word or negative value
+              let width = parseFloat(col);
+              if ((width != NaN) && (width > 0)) {
+                // 2) add measurement & year to pointSets
+                let set = pointSets[k - 1]; // subtract 1 to account for missing year header is pointSets
+                set.widths.push(String(width));
+                set.years.push(row[0]);
+              }
+            }
+          });
+        });
 
-      };
-    };
+        // 3) add each point set to datasets
+        pointSets.forEach((set, w) => {
+          // if w not the last set in pointSets, need to loop until it is so all sets are pushed
+          if (pointSets.length > 1 && w != pointSets.length - 1) {
+            datasets.push(set);
+          } else {
+            addToDataset(set, all_data_parsed, i);
+          }
+        });
 
-    datasets = [];
-    // format = [{years: [...], widths: [...], name: '...'}, {years: [...], widths: [...], name: '...'}, ...]
-    function addToDataset (set, lastSet, i) {
-      datasets.push(set);
-
-      if (lastSet) {
-        return Lt.popoutPlots.createPlot(datasets);
-      } else {
-        i++;
-        parseFile(i);
       };
     };
 
@@ -2902,8 +2938,10 @@ function Popout(Lt) {
 
     // resize line options & plot
     $(optionsDiv).resizable({
-      handles: 'e, w'
+      handles: 'e'
     });
+    var resizeDiv = optionsDiv.getElementsByTagName('div')[0];
+    resizeDiv.style.width = '20px'; // increase draggable div size
     var plotDiv = doc.getElementById('plot');
     var wrapperDiv = doc.getElementById('wrapper');
     $(optionsDiv).resize(() => {
@@ -2913,7 +2951,8 @@ function Popout(Lt) {
     var resizeTimer;
     $(optionsDiv).resize(() => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout( () => { Plotly.relayout(plotDiv, layout) }, 100)
+      // cannot scroll w/ legend
+      resizeTimer = setTimeout( () => { this.win.createPlot(datasets, layout, config); }, 100)
     });
 
     var inputTable = doc.createElement('table');
