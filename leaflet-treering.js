@@ -2652,7 +2652,7 @@ function Popout(Lt) {
                              var fileInput = this.win.document.createElement('input');
                              fileInput.id = 'fileInput';
                              fileInput.type = 'file';
-                             fileInput.setAttribute('accept', '.txt,.json, .csv');
+                             fileInput.setAttribute('accept', '.txt, .json, .csv, .rwl');
                              fileInput.setAttribute('multiple', '');
                              fileInput.addEventListener('input', () => {
                                this.parseFiles(fileInput.files);
@@ -2799,13 +2799,36 @@ function Popout(Lt) {
         // format = [[year, name], [1900, 1], [1901, 2], ...]
         var data = file.data;
         if (file.errors.length > 0) { // RWL or space delimited result in errors
+
+          // space delimited has a years in far left column, RWL had specimen names
+          // way to tell them apart
+          var split_second_row = data[1][0].split(/[\s]+/);
+          var test_string = split_second_row[0];
+          if (isNaN(parseFloat(test_string))) { // rwl has a string in this spot, space demlimited has year
+            var rwlFormat = true;
+            // need to remove header if it exists, row = header when 9th character is string
+            var headerLength = 0;
+            for (array of data) {
+              var test_character = array[0].charAt(9);
+              if (isNaN(parseFloat(test_character))) {
+                headerLength++;
+              } else {
+                break
+              }
+            }
+            data.splice(0, headerLength);
+
+          } else {
+            var rwlFormat = false;
+          }
+
           var formattedData = [];
           var rwlSplitData = [];
           for (array of data) {
             var splitData = array[0].split(/[\s]+/);
-            if (splitData.length == 2) { // space delimitted has only 2 columns
+            if (!rwlFormat) { // space demlimited
               formattedData.push(splitData);
-            } else if (splitData.length > 2){ // RWL has 3+ columns
+            } else { // rwl
               rwlSplitData.push(splitData);
             };
           };
@@ -2827,25 +2850,92 @@ function Popout(Lt) {
           }
 
           // format of rwlSplitData = [[name, 1928, width, width],[name, 1930, width, width, ...], ...]
-          // change to format = [[year, name], [1928, width], [1929, width], ...]
+          // change to format = [[year, name, name, ...], [1928, width, width, ...], [1929, width, width...], ...]
           if (rwlSplitData.length > 0) {
-            var rwlName  = rwlSplitData[0][0];
-            formattedData.push(['Year', rwlName]);
+            // 1) build header
+            var newHeader = ['Year'];
+            var currentName = '';
             for (array of rwlSplitData) {
-              var startingYear = array[1];
-              var adjustment = 0;
-              var widthArray = array.splice(2);
-              for (width of widthArray) {
-                var year = String(parseInt(startingYear) + adjustment);
-                if (width == '-9999') {
+              let rowName = array[0];
+              if (rowName != currentName && rowName) {
+                newHeader.push(rowName);
+                currentName = rowName;
+              };
+            };
+            // add header at end
+            // 2) create arrays for all years
+            var earliestYear = Number.MAX_SAFE_INTEGER;
+            var latestDecade =  -1 * Number.MAX_SAFE_INTEGER;
+            var latestYear = 0;
+            var rwlData1 = JSON.parse(JSON.stringify(rwlSplitData)); // create new array for data so old one is not modified
+            for (array of rwlData1) {
+              var year = parseInt(array[1]);
+              if (year < earliestYear) { // find first year
+                earliestYear = year;
+              } else if (year > latestDecade) { // find last year
+                array.splice(0, 2) // remove row name & decade/year
+                array = array.filter((e) => { // remove sentinel, sentinel = indicator of specimens final width
+                  if ((isNaN(parseFloat(e)) == false) &&
+                  (parseFloat(e) > 0) &&
+                  (e != '999')) {
+                    return e
+                  }
+                });
+                var years_to_add = array.length - 1; // add number of widths to found year, subtract 1 b/c RWL starts at 0 not 1
+                latestDecade = year;
+                latestYear = year + years_to_add;
+              }
+            }
+            for (var k = earliestYear; k <= latestYear; k++) {
+              var newArray = [];
+              newArray.push(String(k));
+              formattedData.push(newArray);
+            }
+            // 3) format & add widths to data
+            var rwlData2 = JSON.parse(JSON.stringify(rwlSplitData)); // create new array for data so old one is not modified
+            var prev_name = '';
+            var newSet = true;
+            for (rwlArray of rwlData2) {
+              var curr_name = rwlArray[0];
+              if (curr_name == prev_name) {
+                newSet = false;
+              } else {
+                newSet = true;
+                prev_name = curr_name;
+              }
+
+              var startYear = parseFloat(rwlArray[1]);
+              var yearAdj = 0; // index of width in RWL as well as that widths year
+              rwlArray.splice(0, 2); // remove row name & decade/year
+              for (array of formattedData) {
+                var year_in_formattedData = array[0];
+                if (yearAdj > rwlArray.length - 1) {
+                  yearAdj = 0;
                   break
-                } else {
-                  var fixedWidth = toMM(width);
-                  formattedData.push([year, fixedWidth])
-                  adjustment++;
+                }
+                var year_in_rwlData = String(startYear + yearAdj);
+                if (year_in_rwlData == year_in_formattedData) {
+                  var width_to_test = rwlArray[yearAdj];
+                  if ((isNaN(parseFloat(width_to_test)) == false) &&
+                      (parseFloat(width_to_test) > 0) &&
+                      (width_to_test != '999')) {
+                    // check that width is not a sentinel (indicator of end of core)
+                    var width = toMM(rwlArray[yearAdj])
+                    array.push(width);
+                    yearAdj++
+                  } else {
+                    break
+                  }
+                } else if (newSet == true) {
+                  array.push('-1')
                 }
               }
             }
+            // 4) add header
+            formattedData.unshift(newHeader);
+
+            console.log(formattedData);
+
           };
 
           var data = formattedData;
@@ -2883,7 +2973,7 @@ function Popout(Lt) {
               // 1) check if width is a measurment or a sentinel for missing data
               // sentinel is a word or negative value
               let width = parseFloat(col);
-              if ((width != NaN) && (width > 0)) {
+              if ((isNaN(width) == false) && (width > 0)) {
                 // 2) add measurement & year to pointSets
                 let set = pointSets[k - 1]; // subtract 1 to account for missing year header is pointSets
                 set.widths.push(String(width));
@@ -2945,7 +3035,7 @@ function Popout(Lt) {
     var plotDiv = doc.getElementById('plot');
     var wrapperDiv = doc.getElementById('wrapper');
     $(optionsDiv).resize(() => {
-      $(plotDiv).width( $(wrapperDiv).width() - $(optionsDiv).width() - 5); // subtract 5 so elements don't overlap / displace
+      $(plotDiv).width( $(wrapperDiv).width() - $(optionsDiv).width() - 50); // subtract 50 so elements don't overlap / displace
     });
     // reload plot at end of plot resizing
     var resizeTimer;

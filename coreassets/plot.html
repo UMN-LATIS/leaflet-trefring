@@ -11,16 +11,20 @@
 
     <style>
       #wrapper {
-
+        height: 80%;
       }
 
       #options {
+        width: 20%;
+        height: 100%;
         overflow: auto;
         border-right: 2px solid black;
         float: left;
       }
 
       #plot {
+        width: 79%;
+        height: 100%;
         float: right;
       }
 
@@ -29,6 +33,7 @@
       }
 
       #files {
+        width: 100%;
         display: block;
       }
 
@@ -63,14 +68,14 @@
 
   </head>
   <body>
-    <div id='wrapper' style='height: 80%'>
-      <div id='options' style='width: 20%; height: 100%'>
+    <div id='wrapper'>
+      <div id='options'>
         <p>Selected files:</p>
       </div>
-      <div id='plot' style='width: 79%; height: 100%'></div>
+      <div id='plot'></div>
     </div>
     <hr>
-    <div id='files' style='width:100%;'>
+    <div id='files'>
       <p id='instructions'> Files must be .CSV, .JSON, RWL format, tab demlimited, or space demlimited. </p>
       <p> Number of files until spaghetti plot is rendered: <input type='number' id='auto-spaghetti-number' value='5'></input> </p>
       <p> Hover over file name to highlight corresponding line. Select checkbox to highlight multiple lines.</p>
