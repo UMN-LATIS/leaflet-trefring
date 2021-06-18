@@ -2923,7 +2923,12 @@ function Popout(Lt) {
                     var width = toMM(rwlArray[yearAdj])
                     array.push(width);
                     yearAdj++
-                  } else {
+                  } else { // if sentinel, add -1 (missing data indicator) to rest of formattedData
+                    var current_array_index = formattedData.indexOf(array);
+                    for (var l = current_array_index; l < formattedData.length; l++) {
+                      var array_needing_neg_one = formattedData[l];
+                      array_needing_neg_one.push('-1');
+                    }
                     break
                   }
                 } else if (newSet == true) {
@@ -2933,8 +2938,6 @@ function Popout(Lt) {
             }
             // 4) add header
             formattedData.unshift(newHeader);
-
-            console.log(formattedData);
 
           };
 
@@ -3347,7 +3350,7 @@ function Popout(Lt) {
       let dataObj = new Object();
       dataObj.y = set.widths;
       dataObj.x = set.years;
-      dataObj.type = 'line';
+      dataObj.type = 'scattergl';
       if (shapes.length == 0) { // shapes array has length 0 when creating a spaghetti plot
         dataObj.mode = 'lines';
         dataObj.opacity = 0.5
