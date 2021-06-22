@@ -4296,8 +4296,17 @@ function ImageAdjustment(Lt) {
     <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">Emboss</label> \
     <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <label style="text-align:center;display:block;">Emboss Direction</label> \
-    <input class="imageSlider" id="emboss-direction-slider" value=0 min=0 max=1 step=0.005 type=range> \
+    <label style="text-align:left;display:block;margin-top:10px;">Emboss Direction</label> \
+    <select id= "emboss-direction">\
+    <option value="emboss">North</option>\
+    <option value="emboss2">North East</option>\
+    <option value="emboss3">East</option>\
+    <option value="emboss4">South East</option>\
+    <option value="emboss5">South</option>\
+    <option value="emboss6">South West</option>\
+    <option value="emboss7">West</option>\
+    <option value="emboss8">North West</option>\
+    </select>\
     <label style="text-align:center;display:block;">edgeDetect</label> \
     <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
     <label style="text-align:center;display:block;">unsharpen</label> \
@@ -4317,7 +4326,7 @@ function ImageAdjustment(Lt) {
     var invert = $("#invert-checkbox").prop('checked')?1:0;
     var sharpnessSlider = document.getElementById("sharpness-slider").value;
     var embossSlider = document.getElementById("emboss-slider").value;
-    var embossDirection = document.getElementById("emboss-direction-slider");
+    var embossDirection = document.getElementById("emboss-direction").value;
     var edgeDetect = document.getElementById("edgeDetect-slider").value;
     var unsharpnessSlider = document.getElementById("unsharpness-slider").value;
     document.getElementsByClassName("leaflet-pane")[0].style.filter =
@@ -4326,38 +4335,7 @@ function ImageAdjustment(Lt) {
       "saturate(" + saturationSlider.value + "%) " +
       "invert(" + invert + ")" +
       "hue-rotate(" + hueSlider.value + "deg)";
-    var embossName;
-    if(embossDirection.value <= 0.125)
-    {
-      embossName = "emboss";
-    }
-    else if (embossDirection.value <= 0.25)
-    {
-      embossName = "emboss2"
-    }
-    else if (embossDirection.value <= 0.375)
-    {
-      embossName = "emboss3"
-    }
-    else if (embossDirection.value <= 0.50)
-    {
-      embossName = "emboss4"
-    }
-    else if (embossDirection.value <= 0.675)
-    {
-      embossName = "emboss5"
-    }
-    else if (embossDirection.value <= 0.75)
-    {
-      embossName = "emboss6"
-    }
-    else if (embossDirection.value <= 0.875)
-    {
-      embossName = "emboss7"
-    }
-    else{
-      embossName = "emboss8"
-    }
+    var embossName = embossDirection; 
     console.log(embossName);
     console.log(embossDirection.value)
     Lt.baseLayer['GL Layer'].setKernelsAndStrength([
@@ -4393,7 +4371,7 @@ function ImageAdjustment(Lt) {
     var hueSlider = document.getElementById("hue-slider");
     var sharpnessSlider = document.getElementById("sharpness-slider");
     var embossSlider = document.getElementById("emboss-slider");
-    var embossDirection = document.getElementById("emboss-direction-slider");
+    var embossDirection = document.getElementById("emboss-direction");
     var edgeDetect = document.getElementById("edgeDetect-slider");
     var unsharpnessSlider = document.getElementById("unsharpness-slider");
     //Close view if user clicks anywhere outside of slider window
@@ -4408,7 +4386,7 @@ function ImageAdjustment(Lt) {
     $("#invert-checkbox").change(() => {
       this.updateFilters();
     });
-    $("#emboss-direction-slider").change(() => {
+    $("#emboss-direction").change(() => {
       this.updateFilters();
     });
     $("#reset-button").click(() => {
@@ -4418,7 +4396,7 @@ function ImageAdjustment(Lt) {
       $(hueSlider).val(0);
       $(sharpnessSlider).val(0);
       $(embossSlider).val(0);
-      $(embossDirection).val(0);
+      $(embossDirection).val("emboss");
       $(edgeDetect).val(0);
       $(unsharpnessSlider).val(0);
       this.updateFilters();
