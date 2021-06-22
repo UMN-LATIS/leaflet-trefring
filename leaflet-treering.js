@@ -2659,12 +2659,21 @@ function Popout(Lt) {
                              });
                              this.win.document.getElementById('files').insertBefore(fileInput, this.win.document.getElementById('instructions'));
 
+                             // reset plot from user changes
+                             var resetButton = this.win.document.createElement('button');
+                             resetButton.style.marginRight = '40px';
+                             resetButton.innerHTML = 'Reset plot...'
+                             resetButton.addEventListener('click', () => {
+                               this.parseFiles(fileInput.files);
+                             });
+                             this.win.document.getElementById('files').insertBefore(resetButton, this.win.document.getElementById('instructions'));
+
                              // clear all data except core data from plot
                              var clearButton = this.win.document.createElement('button');
-                             clearButton.innerHTML = 'Clear files & reset plot...'
+                             clearButton.innerHTML = 'Clear added data...'
                              clearButton.addEventListener('click', () => {
                                fileInput.value = null;
-                               this.createPlot();
+                               this.prepData_forPlotting();
                              });
                              this.win.document.getElementById('files').insertBefore(clearButton, this.win.document.getElementById('instructions'));
 
@@ -2674,7 +2683,7 @@ function Popout(Lt) {
                                this.parseFiles(fileInput.files);
                              });
 
-                             this.createPlot();
+                             this.prepData_forPlotting();
 
                            }
                          });
@@ -2708,6 +2717,11 @@ function Popout(Lt) {
 
   PopoutPlots.prototype.parseFiles = function (files) {
     // FileReader is slow, so need to have seperate functions to keep file order
+
+    if (files.length == 0) { // if no files, just plot core's JSON data
+      this.prepData_forPlotting();
+      return
+    }
 
     var i = 0
     var parsedFiles = [];
@@ -2760,7 +2774,7 @@ function Popout(Lt) {
       datasets.push(set);
 
       if (all_data_parsed) {
-        return Lt.popoutPlots.createPlot(datasets);
+        return Lt.popoutPlots.prepData_forPlotting(datasets);
       } else {
         i++;
         parseFile(i);
@@ -3005,231 +3019,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.createOptionsTable = function (datasets, layout, config) {
-    function resetPlot_and_Options () {
-      if (doc.getElementById('fileInput').files.length > 0) {
-        Lt.popoutPlots.parseFiles(doc.getElementById('fileInput').files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
-    }
-
-    // create color inputs to change line colors & other options
-    var doc = this.win.document;
-
-    var optionsDiv = doc.getElementById('options');
-
-    var i = 0;
-    while (optionsDiv.childNodes.length > 1) { // keep first child since it is the instructions
-      let child = optionsDiv.childNodes[i];
-      if (child.tagName != 'P') {
-        optionsDiv.removeChild(child);
-      } else {
-        i++;
-      }
-    }
-
-    // resize line options & plot
-    $(optionsDiv).resizable({
-      handles: 'e'
-    });
-    var resizeDiv = optionsDiv.getElementsByTagName('div')[0];
-    resizeDiv.style.width = '20px'; // increase draggable div size
-    var plotDiv = doc.getElementById('plot');
-    var wrapperDiv = doc.getElementById('wrapper');
-    $(optionsDiv).resize(() => {
-      $(plotDiv).width( $(wrapperDiv).width() - $(optionsDiv).width() - 50); // subtract 50 so elements don't overlap / displace
-    });
-    // reload plot at end of plot resizing
-    var resizeTimer;
-    $(optionsDiv).resize(() => {
-      clearTimeout(resizeTimer);
-      // cannot scroll w/ legend
-      resizeTimer = setTimeout( () => { this.win.createPlot(datasets, layout, config); }, 100)
-    });
-
-    var inputTable = doc.createElement('table');
-    datasets.forEach((set, i) => {
-      let inputRow = inputTable.insertRow(-1);
-
-      let span = doc.createElement('span');
-      span.innerHTML = set.name;
-      span.addEventListener('mouseover', () => {
-        // get all highlighted (checked) datasets to re activate after mousing out
-        var highlightInputs = doc.getElementsByClassName('highlightInput');
-        this.id_of_lines_to_highlight = [];
-        for (input of highlightInputs) {
-          if (input.checked) {
-            // input id = row index
-            this.id_of_lines_to_highlight.push(input.id)
-          }
-        }
-
-        var highlightedSet = '';
-        datasets.forEach((set, i) => {
-          if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
-            set.line = { color: '#ff0000', width: 4 };
-            highlightedSet = set;
-          } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
-            set.line = { color: '#00d907', width: 4 }; // green
-            set.opacity = 1;
-            highlightedSet = set;
-          } else {
-            set.line = { color: '#797979' };
-          }
-        });
-
-        // move set to last index of dataset so it renders on top of other lines
-        datasets.push(highlightedSet);
-
-        this.win.createPlot(datasets, layout, config);
-        var colorInputs = doc.getElementsByClassName('colorInput');
-        for (var i = 0; i < colorInputs.length; i++) {
-          colorInputs[i].value = datasets[i].line.color;
-        }
-      });
-
-      function mouseoutAction () {
-        var doc = Lt.popoutPlots.win.document;
-        if (Lt.popoutPlots.id_of_lines_to_highlight.length > 0) {
-          for (id of Lt.popoutPlots.id_of_lines_to_highlight) {
-            var rows = doc.getElementsByTagName('tr');
-            var row = rows[parseInt(id)];
-            var checkbox = row.childNodes[2].childNodes[0]; // checkbox always 2cd child
-            checkbox.click();
-          }
-        }
-      }
-
-      span.addEventListener('mouseout', () => {
-        // ajax needed so mousout action occurs after plot is reset
-        // reseting plot takes longer than mouse out action so without ajax
-        // it will finish after mouseoutAction()
-        $.ajax({
-          url: resetPlot_and_Options(),
-          success: function() {
-            mouseoutAction();
-          }
-        })
-      })
-
-      let colorInput = doc.createElement('input');
-      colorInput.className = 'colorInput';
-      colorInput.type = 'color';
-      colorInput.value = set.line.color;
-      colorInput.addEventListener('change', () => {
-        colorChange = {
-          'line.color': colorInput.value,
-        }
-        Plotly.restyle(plotDiv, colorChange, [i]);
-      });
-
-      let highlightInput = doc.createElement('input');
-      highlightInput.className = 'highlightInput';
-      highlightInput.id = String(i); // i = row index
-      highlightInput.type = 'checkbox';
-      highlightInput.addEventListener('change', () => {
-        var highlightInputs = doc.getElementsByClassName('highlightInput');
-        var highlightCount = 0;
-        for (input of highlightInputs) {
-          if (input.checked) {
-            highlightCount++;
-          }
-        }
-
-        var updateWhole = false;
-        if (highlightInput.checked) {
-          if (highlightCount == 1) { // behavior different depending on how many lines to be highlighted
-            for (set of datasets) {
-              set.line = { color: '#797979' }; // set all lines to black
-            }
-          }
-
-          var highlightedSet = '';
-          for (set of datasets) {
-            if (span.innerHTML == 'Median' && span.innerHTML == set.name) { // median will always be red if highlighted
-              set.line = { color: '#ff0000', width: 4 };
-              highlightedSet = set;
-            } else if (span.innerHTML == set.name) { // other lines highlighted will be blue
-              set.line = { color: '#00d907', width: 4 }; // green
-              set.opacity = 1;
-              highlightedSet = set;
-            }
-          }
-
-          // move set to last index of dataset so it renders on top of other lines
-          datasets.push(highlightedSet);
-
-        } else {
-          if (highlightCount >= 1) {
-            for (set of datasets) {
-              if (span.innerHTML == set.name) {
-                set.line = { color: '#797979' };
-              }
-            }
-          } else {
-            updateWhole = true;
-          }
-        }
-
-        if (updateWhole) {
-          resetPlot_and_Options();
-        } else { // update only plot not all options
-          this.win.createPlot(datasets, layout, config);
-          var colorInputs = doc.getElementsByClassName('colorInput');
-          for (var i = 0; i < colorInputs.length; i++) {
-            colorInputs[i].value = datasets[i].line.color;
-          }
-        }
-      });
-
-      function addCell (row, htmlNode) {
-        var cell = row.insertCell(-1);
-        cell.appendChild(htmlNode);
-      }
-
-      addCell(inputRow, span);
-      addCell(inputRow, colorInput);
-      addCell(inputRow, highlightInput);
-
-      if (i > 0) { // add option to remove specfic cores, do not allow removal of base tree core
-        let deleteBtn = doc.createElement('i');
-        deleteBtn.id = String(i); // i = row index
-        deleteBtn.className = 'fa fa-times';
-        deleteBtn.setAttribute('aria-hidden', 'true');
-
-        deleteBtn.addEventListener('click', () => {
-          datasets.forEach((obj, i) => {
-            if (obj.name == span.innerHTML) { // if data name = name of span in same table row
-              datasets.splice(i, 1); // remove data & re-render plot
-
-              // files in table in same order as files in input
-              let index_of_del_file = parseInt(deleteBtn.id) - 1;
-
-              // remove file from input
-              let dt = new DataTransfer()
-              let files = doc.getElementById('fileInput').files;
-              for (var i = 0; i < files.length; i++) {
-                if (i != index_of_del_file) {
-                  dt.items.add(files[i]);
-                }
-              };
-              doc.getElementById('fileInput').files = dt.files;
-
-              this.parseFiles(dt.files);
-            }
-          });
-        });
-
-        var deleteCell = inputRow.insertCell(-1);
-        deleteCell.appendChild(deleteBtn);
-      };
-    })
-
-    optionsDiv.appendChild(inputTable);
-  }
-
-  PopoutPlots.prototype.createPlot = function (allData) {
+  PopoutPlots.prototype.prepData_forPlotting = function (allData) {
     if (Lt.preferences.forwardDirection) { // if measuring forward in time...
       var pts = Lt.data.points;
     } else {
@@ -3245,7 +3035,7 @@ function Popout(Lt) {
     }
 
     var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
-    allData.unshift(coreData); // add data to front of array so it's color is consistent
+    allData.unshift(coreData); // add data to front of array so it's color is consistent as other datasets are added
 
     var n = this.win.document.getElementById('auto-spaghetti-number').value;
     if (allData.length < n) { // limit of cores before it turns into spagetti plot
@@ -3343,7 +3133,7 @@ function Popout(Lt) {
 
   }
 
-    var datasets = [];
+    var data = [];
     var j = 0; // shape index
     var k = 0; // color index
     for (set of allData) {
@@ -3380,32 +3170,314 @@ function Popout(Lt) {
         dataObj.opacity = 1;
       }
 
-      datasets.push(dataObj);
+      data.push(dataObj);
     };
 
+    this.addPlot_andOptions_toWindow(data);
+  }
+
+  PopoutPlots.prototype.addPlot_andOptions_toWindow = function (data) {
     var layout = {
-      title: Lt.meta.assetName + ' Time Series',
-      autosize: true,
-      xaxis: {
-        title: 'Year',
-      },
-      yaxis: {
-        title: 'Width (mm)',
-      },
-      legend: {
-        orientation: 'v',
-      },
+     title: Lt.meta.assetName + ' Time Series',
+     autosize: true,
+     xaxis: {
+       title: 'Year',
+     },
+     yaxis: {
+       title: 'Width (mm)',
+     },
+     showlegend: false,
+   }
+
+   var config = {
+     responsive: true,
+     scrollZoom: true,
+     displayModeBar: true,
+     modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
+   }
+
+   this.win.createPlot(data, layout, config);
+   this.createDataOptions(data);
+   this.createListeners(data, layout, config);
+
+  }
+
+  PopoutPlots.prototype.createDataOptions = function (data) {
+    // create color inputs to change line colors & other options
+    var doc = this.win.document;
+
+    var optionsDiv = doc.getElementById('options');
+
+    var i = 0;
+    while (optionsDiv.childNodes.length > 1) { // keep description
+      let child = optionsDiv.childNodes[i];
+      if (child.tagName != 'P') {
+        optionsDiv.removeChild(child);
+      } else {
+        i++;
+      }
     }
 
-    var config = {
-      responsive: true,
-      scrollZoom: true,
-      displayModeBar: true,
-      modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
+    var inputTable = doc.createElement('table');
+    data.forEach((set, i) => {
+      let inputRow = inputTable.insertRow(-1);
+
+      let span = doc.createElement('span');
+      span.className = 'data-name-span';
+      span.innerHTML = set.name;
+
+      let colorInput = doc.createElement('input');
+      colorInput.className = 'colorInputs';
+      colorInput.type = 'color';
+      colorInput.value = set.line.color;
+
+      let highlightInput = doc.createElement('input');
+      highlightInput.className = 'highlightCheckboxes';
+      highlightInput.id = String(i); // i = row index
+      highlightInput.type = 'checkbox';
+
+      function addCell (row, htmlNode) {
+        var cell = row.insertCell(-1);
+        cell.appendChild(htmlNode);
+      }
+
+      addCell(inputRow, span);
+      addCell(inputRow, colorInput);
+      addCell(inputRow, highlightInput);
+
+      let deleteBtn = doc.createElement('i');
+      deleteBtn.id = String(i); // i = row index
+      deleteBtn.className = 'fa fa-times delete-buttons';
+      deleteBtn.setAttribute('aria-hidden', 'true');
+
+      var deleteCell = inputRow.insertCell(-1);
+      deleteCell.appendChild(deleteBtn);
+    })
+
+    optionsDiv.appendChild(inputTable);
+  }
+
+  PopoutPlots.prototype.createListeners = function (data, layout, config) {
+    this.plot_layout_static = false;
+    var dataCopy = JSON.parse(JSON.stringify(data));
+
+    function updatePlot (new_data) {
+      var div = Lt.popoutPlots.win.document.getElementById('plot');
+
+      var w = div.clientWidth;
+      var h = div.clientHeight;
+
+      // need layout w/ specified width & height or visual flash occurs
+      var update_layout = {
+       title: Lt.meta.assetName + ' Time Series',
+       autosize: false,
+       width: w,
+       height: h,
+       xaxis: {
+         title: 'Year',
+       },
+       yaxis: {
+         title: 'Width (mm)',
+       },
+       showlegend: false,
+     }
+
+      Plotly.react(div, new_data, update_layout, config);
+      Lt.popoutPlots.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
+      Lt.popoutPlots.plot_layout_static = true;
+
+      // recolor color inputs to match data update
+      var colorInputs = Lt.popoutPlots.win.document.getElementsByClassName('colorInputs');
+      var spans_with_data_names = Lt.popoutPlots.win.document.getElementsByClassName('data-name-span');
+      for (let i = 0; i < spans_with_data_names.length; i++) {
+        let span_name = spans_with_data_names[i].innerHTML;
+        for (set of new_data) {
+          if (span_name == set.name) {
+            colorInputs[i].value = set.line.color;
+          }
+        }
+      }
     }
 
-    this.win.createPlot(datasets, layout, config);
-    this.createOptionsTable(datasets, layout, config);
+    function updateData (elem, data, option, change) {
+      let span = $(elem).closest('tr').find('span.data-name-span')[0];
+      for (set of data) {
+        if (set.name == span.innerHTML) {
+          set[option] = change;
+          return
+        }
+      }
+    }
+
+    var doc = this.win.document;
+
+    // 1) plot & options resizing
+    var plotDiv = doc.getElementById('plot');
+    var optionsDiv = doc.getElementById('options')
+    $(optionsDiv).resizable({
+      handles: 'e'
+    });
+
+    var resizeDiv = optionsDiv.getElementsByTagName('div')[0];
+    resizeDiv.style.width = '20px'; // increase draggable div size
+
+    var plotDiv = doc.getElementById('plot');
+    var wrapperDiv = doc.getElementById('wrapper');
+    $(optionsDiv).resize(() => {
+      var wrapperWidth = $(wrapperDiv).width();
+      $(plotDiv).width( wrapperWidth - $(optionsDiv).width() - (5 * wrapperWidth / 100) );
+
+      if (Lt.popoutPlots.plot_layout_static) {
+        Plotly.relayout(plotDiv, layout); // reset layout if set static by updatePlot()
+        Lt.popoutPlots.plot_layout_static = false;
+      }
+      Lt.popoutPlots.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
+
+    });
+
+    // 2) hovering to highlight individual lines
+    var spans_with_file_names = doc.getElementsByClassName('data-name-span');
+    for (let i = 0; i < spans_with_file_names.length; i++) {
+      let span = spans_with_file_names[i];
+      span.addEventListener('mouseover', () => {
+        let dataCopy_highlight_1 = JSON.parse(JSON.stringify(dataCopy));
+
+        // get all highlighted (checked) datasets to re-activate after mousing out
+        var highlightInputs = doc.getElementsByClassName('highlightCheckboxes');
+        this.id_of_lines_to_highlight = [];
+        for (input of highlightInputs) {
+          if (input.checked) {
+            // input id = row index
+            this.id_of_lines_to_highlight.push(input.id)
+          }
+        }
+
+        // action when hovered over
+        var highlightedSet;
+        for (let y = 0; y < dataCopy_highlight_1.length; y++) {
+          if (span.innerHTML == dataCopy_highlight_1[y].name) { // median will always be red if highlighted
+            if (span.innerHTML == 'Median') {
+              dataCopy_highlight_1[y].line = { color: '#ff0000', width: 4 }; // red
+            } else {
+              dataCopy_highlight_1[y].line = { color: '#00d907', width: 4 }; // green
+            }
+            dataCopy_highlight_1[y].opacity = 1;
+            highlightedSet = dataCopy_highlight_1[y];
+          } else {
+            dataCopy_highlight_1[y].line = { color: '#797979' };
+          }
+        }
+
+        // move set to last index of dataset so it renders on top of other lines
+        dataCopy_highlight_1.push(highlightedSet);
+        // remove original dataset
+        let index = dataCopy_highlight_1.indexOf(highlightedSet);
+        dataCopy_highlight_1.splice(index, 1); // remove set from data b/c it will be added later
+
+        updatePlot(dataCopy_highlight_1);
+      });
+
+      // action when mouse stops hovering
+      span.addEventListener('mouseout', () => {
+        updatePlot(dataCopy);
+
+        // check previously checked lines
+        if (this.id_of_lines_to_highlight.length > 0) {
+          for (id of this.id_of_lines_to_highlight) {
+            var rows = doc.getElementsByTagName('tr');
+            var row = rows[parseInt(id)];
+            var checkbox = row.childNodes[2].childNodes[0]; // checkbox always 2cd child
+            checkbox.checked = false;
+            checkbox.click();
+          }
+        }
+      })
+    }
+
+    // 3) changing line color
+    var colorInputs = doc.getElementsByClassName('colorInputs');
+    for (let j = 0; j < colorInputs.length; j++) {
+      let colorInput = colorInputs[j];
+      colorInput.addEventListener('change', () => {
+        updateData(colorInput, dataCopy, 'line', { color: colorInput.value } );
+        updatePlot(dataCopy);
+      });
+    }
+
+    // 4) using checkbox to highlight multiple cores
+    var checkboxes_for_highlighting  = doc.getElementsByClassName('highlightCheckboxes');
+    var dataCopy_highlight_2 = JSON.parse(JSON.stringify(dataCopy));
+    for (let t = 0; t < checkboxes_for_highlighting.length; t++) {
+      let highlightInput = checkboxes_for_highlighting[t];
+
+      highlightInput.addEventListener('change', () => {
+        let highlightCount = 0;
+        for (box of checkboxes_for_highlighting) {
+          if (box.checked) {
+            highlightCount++
+          }
+        }
+
+        if (highlightInput.checked) {
+          if (highlightCount > 1) {
+            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#00d907', width: 4 } );
+          } else {
+            for (input of checkboxes_for_highlighting) {
+              updateData(input, dataCopy_highlight_2, 'line', { color: '#797979' } );
+            }
+            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#00d907', width: 4 } );
+          }
+          updateData(highlightInput, dataCopy_highlight_2, 'opacity', 1 );
+
+          // move set to end so it appears on top of all other lines
+          let span = $(highlightInput).closest('tr').find('span.data-name-span')[0];
+          for (let h = 0; h < dataCopy_highlight_2.length; h++) {
+            let set = dataCopy_highlight_2[h];
+            if (set.name == span.innerHTML) {
+              dataCopy_highlight_2.push(set);
+              dataCopy_highlight_2.splice(h, 1);
+            }
+          }
+
+        } else {
+          if (highlightCount > 0) {
+            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#797979' } );
+          } else {
+            dataCopy_highlight_2 = JSON.parse(JSON.stringify(dataCopy)); // plot goes back to original if no inputs checked
+          }
+        }
+
+        updatePlot(dataCopy_highlight_2);
+
+      });
+    }
+
+    // 5) delete buttons
+    var delete_buttons = doc.getElementsByClassName('delete-buttons');
+    var table = doc.getElementsByTagName('table')[0];
+    for (var k = 0; k < delete_buttons.length; k++) {
+      let deleteBtn = delete_buttons[k];
+      let span = spans_with_file_names[k]; // first span cannot be deleted
+
+      deleteBtn.addEventListener('click', () => {
+        for (let m = 0; m < dataCopy.length; m++) {
+          let set = dataCopy[m];
+          if (span.innerHTML == set.name) {
+            dataCopy.splice(m, 1);
+            table.deleteRow(m);
+            updatePlot(dataCopy);
+          }
+        }
+        for (checkbox of checkboxes_for_highlighting) { // re-activate checkbox to color plot correctly
+          if (checkbox.checked) {
+            checkbox.checked = false;
+            checkbox.click();
+            break
+          }
+        }
+      });
+    }
+
   }
 
 };
