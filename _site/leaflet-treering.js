@@ -2617,9 +2617,28 @@ function Popout(Lt) {
                            this.win = window.open('plot.html', '', 'height=600,width=' + String(screen.width));
 
                            this.win.onload = () => {
+                             // reset plot from user changes
+                             var resetButton = this.win.document.createElement('button');
+                             resetButton.className = 'plot-inputs';
+                             resetButton.innerHTML = 'Reset plot'
+                             resetButton.addEventListener('click', () => {
+                               this.parseFiles(fileInput.files);
+                             });
+                             this.win.document.getElementById('files').insertBefore(resetButton, this.win.document.getElementById('instructions'));
+
+                             // clear all data except core data from plot
+                             var clearButton = this.win.document.createElement('button');
+                             clearButton.className = 'plot-inputs';
+                             clearButton.innerHTML = 'Clear added data'
+                             clearButton.addEventListener('click', () => {
+                               fileInput.value = null;
+                               this.prepData_forPlotting();
+                             });
+                             this.win.document.getElementById('files').insertBefore(clearButton, this.win.document.getElementById('instructions'));
 
                              // file input
                              var fileInput = this.win.document.createElement('input');
+                             fileInput.className = 'plot-inputs';
                              fileInput.id = 'fileInput';
                              fileInput.type = 'file';
                              fileInput.setAttribute('accept', '.txt, .json, .csv, .rwl');
@@ -2629,23 +2648,10 @@ function Popout(Lt) {
                              });
                              this.win.document.getElementById('files').insertBefore(fileInput, this.win.document.getElementById('instructions'));
 
-                             // reset plot from user changes
-                             var resetButton = this.win.document.createElement('button');
-                             resetButton.style.marginRight = '40px';
-                             resetButton.innerHTML = 'Reset plot...'
-                             resetButton.addEventListener('click', () => {
-                               this.parseFiles(fileInput.files);
-                             });
-                             this.win.document.getElementById('files').insertBefore(resetButton, this.win.document.getElementById('instructions'));
-
-                             // clear all data except core data from plot
-                             var clearButton = this.win.document.createElement('button');
-                             clearButton.innerHTML = 'Clear added data...'
-                             clearButton.addEventListener('click', () => {
-                               fileInput.value = null;
-                               this.prepData_forPlotting();
-                             });
-                             this.win.document.getElementById('files').insertBefore(clearButton, this.win.document.getElementById('instructions'));
+                             // set width & height of buttons based on file input
+                             var height = String(parseInt($(fileInput).height()) + 10); // add 10 for padding
+                             resetButton.style.height = height;
+                             clearButton.style.height = height;
 
                              // auto-spaghetti plot number limit
                              var numberLimit = this.win.document.getElementById('auto-spaghetti-number')
@@ -3163,7 +3169,8 @@ function Popout(Lt) {
      responsive: true,
      scrollZoom: true,
      displayModeBar: true,
-     modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
+     modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d'],
+     editable: true,
    }
 
    this.shownData = JSON.parse(JSON.stringify(data));
