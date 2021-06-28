@@ -3443,26 +3443,49 @@ function Popout(Lt) {
     // 5) delete buttons
     var delete_buttons = doc.getElementsByClassName('delete-buttons');
     var table = doc.getElementsByTagName('table')[0];
-    for (var k = 0; k < delete_buttons.length; k++) {
+    for (let k = 0; k < delete_buttons.length; k++) {
       let deleteBtn = delete_buttons[k];
-      let span = spans_with_file_names[k]; // first span cannot be deleted
 
       deleteBtn.addEventListener('click', () => {
+        let span = $(deleteBtn).closest('tr').find('span.data-name-span')[0];
+        let row_index = $(deleteBtn).closest('tr').index();
         for (let m = 0; m < this.shownData.length; m++) {
           let set = this.shownData[m];
           if (span.innerHTML == set.name) {
             this.shownData.splice(m, 1);
-            table.deleteRow(m);
-            this.updatePlot(this.shownData);
+            table.deleteRow(row_index);
           }
         }
-        for (checkbox of checkboxes_for_highlighting) { // re-activate checkbox to color plot correctly
+
+        function remove_from_data (data_array) {
+          for (let i = 0; i < data_array.length; i++) {
+            let set = data_array[i];
+            if (span.innerHTML == set.name) {
+              data_array.splice(i, 1);
+            }
+          }
+        }
+
+        remove_from_data(this.data_pre_highlight_hover);
+        remove_from_data(this.data_pre_highlight_checkbox);
+
+        let highlight_checkboxes = doc.getElementsByClassName('highlightCheckboxes');
+        let checked_question = false;
+        for (checkbox of highlight_checkboxes) { // re-activate checkbox to color plot correctly
           if (checkbox.checked) {
+            checked_question = true;
             checkbox.checked = false;
             checkbox.click();
             break
           }
         }
+
+        if (checked_question == false) { // reset data color if non checked
+          this.shownData = JSON.parse(JSON.stringify(this.data_pre_highlight_checkbox));
+        }
+
+        this.updatePlot(this.shownData);
+
       });
     }
 
@@ -3482,7 +3505,7 @@ function Popout(Lt) {
     var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
 
     // find core index in data array & edit its data
-    function data_changer (data_array) {
+    function update_data_points (data_array) {
       for (var i = 0; i < data_array.length; i++) {
         let set = data_array[i];
         if (set.name == Lt.meta.assetName) {
@@ -3493,9 +3516,9 @@ function Popout(Lt) {
       }
     }
 
-    data_changer(this.data_pre_highlight_hover);
-    data_changer(this.data_pre_highlight_checkbox);
-    data_changer(this.shownData);
+    update_data_points(this.data_pre_highlight_hover);
+    update_data_points(this.data_pre_highlight_checkbox);
+    update_data_points(this.shownData);
     this.updatePlot(this.shownData);
 
   }
