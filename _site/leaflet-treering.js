@@ -312,13 +312,7 @@ function MeasurementData (dataObject, Lt) {
     Lt.metaDataText.updateText();
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   };
 
@@ -405,13 +399,7 @@ function MeasurementData (dataObject, Lt) {
     Lt.metaDataText.updateText(); // updates after a point is deleted
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   };
 
@@ -495,13 +483,7 @@ function MeasurementData (dataObject, Lt) {
     Lt.metaDataText.updateText(); // updates after points are cut
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   };
 
@@ -612,13 +594,7 @@ function MeasurementData (dataObject, Lt) {
     Lt.metaDataText.updateText(); // updates after a single point is inserted
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
     return tempK;
   };
@@ -690,13 +666,7 @@ function MeasurementData (dataObject, Lt) {
     Lt.metaDataText.updateText(); // updates after a single point is inserted
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
     return tempK;
   };
@@ -3189,16 +3159,17 @@ function Popout(Lt) {
      showlegend: false,
    }
 
-   var config = {
+   this.config = {
      responsive: true,
      scrollZoom: true,
      displayModeBar: true,
      modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d']
    }
 
-   this.win.createPlot(data, layout, config);
+   this.shownData = JSON.parse(JSON.stringify(data));
+   this.win.createPlot(data, layout, this.config);
    this.createDataOptions(data);
-   this.createListeners(data, layout, config);
+   this.createListeners(layout);
 
   }
 
@@ -3257,51 +3228,54 @@ function Popout(Lt) {
     optionsDiv.appendChild(inputTable);
   }
 
-  PopoutPlots.prototype.createListeners = function (data, layout, config) {
-    this.plot_layout_static = false;
-    var dataCopy = JSON.parse(JSON.stringify(data));
+  PopoutPlots.prototype.updatePlot = function (new_data) {
+    var div = Lt.popoutPlots.win.document.getElementById('plot');
 
-    function updatePlot (new_data) {
-      var div = Lt.popoutPlots.win.document.getElementById('plot');
+    var w = div.clientWidth;
+    var h = div.clientHeight;
 
-      var w = div.clientWidth;
-      var h = div.clientHeight;
+    // need layout w/ specified width & height or visual flash occurs
+    var update_layout = {
+     title: Lt.meta.assetName + ' Time Series',
+     autosize: false,
+     width: w,
+     height: h,
+     xaxis: {
+       title: 'Year',
+     },
+     yaxis: {
+       title: 'Width (mm)',
+     },
+     showlegend: false,
+   }
 
-      // need layout w/ specified width & height or visual flash occurs
-      var update_layout = {
-       title: Lt.meta.assetName + ' Time Series',
-       autosize: false,
-       width: w,
-       height: h,
-       xaxis: {
-         title: 'Year',
-       },
-       yaxis: {
-         title: 'Width (mm)',
-       },
-       showlegend: false,
-     }
+    Plotly.react(div, new_data, update_layout, this.config);
+    this.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
+    this.plot_layout_static = true;
+    this.shownData = new_data;
 
-      Plotly.react(div, new_data, update_layout, config);
-      Lt.popoutPlots.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
-      Lt.popoutPlots.plot_layout_static = true;
-
-      // recolor color inputs to match data update
-      var colorInputs = Lt.popoutPlots.win.document.getElementsByClassName('colorInputs');
-      var spans_with_data_names = Lt.popoutPlots.win.document.getElementsByClassName('data-name-span');
-      for (let i = 0; i < spans_with_data_names.length; i++) {
-        let span_name = spans_with_data_names[i].innerHTML;
-        for (set of new_data) {
-          if (span_name == set.name) {
-            colorInputs[i].value = set.line.color;
-          }
+    // recolor color inputs to match data update
+    var colorInputs = this.win.document.getElementsByClassName('colorInputs');
+    var spans_with_data_names = this.win.document.getElementsByClassName('data-name-span');
+    for (let i = 0; i < spans_with_data_names.length; i++) {
+      let span_name = spans_with_data_names[i].innerHTML;
+      for (set of new_data) {
+        if (span_name == set.name) {
+          colorInputs[i].value = set.line.color;
         }
       }
     }
+  }
 
-    function updateData (elem, data, option, change) {
+  PopoutPlots.prototype.createListeners = function (layout) {
+    this.data_pre_highlight_hover = [];
+    this.data_pre_highlight_checkbox = [];
+    this.plot_layout_static = false;
+
+    function updateData (elem, new_data, option, change) {
+      this.shownData = new_data;
       let span = $(elem).closest('tr').find('span.data-name-span')[0];
-      for (set of data) {
+      for (set of new_data) {
         if (set.name == span.innerHTML) {
           set[option] = change;
           return
@@ -3340,7 +3314,7 @@ function Popout(Lt) {
     for (let i = 0; i < spans_with_file_names.length; i++) {
       let span = spans_with_file_names[i];
       span.addEventListener('mouseover', () => {
-        let dataCopy_highlight_1 = JSON.parse(JSON.stringify(dataCopy));
+        this.data_pre_highlight_hover = JSON.parse(JSON.stringify(this.shownData));
 
         // get all highlighted (checked) datasets to re-activate after mousing out
         var highlightInputs = doc.getElementsByClassName('highlightCheckboxes');
@@ -3354,32 +3328,33 @@ function Popout(Lt) {
 
         // action when hovered over
         var highlightedSet;
-        for (let y = 0; y < dataCopy_highlight_1.length; y++) {
-          if (span.innerHTML == dataCopy_highlight_1[y].name) { // median will always be red if highlighted
+        for (let y = 0; y < this.shownData.length; y++) {
+          if (span.innerHTML == this.shownData[y].name) { // median will always be red if highlighted
             if (span.innerHTML == 'Median') {
-              dataCopy_highlight_1[y].line = { color: '#ff0000', width: 4 }; // red
+              this.shownData[y].line = { color: '#ff0000', width: 4 }; // red
             } else {
-              dataCopy_highlight_1[y].line = { color: '#00d907', width: 4 }; // green
+              this.shownData[y].line = { color: '#00d907', width: 4 }; // green
             }
-            dataCopy_highlight_1[y].opacity = 1;
-            highlightedSet = dataCopy_highlight_1[y];
+            this.shownData[y].opacity = 1;
+            highlightedSet = this.shownData[y];
           } else {
-            dataCopy_highlight_1[y].line = { color: '#797979' };
+            this.shownData[y].line = { color: '#797979' };
           }
         }
 
         // move set to last index of dataset so it renders on top of other lines
-        dataCopy_highlight_1.push(highlightedSet);
+        this.shownData.push(highlightedSet);
         // remove original dataset
-        let index = dataCopy_highlight_1.indexOf(highlightedSet);
-        dataCopy_highlight_1.splice(index, 1); // remove set from data b/c it will be added later
+        let index = this.shownData.indexOf(highlightedSet);
+        this.shownData.splice(index, 1); // remove set from data b/c it will be added later
 
-        updatePlot(dataCopy_highlight_1);
+        this.updatePlot(this.shownData);
       });
 
       // action when mouse stops hovering
       span.addEventListener('mouseout', () => {
-        updatePlot(dataCopy);
+        this.updatePlot(this.data_pre_highlight_hover);
+        this.shownData = JSON.parse(JSON.stringify(this.data_pre_highlight_hover));
 
         // check previously checked lines
         if (this.id_of_lines_to_highlight.length > 0) {
@@ -3399,14 +3374,13 @@ function Popout(Lt) {
     for (let j = 0; j < colorInputs.length; j++) {
       let colorInput = colorInputs[j];
       colorInput.addEventListener('change', () => {
-        updateData(colorInput, dataCopy, 'line', { color: colorInput.value } );
-        updatePlot(dataCopy);
+        updateData(colorInput, this.shownData, 'line', { color: colorInput.value } );
+        this.updatePlot(this.shownData);
       });
     }
 
     // 4) using checkbox to highlight multiple cores
     var checkboxes_for_highlighting  = doc.getElementsByClassName('highlightCheckboxes');
-    var dataCopy_highlight_2 = JSON.parse(JSON.stringify(dataCopy));
     for (let t = 0; t < checkboxes_for_highlighting.length; t++) {
       let highlightInput = checkboxes_for_highlighting[t];
 
@@ -3418,36 +3392,50 @@ function Popout(Lt) {
           }
         }
 
+        // check if plot is highlighted from being hovered over
+        // do not want to update data_pre_highlight_checkbox if so
+        let hightlighted_previously = false;
+        for (set of this.shownData) {
+          if (set.line.color == '#797979' || set.line.color == '#00d907') {
+            hightlighted_previously = true;
+            break
+          }
+        }
+
+        if (hightlighted_previously == false) {
+          this.data_pre_highlight_checkbox = JSON.parse(JSON.stringify(this.shownData));
+        }
+
         if (highlightInput.checked) {
           if (highlightCount > 1) {
-            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#00d907', width: 4 } );
+            updateData(highlightInput, this.shownData, 'line', { color: '#00d907', width: 4 } );
           } else {
             for (input of checkboxes_for_highlighting) {
-              updateData(input, dataCopy_highlight_2, 'line', { color: '#797979' } );
+              updateData(input, this.shownData, 'line', { color: '#797979' } );
             }
-            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#00d907', width: 4 } );
+            updateData(highlightInput, this.shownData, 'line', { color: '#00d907', width: 4 } );
           }
-          updateData(highlightInput, dataCopy_highlight_2, 'opacity', 1 );
+          updateData(highlightInput, this.shownData, 'opacity', 1 );
 
           // move set to end so it appears on top of all other lines
           let span = $(highlightInput).closest('tr').find('span.data-name-span')[0];
-          for (let h = 0; h < dataCopy_highlight_2.length; h++) {
-            let set = dataCopy_highlight_2[h];
+          for (let h = 0; h < this.shownData.length; h++) {
+            let set = this.shownData[h];
             if (set.name == span.innerHTML) {
-              dataCopy_highlight_2.push(set);
-              dataCopy_highlight_2.splice(h, 1);
+              this.shownData.push(set);
+              this.shownData.splice(h, 1);
             }
           }
 
         } else {
           if (highlightCount > 0) {
-            updateData(highlightInput, dataCopy_highlight_2, 'line', { color: '#797979' } );
+            updateData(highlightInput, this.shownData, 'line', { color: '#797979' } );
           } else {
-            dataCopy_highlight_2 = JSON.parse(JSON.stringify(dataCopy)); // plot goes back to original if no inputs checked
+            this.shownData = JSON.parse(JSON.stringify(this.data_pre_highlight_checkbox)); // plot goes back to original if no inputs checked
           }
         }
 
-        updatePlot(dataCopy_highlight_2);
+        this.updatePlot(this.shownData);
 
       });
     }
@@ -3460,12 +3448,12 @@ function Popout(Lt) {
       let span = spans_with_file_names[k]; // first span cannot be deleted
 
       deleteBtn.addEventListener('click', () => {
-        for (let m = 0; m < dataCopy.length; m++) {
-          let set = dataCopy[m];
+        for (let m = 0; m < this.shownData.length; m++) {
+          let set = this.shownData[m];
           if (span.innerHTML == set.name) {
-            dataCopy.splice(m, 1);
+            this.shownData.splice(m, 1);
             table.deleteRow(m);
-            updatePlot(dataCopy);
+            this.updatePlot(this.shownData);
           }
         }
         for (checkbox of checkboxes_for_highlighting) { // re-activate checkbox to color plot correctly
@@ -3477,6 +3465,38 @@ function Popout(Lt) {
         }
       });
     }
+
+  }
+
+  PopoutPlots.prototype.updatePlot_afterChangingPoints = function () {
+    if (Lt.preferences.forwardDirection) { // if measuring forward in time...
+      var pts = Lt.data.points;
+    } else {
+      var pts = Lt.helper.reverseData();
+    };
+
+    if (Lt.preferences.subAnnual) { // remove earlywood points if sub annually measured
+      var pts = pts.filter(e => e && !e.earlywood);
+    };
+
+    var coreData = this.parseJSONPts(pts, Lt.meta.assetName);
+
+    // find core index in data array & edit its data
+    function data_changer (data_array) {
+      for (var i = 0; i < data_array.length; i++) {
+        let set = data_array[i];
+        if (set.name == Lt.meta.assetName) {
+          data_array[i].y = coreData.widths;
+          data_array[i].x = coreData.years;
+          return
+        }
+      }
+    }
+
+    data_changer(this.data_pre_highlight_hover);
+    data_changer(this.data_pre_highlight_checkbox);
+    data_changer(this.shownData);
+    this.updatePlot(this.shownData);
 
   }
 
@@ -3493,13 +3513,7 @@ function Undo(Lt) {
     this.pop();
     Lt.metaDataText.updateText();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   });
   this.btn.disable();
@@ -3561,13 +3575,7 @@ function Redo(Lt) {
     this.pop();
     Lt.metaDataText.updateText();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   });
   this.btn.disable();
@@ -3769,13 +3777,7 @@ function Dating(Lt) {
     Lt.metaDataText.updateText(); // updates once user hits enter
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
 
     this.btn.state('inactive');
@@ -3972,13 +3974,7 @@ function CreateZeroGrowth(Lt) {
       Lt.metaDataText.updateText(); // updates after point is inserted
       Lt.annotationAsset.reloadAssociatedYears();
       if (Lt.popoutPlots.win) {
-        var win = Lt.popoutPlots.win;
-        var inputtedFiles = win.document.getElementById('fileInput');
-        if (inputtedFiles.files.length > 0) {
-          Lt.popoutPlots.parseFiles(inputtedFiles.files);
-        } else {
-          Lt.popoutPlots.createPlot();
-        }
+        Lt.popoutPlots.updatePlot_afterChangingPoints();
       }
 
     } else {
@@ -4295,13 +4291,7 @@ function ConvertToStartPoint(Lt) {
     Lt.metaDataText.updateText();
     Lt.annotationAsset.reloadAssociatedYears();
     if (Lt.popoutPlots.win) {
-      var win = Lt.popoutPlots.win;
-      var inputtedFiles = win.document.getElementById('fileInput');
-      if (inputtedFiles.files.length > 0) {
-        Lt.popoutPlots.parseFiles(inputtedFiles.files);
-      } else {
-        Lt.popoutPlots.createPlot();
-      }
+      Lt.popoutPlots.updatePlot_afterChangingPoints();
     }
   };
 
