@@ -938,11 +938,10 @@ function MouseLine (Lt) {
   * @param {Drag ability} iconDrag
   * @param {Marker title} title
   */
-function getMarker(iconLatLng, color, iconImagePath, iconDrag, title) {
+function getMarker(iconLatLng, color, iconImagePath, iconDrag) {
   return L.marker(iconLatLng, {
         icon: new MarkerIcon(color, iconImagePath),
         draggable: iconDrag,
-        title: title,
         riseOnHover: true
       })
   };
@@ -996,52 +995,65 @@ function VisualAsset (Lt) {
       draggable = true;
     }
 
-    var marker;
+    let marker, title;
 
     if (pts[i].start) { //check if index is the start point
-      marker = getMarker(leafLatLng, 'white_start', Lt.basePath, draggable, 'Start');
+      marker = getMarker(leafLatLng, 'white_start', Lt.basePath, draggable);
+      title = 'Start';
     } else if (pts[i].break) { //check if point is a break
-      marker = getMarker(leafLatLng, 'white_break', Lt.basePath, draggable, 'Break');
+      marker = getMarker(leafLatLng, 'white_break', Lt.basePath, draggable);
+      title = 'Break';
     } else if (Lt.measurementOptions.subAnnual) { //check if point subAnnual
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
             // which marker asset is used depends on measurement direction
             if (Lt.measurementOptions.forwardDirection) { // check if years counting up
-              marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+              marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable);
+              title = 'Year ' + pts[i].year + ', earlywood';
             } else { // otherwise years counting down & marker assets need to be flipped
-              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable);
+              title = 'Year ' + pts[i].year + ', latewood';
             };
           } else {
             if (Lt.measurementOptions.forwardDirection) {
-              marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+              marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
+              title = 'Year ' + pts[i].year + ', earlywood';
             } else {
-              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+              marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable);
+              title = 'Year ' + pts[i].year + ', latewood';
             }
           }
         } else { //otherwise it's latewood
             if (pts[i].year % 10 == 0) {
               if (Lt.measurementOptions.forwardDirection) { // check if years counting up
-                marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+                marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable);
+                title = 'Year ' + pts[i].year + ', latewood';
               } else { // otherwise years counting down
-                marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+                marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable);
+                title = 'Year ' + pts[i].year + ', earlywood';
               };
             } else {
               if (Lt.measurementOptions.forwardDirection) {
-                marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', latewood');
+                marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable);
+                title = 'Year ' + pts[i].year + ', latewood';
               } else {
-                marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year + ', earlywood');
+                marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
+                title = 'Year ' + pts[i].year + ', earlywood';
               }
             }
         }
     } else {
       if (pts[i].year % 10 == 0) {
-        marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable, 'Year ' + pts[i].year)
+        marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable);
       } else {
-        marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable, 'Year ' + pts[i].year)
+        marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
       }
+      title ='Year ' + pts[i].year;
     };
 
     this.markers[i] = marker;   //add created marker to marker_list
+
+    marker.bindTooltip(title);
 
     //tell marker what to do when being dragged
     this.markers[i].on('drag', (e) => {
@@ -1152,7 +1164,25 @@ function VisualAsset (Lt) {
       this.lines[i] =
           L.polyline([pts[i - 1].latLng, leafLatLng],
           {color: color, opacity: opacity, weight: weight});
+
+      if (window.name.includes('popout') == false) {
+          this.lines[i].bindTooltip(title);
+      }
+      this.lines[i].on('mouseover', () => {
+        var markersON = Lt.viewer.hasLayer(Lt.visualAsset.markerLayer);
+        if (markersON == false) {
+          // only show tooltip when points are hidden & in browsing mode
+          this.lines[i].openTooltip();
+        } else if (markersON == true) {
+          this.lines[i].closeTooltip();
+        }
+      });
+      this.lines[i].on('mouseout', () => {
+        this.lines[i].closeTooltip();
+      });
+
       this.lineLayer.addLayer(this.lines[i]);
+
     }
 
     this.previousLatLng = leafLatLng;
