@@ -2782,7 +2782,7 @@ function Dating(Lt) {
 
   // enable with ctrl-d
   L.DomEvent.on(window, 'keydown', (e) => {
-     if (e.keyCode == 68 && !(e.getModifierState("Shift")) && e.getModifierState("Control") && window.name.includes('popout')) { // 73 refers to 'i'
+     if (e.keyCode == 68 && !(e.getModifierState("Shift")) && e.getModifierState("Control") && window.name.includes('popout')) { // 68 refers to 'd'
        e.preventDefault();
        e.stopPropagation();
        Lt.disableTools();
