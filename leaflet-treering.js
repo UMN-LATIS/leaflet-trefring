@@ -2780,6 +2780,16 @@ function Dating(Lt) {
     () => { this.disable() }
   );
 
+  // enable with ctrl-d
+  L.DomEvent.on(window, 'keydown', (e) => {
+     if (e.keyCode == 68 && !(e.getModifierState("Shift")) && e.getModifierState("Control") && window.name.includes('popout')) { // 68 refers to 'd'
+       e.preventDefault();
+       e.stopPropagation();
+       Lt.disableTools();
+       this.enable();
+     }
+  }, this);
+
   /**
    * Open a text container for user to input date
    * @function action
@@ -2837,6 +2847,7 @@ function Dating(Lt) {
   Dating.prototype.enable = function() {
     this.btn.state('active');
     this.active = true;
+    Lt.viewer.getContainer().style.cursor = 'pointer';
   };
 
   /**
@@ -2851,6 +2862,7 @@ function Dating(Lt) {
     $(Lt.viewer.getContainer()).off('click');
     $(document).off('keypress');
     this.active = false;
+    Lt.viewer.getContainer().style.cursor = 'default';
   };
 }
 
@@ -5070,6 +5082,10 @@ function KeyboardShortCutDialog (Lt) {
       {
        'key': 'Ctrl-i',
        'use': 'Insert measurement point',
+      },
+      {
+        'key': 'Ctrl-d',
+        'use': 'Edit measurement point dating',
       },
       {
        'key': 'Ctrl-a',
