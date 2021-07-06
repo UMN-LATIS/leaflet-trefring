@@ -970,14 +970,92 @@ function VisualAsset (Lt) {
     this.lineLayer.clearLayers();
     this.lines = new Array();
 
-    //plot the data back onto the map
+    // plot the data back onto the map
     if (Lt.data.points !== undefined) {
       Object.values(Lt.data.points).map((e, i) => {
         if (e != undefined) {
           this.newLatLng(Lt.data.points, i, e.latLng);
+          if (Lt.data.points[i].year) {
+            this.markers[i].bindTooltip(String(Lt.data.points[i].year), { direction: 'bottom' })
+          } else if (Lt.data.points[i].start) {
+            this.markers[i].bindTooltip('Start', { direction: 'bottom' })
+          } else if (Lt.data.points[i].break) {
+            this.markers[i].bindTooltip('Break', { direction: 'bottom' })
+          }
         }
       });
     }
+
+    // TODO: mouseout removes permanent tool tips,
+    // change when permanent tooltips show (First point all decades ending in 00 or 50, and last point),
+    // change tooltip direction priority
+
+    // FOR MEETING: opportunity to change tooltip title
+
+    // bind popups to lines if not popped out
+    const pts = JSON.parse(JSON.stringify(Lt.data.points)).filter( pt => pt ); // filter null points
+    function add_tooltip (i) {
+      const lines = Lt.visualAsset.lines;
+      var li, tt, op; // line index, tool tip, options
+
+      if (Lt.measurementOptions.subAnnual) {
+        var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 1) { return true } })();
+      } else {
+        var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 1) { return true } })();
+      }
+
+      if (Lt.preferences.forwardDirection) {
+        var pt = pts[i];
+        var latewood_or_annual = pt.earlywood == false || Lt.measurementOptions.subAnnual == false;
+        li = i;
+      } else {
+        if (pts[i - 1].year) {
+          var pt = pts[i - 1];
+        } else {
+          var pt = pts[i];
+          pts[i].year++;
+        }
+        var latewood_or_annual = pt.earlywood == true || Lt.measurementOptions.subAnnual == false;
+        if (Lt.measurementOptions.subAnnual || first_or_last) {
+          li = i;
+        } else { // must shift line index when backwards & annual
+          li = i + 1;
+        }
+      }
+
+      tt = String(pt.year);
+
+      if (latewood_or_annual && (pt.year % 50 == 0 || first_or_last)) { // tooltips permanent when year ends in 00s, 50s
+        op = { permanent: true, direction: 'bottom' };
+      } else {
+        op = { direction: 'bottom' };
+      }
+
+      return [li, tt, op]
+    }
+
+    if (window.name.includes('popout') == false) {
+      this.lines.map((line, i) => {
+        let line_index, tooltip, options;
+        [line_index, tooltip, options] = add_tooltip(i);
+
+        if (this.lines[line_index]) {
+          this.lines[line_index].bindTooltip(tooltip, options);
+        }
+
+        this.lines[i].on('mouseover', () => {
+          var markersON = Lt.viewer.hasLayer(Lt.visualAsset.markerLayer);
+          if (markersON == false) {
+            // only show tooltip when points are hidden & in browsing mode
+            this.lines[i].openTooltip();
+          } else if (markersON == true) {
+            this.lines[i].closeTooltip();
+          }
+        });
+
+      });
+    }
+
   }
 
   /**
@@ -995,50 +1073,40 @@ function VisualAsset (Lt) {
       draggable = true;
     }
 
-    let marker, title;
+    let marker;
 
     if (pts[i].start) { //check if index is the start point
       marker = getMarker(leafLatLng, 'white_start', Lt.basePath, draggable);
-      title = 'Start';
     } else if (pts[i].break) { //check if point is a break
       marker = getMarker(leafLatLng, 'white_break', Lt.basePath, draggable);
-      title = 'Break';
     } else if (Lt.measurementOptions.subAnnual) { //check if point subAnnual
         if (pts[i].earlywood) { //check if point is earlywood
           if (pts[i].year % 10 == 0) {
             // which marker asset is used depends on measurement direction
             if (Lt.measurementOptions.forwardDirection) { // check if years counting up
               marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable);
-              title = 'Year ' + pts[i].year + ', earlywood';
             } else { // otherwise years counting down & marker assets need to be flipped
               marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable);
-              title = 'Year ' + pts[i].year + ', latewood';
             };
           } else {
             if (Lt.measurementOptions.forwardDirection) {
               marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
-              title = 'Year ' + pts[i].year + ', earlywood';
             } else {
               marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable);
-              title = 'Year ' + pts[i].year + ', latewood';
             }
           }
         } else { //otherwise it's latewood
             if (pts[i].year % 10 == 0) {
               if (Lt.measurementOptions.forwardDirection) { // check if years counting up
                 marker = getMarker(leafLatLng, 'light_red', Lt.basePath, draggable);
-                title = 'Year ' + pts[i].year + ', latewood';
               } else { // otherwise years counting down
                 marker = getMarker(leafLatLng, 'pale_red', Lt.basePath, draggable);
-                title = 'Year ' + pts[i].year + ', earlywood';
               };
             } else {
               if (Lt.measurementOptions.forwardDirection) {
                 marker = getMarker(leafLatLng, 'dark_blue', Lt.basePath, draggable);
-                title = 'Year ' + pts[i].year + ', latewood';
               } else {
                 marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
-                title = 'Year ' + pts[i].year + ', earlywood';
               }
             }
         }
@@ -1048,12 +1116,9 @@ function VisualAsset (Lt) {
       } else {
         marker = getMarker(leafLatLng, 'light_blue', Lt.basePath, draggable);
       }
-      title ='Year ' + pts[i].year;
     };
 
     this.markers[i] = marker;   //add created marker to marker_list
-
-    marker.bindTooltip(title);
 
     //tell marker what to do when being dragged
     this.markers[i].on('drag', (e) => {
@@ -1161,26 +1226,7 @@ function VisualAsset (Lt) {
         };
       };
 
-      this.lines[i] =
-          L.polyline([pts[i - 1].latLng, leafLatLng],
-          {color: color, opacity: opacity, weight: weight});
-
-      if (window.name.includes('popout') == false) {
-          this.lines[i].bindTooltip(title);
-      }
-      this.lines[i].on('mouseover', () => {
-        var markersON = Lt.viewer.hasLayer(Lt.visualAsset.markerLayer);
-        if (markersON == false) {
-          // only show tooltip when points are hidden & in browsing mode
-          this.lines[i].openTooltip();
-        } else if (markersON == true) {
-          this.lines[i].closeTooltip();
-        }
-      });
-      this.lines[i].on('mouseout', () => {
-        this.lines[i].closeTooltip();
-      });
-
+      this.lines[i] = L.polyline([pts[i - 1].latLng, leafLatLng], {color: color, opacity: opacity, weight: weight});
       this.lineLayer.addLayer(this.lines[i]);
 
     }
@@ -1189,6 +1235,8 @@ function VisualAsset (Lt) {
     //add the marker to the marker layer
     this.markerLayer.addLayer(this.markers[i]);
   };
+
+
 }
 
 function AnnotationAsset(Lt) {
