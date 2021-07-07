@@ -756,20 +756,22 @@ function Autoscroll (viewer) {
 function MarkerIcon(color, imagePath) {
 
   var colors = {
-    'light_blue': { 'path': imagePath + 'images/light_blue_rect_circle_dot_crosshair.png',
+    'light_blue' : { 'path': imagePath + 'images/light_blue_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'dark_blue' : { 'path': imagePath + 'images/dark_blue_rect_circle_dot_crosshair.png',
+    'dark_blue'  : { 'path': imagePath + 'images/dark_blue_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'white_start'   : { 'path': imagePath + 'images/white_tick_icon.png',
+    'white_start': { 'path': imagePath + 'images/white_tick_icon.png',
                     'size': [32, 48] },
-    'white_break'   : { 'path': imagePath + 'images/white_rect_circle_dot_crosshair.png',
+    'white_break': { 'path': imagePath + 'images/white_rect_circle_dot_crosshair.png',
                     'size': [32, 48] },
-    'red'       : { 'path': imagePath + 'images/red_dot_icon.png',
+    'red'        : { 'path': imagePath + 'images/red_dot_icon.png',
                     'size': [12, 12] },
     'light_red'  : { 'path': imagePath + 'images/cb_light_red_tick_icon.png',
                     'size': [32, 48] },
-    'pale_red' : { 'path': imagePath + 'images/cb_pale_red_tick_icon.png',
+    'pale_red'   : { 'path': imagePath + 'images/cb_pale_red_tick_icon.png',
                     'size': [32, 48] },
+    'empty'      : { 'path': imagePath + 'images/empty_marker.png',
+                    'size': [0, 0] },
   };
 
   return L.icon({
@@ -975,102 +977,72 @@ function VisualAsset (Lt) {
       Object.values(Lt.data.points).map((e, i) => {
         if (e != undefined) {
           this.newLatLng(Lt.data.points, i, e.latLng);
+
+          // marker tool tips
           if (Lt.data.points[i].year && Lt.measurementOptions.subAnnual) {
-            if (Lt.data.points[i].earlywood) {
-              this.markers[i].bindTooltip(String(Lt.data.points[i].year) + ', early', { direction: 'top' });
-            } else {
-              this.markers[i].bindTooltip(String(Lt.data.points[i].year) + ', late', { direction: 'bottom' });
-            }
+            var descFor = (Lt.data.points[i].earlywood) ? ', early' : ', late';
+            var descBac = (Lt.data.points[i].earlywood) ? ', late' : ', early';
+            var desc = (Lt.preferences.forwardDirection) ? descFor : descBac;
+            this.markers[i].bindTooltip(String(Lt.data.points[i].year) + desc, { direction: 'top' });
           } else if (Lt.data.points[i].year) {
-            this.markers[i].bindTooltip(String(Lt.data.points[i].year), { direction: 'bottom' });
+            this.markers[i].bindTooltip(String(Lt.data.points[i].year), { direction: 'top' });
           } else if (Lt.data.points[i].start) {
-            this.markers[i].bindTooltip('Start', { direction: 'bottom' });
+            this.markers[i].bindTooltip('Start', { direction: 'top' });
           } else if (Lt.data.points[i].break) {
-            this.markers[i].bindTooltip('Break', { direction: 'bottom' });
+            this.markers[i].bindTooltip('Break', { direction: 'top' });
           }
         }
       });
     }
-
-    // FOR MEETING: opportunity to change tooltip title
 
     // bind popups to lines if not popped out
     const pts = JSON.parse(JSON.stringify(Lt.data.points)).filter( pt => pt ); // filter null points
-    function add_tooltip (i, perm) {
-      const lines = Lt.visualAsset.lines;
-      var li, tt, op; // line index, tool tip, options
 
-      if (Lt.measurementOptions.subAnnual && Lt.preferences.forwardDirection) {
-        var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 2) { return true } })();
-      } else {
-        var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 1) { return true } })();
-      }
-
-      if (Lt.preferences.forwardDirection) {
-        var pt = pts[i];
-        li = i;
-      } else {
-        if (pts[i - 1].year) {
-          var pt = pts[i - 1];
-        } else {
-          var pt = pts[i];
+    function create_tooltips_annual () {
+      pts.map((e, i) => {
+        let year = (Lt.preferences.forwardDirection) ? pts[i].year : pts[i].year + 1;
+        if (year) {
+          let first_or_last = (i == 1 || i == pts.length - 1) ? true : false;
+          let options = (year % 50 == 0 || first_or_last) ? { permanent: true, direction: 'top' } : { direction: 'top' };
+          let tooltip = String(year);
+          Lt.visualAsset.lines[i].bindTooltip(tooltip, options);
         }
-      }
+      });
+    }
 
-      li = i;
-      tt = String(pt.year);
+    function add_mouse_events (line, marker) {
+      line.on('mouseover', () => {
+        marker.openTooltip();
+      });
+      line.on('mouseout', () => {
+        marker.closeTooltip();
+      });
+    }
 
-      if (perm && (pt.year % 50 == 0 || first_or_last)) { // tooltips permanent when year ends in 00s, 50s
-        op = { permanent: true, direction: 'bottom' };
-      } else {
-        op = { direction: 'bottom' };
-      }
-
-      return [li, tt, op]
+    function create_tooltips_subAnnual () {
+      pts.map((e, i) => {
+        let year = pts[i].year;
+        let ew = (Lt.preferences.forwardDirection) ? pts[i].earlywood : !pts[i].earlywood;
+        let latLng = L.latLng(pts[i].latLng);
+        if (year && ew) {
+          let first_or_last = (i == 1 || i == pts.length - 2) ? true : false;
+          let options = (year % 50 == 0 || first_or_last) ? { permanent: true, direction: 'top' } : { direction: 'top' };
+          let tooltip = String(year);
+          let inv_marker = getMarker(latLng, 'empty', Lt.basePath, false);
+          inv_marker.bindTooltip(tooltip, options);
+          inv_marker.addTo(Lt.viewer);
+          add_mouse_events(Lt.visualAsset.lines[i], inv_marker);
+          add_mouse_events(Lt.visualAsset.lines[i + 1], inv_marker);
+        }
+      });
     }
 
     if (window.name.includes('popout') == false) {
-      if (Lt.measurementOptions.subAnnual) { // use point lat lng for permanent popups if sub-annual
-        var permanent_tooltip = false;
-        pts.map((pt, i) => {
-          if (Lt.preferences.forwardDirection) {
-            var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 2) { return true } })();
-            var pt_loc = pt.earlywood;
-          } else {
-            var first_or_last = (() => { if (i == 1 || i == Lt.visualAsset.lines.length - 1) { return true } })();
-            var pt_loc = !pt.earlywood;
-          }
-
-          if ((first_or_last || pt.year % 50 == 0) && pt_loc) {
-            var inv_marker = new L.marker(L.latLng(pt.latLng), { opacity: 0 });
-            inv_marker.bindTooltip(String(pt.year), { permanent: true, direction: 'bottom' } );
-            inv_marker.addTo(Lt.viewer);
-          }
-        });
+      if (Lt.measurementOptions.subAnnual) {
+        create_tooltips_subAnnual();
       } else {
-        var permanent = true;
-      }
-
-      this.lines.map((line, i) => {
-        const inv_marker = new L.marker(L.latLng(pts[i].latLng), { opacity: 0 });
-        let line_index, tooltip, options;
-        [line_index, tooltip, options] = add_tooltip(i, permanent);
-
-        if (this.lines[line_index]) {
-          this.lines[line_index].bindTooltip(tooltip, options);
-        }
-
-        this.lines[i].on('mouseover', () => {
-          var markersON = Lt.viewer.hasLayer(Lt.visualAsset.markerLayer);
-          if (markersON == false) {
-            // only show tooltip when points are hidden & in browsing mode
-            this.lines[i].openTooltip();
-          } else if (markersON == true) {
-            this.lines[i].closeTooltip();
-          }
-        });
-
-      });
+        create_tooltips_annual();
+      };
     }
 
   }
