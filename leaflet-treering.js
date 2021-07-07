@@ -1010,13 +1010,15 @@ function VisualAsset (Lt) {
       });
     }
 
-    function add_mouse_events (line, marker) {
-      line.on('mouseover', () => {
-        marker.openTooltip();
-      });
-      line.on('mouseout', () => {
-        marker.closeTooltip();
-      });
+    function add_mouse_events (line, marker, permanent) {
+      if (permanent == false) {
+        line.on('mouseover', () => {
+          marker.openTooltip();
+        });
+        line.on('mouseout', () => {
+          marker.closeTooltip();
+        });
+      }
     }
 
     function create_tooltips_subAnnual () {
@@ -1026,13 +1028,14 @@ function VisualAsset (Lt) {
         let latLng = L.latLng(pts[i].latLng);
         if (year && ew) {
           let first_or_last = (i == 1 || i == pts.length - 2) ? true : false;
+          let perm = (year % 50 == 0 || first_or_last) ? true : false;
           let options = (year % 50 == 0 || first_or_last) ? { permanent: true, direction: 'top' } : { direction: 'top' };
           let tooltip = String(year);
           let inv_marker = getMarker(latLng, 'empty', Lt.basePath, false);
           inv_marker.bindTooltip(tooltip, options);
           inv_marker.addTo(Lt.viewer);
-          add_mouse_events(Lt.visualAsset.lines[i], inv_marker);
-          add_mouse_events(Lt.visualAsset.lines[i + 1], inv_marker);
+          add_mouse_events(Lt.visualAsset.lines[i], inv_marker, perm);
+          add_mouse_events(Lt.visualAsset.lines[i + 1], inv_marker, perm);
         }
       });
     }
