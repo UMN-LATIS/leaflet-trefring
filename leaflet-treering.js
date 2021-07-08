@@ -1188,7 +1188,7 @@ function VisualAsset (Lt) {
     //drawing the line if the previous point exists
     if (pts[i - 1] != undefined && !pts[i].start) {
       var opacity = '.5';
-      var weight = '3';
+      var weight = '5';
       if (pts[i].earlywood || !Lt.measurementOptions.subAnnual ||
           (!pts[i - 1].earlywood && pts[i].break)) {
         var color = '#17b0d4'; // original = #00BCD4 : actual = #5dbcd
