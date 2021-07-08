@@ -907,25 +907,25 @@ function MouseLine (Lt) {
           // path guide for point
           this.layer.addLayer(L.polyline([latLng, latLngOne],
               {interactive: false, color: color, opacity: '.75',
-                weight: '3'}));
+                weight: '5'}));
 
           // path guide for mouse
           this.layer.addLayer(L.polyline([mouseLatLng, latLngTwo],
               {interactive: false, color: color, opacity: '.75',
-                weight: '3'}));
+                weight: '5'}));
 
         };
 
         this.layer.addLayer(L.polyline([latLng, mouseLatLng],
             {interactive: false, color: color, opacity: '.75',
-              weight: '3'}));
+              weight: '5'}));
 
         this.layer.addLayer(L.polyline([topLeftPoint, bottomLeftPoint],
             {interactive: false, color: color, opacity: '.75',
-              weight: '3'}));
+              weight: '5'}));
         this.layer.addLayer(L.polyline([topRightPoint, bottomRightPoint],
             {interactive: false, color: color, opacity: '.75',
-              weight: '3'}));
+              weight: '5'}));
       }
     });
   }
@@ -1010,32 +1010,28 @@ function VisualAsset (Lt) {
       });
     }
 
-    function add_mouse_events (line, marker, permanent) {
-      if (permanent == false) {
-        line.on('mouseover', () => {
-          marker.openTooltip();
-        });
-        line.on('mouseout', () => {
-          marker.closeTooltip();
-        });
-      }
-    }
-
     function create_tooltips_subAnnual () {
       pts.map((e, i) => {
-        let year = pts[i].year;
-        let ew = (Lt.preferences.forwardDirection) ? pts[i].earlywood : !pts[i].earlywood;
+        let forward = Lt.preferences.forwardDirection;
+        let backward = !Lt.preferences.forwardDirection;
+        let year = (forward || (backward && !pts[i].earlywood)) ? pts[i].year : pts[i].year + 1;
+        let ew = (forward) ? pts[i].earlywood : !pts[i].earlywood;
         let latLng = L.latLng(pts[i].latLng);
-        if (year && ew) {
+        if (year) {
           let first_or_last = (i == 1 || i == pts.length - 2) ? true : false;
-          let perm = (year % 50 == 0 || first_or_last) ? true : false;
-          let options = (year % 50 == 0 || first_or_last) ? { permanent: true, direction: 'top' } : { direction: 'top' };
+          let static = (year % 50 == 0 || first_or_last) ? true : false;
+          let options = (static && ew) ? { permanent: true, direction: 'top' } : { direction: 'top' };
           let tooltip = String(year);
-          let inv_marker = getMarker(latLng, 'empty', Lt.basePath, false);
-          inv_marker.bindTooltip(tooltip, options);
-          inv_marker.addTo(Lt.viewer);
-          add_mouse_events(Lt.visualAsset.lines[i], inv_marker, perm);
-          add_mouse_events(Lt.visualAsset.lines[i + 1], inv_marker, perm);
+
+          if (static && ew) { // permanent tooltips are attached to 1st increment of sub-annual measurements
+            let inv_marker = getMarker(latLng, 'empty', Lt.basePath, false);
+            inv_marker.bindTooltip(tooltip, options);
+            inv_marker.addTo(Lt.viewer);
+            inv_marker.openTooltip();
+            options = { direction: 'top' };
+          }
+          tooltip = (pts[i].earlywood) ? tooltip += ', early' : tooltip += ', late';
+          Lt.visualAsset.lines[i].bindTooltip(tooltip, options);
         }
       });
     }
@@ -1119,7 +1115,7 @@ function VisualAsset (Lt) {
         this.lines[i] =
             L.polyline([this.lines[i]._latlngs[0], e.target._latlng],
             { color: this.lines[i].options.color,
-              opacity: '.75', weight: '3'});
+              opacity: '.75', weight: '5'});
         this.lineLayer.addLayer(this.lines[i]);
       }
       if (this.lines[i + 1] !== undefined) {
@@ -1128,7 +1124,7 @@ function VisualAsset (Lt) {
             L.polyline([e.target._latlng, this.lines[i + 1]._latlngs[1]],
             { color: this.lines[i + 1].options.color,
               opacity: '.75',
-              weight: '3'
+              weight: '5'
             });
         this.lineLayer.addLayer(this.lines[i + 1]);
       } else if (this.lines[i + 2] !== undefined && !pts[i + 1].start) {
@@ -1137,7 +1133,7 @@ function VisualAsset (Lt) {
             L.polyline([e.target._latlng, this.lines[i + 2]._latlngs[1]],
             { color: this.lines[i + 2].options.color,
               opacity: '.75',
-              weight: '3' });
+              weight: '5' });
         this.lineLayer.addLayer(this.lines[i + 2]);
       }
     });
