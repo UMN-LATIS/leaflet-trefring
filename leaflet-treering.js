@@ -91,6 +91,7 @@ function LTreering (viewer, basePath, options) {
   this.deletePoint = new DeletePoint(this);
   this.cut = new Cut(this);
   this.insertPoint = new InsertPoint(this);
+  this.shiftDirection = new ShiftDirection(this);
   this.convertToStartPoint = new ConvertToStartPoint(this);
   this.insertZeroGrowth = new InsertZeroGrowth(this);
   this.insertBreak = new InsertBreak(this);
@@ -109,7 +110,7 @@ function LTreering (viewer, basePath, options) {
   this.annotationTools = new ButtonBar(this, [this.annotationAsset.createBtn, this.annotationAsset.deleteBtn], 'comment', 'Manage annotations');
   this.createTools = new ButtonBar(this, [this.createPoint.btn, this.mouseLine.btn, this.zeroGrowth.btn, this.createBreak.btn], 'straighten', 'Create new measurements');
   // add this.insertBreak.btn below once fixed
-  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.convertToStartPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
+  this.editTools = new ButtonBar(this, [this.dating.btn, this.insertPoint.btn, this.shiftDirection.btn, this.convertToStartPoint.btn, this.deletePoint.btn, this.insertZeroGrowth.btn, this.cut.btn], 'edit', 'Edit existing measurements');
   this.ioTools = new ButtonBar(this, ioBtns, 'folder_open', 'Save or upload a record of measurements, annotations, etc.');
   this.settings = new ButtonBar(this, [this.measurementOptions.btn, this.calibration.btn, this.keyboardShortCutDialog.btn], 'settings', 'Measurement preferences & distance calibration');
 
@@ -487,11 +488,14 @@ function MeasurementData (dataObject, Lt) {
     };
 
     var new_points = this.points;
-    var second_points = this.points.slice().splice(i);
+    if (Lt.shiftDirection.shift_forwards) {
+      var second_points = this.points.slice().splice(i);
+    } else {
+      var second_points = [];
+    }
     var k = i;
     var year_adjusted;
     var earlywood_adjusted = true;
-
 
     if (this.points[i - 1] && this.points[i]) {
       if (this.points[i - 1].earlywood && measurementOptions.subAnnual) { // case 1: subAnnual enabled & previous point ew
@@ -514,9 +518,9 @@ function MeasurementData (dataObject, Lt) {
 
       } else { // case 3: subAnnual disabled or previous point lw
         if (direction == forwardInTime) {
-          year_adjusted = this.points[i - 1].year + 1;
+          year_adjusted = this.points[i - 1].year + 1
         } else if (direction == backwardInTime) {
-          year_adjusted = this.points[i].year;
+          year_adjusted = this.points[i].year
         };
       };
     } else {
@@ -527,12 +531,17 @@ function MeasurementData (dataObject, Lt) {
       return;
     };
 
-    new_points[k] = {'start': false, 'skip': false, 'break': false,
+    var pt_info = {'start': false, 'skip': false, 'break': false,
       'year': year_adjusted, 'earlywood': earlywood_adjusted,
       'latLng': latLng};
 
-    var tempK = k;
+    if (Lt.shiftDirection.shift_forwards) {
+      new_points[k] = pt_info;
+    } else { // shift earlier points back one year
+      new_points.splice(i, 0, pt_info)
+    }
 
+    var tempK = k;
     k++;
 
     second_points.map(e => {
@@ -558,6 +567,7 @@ function MeasurementData (dataObject, Lt) {
           };
         };
       };
+
       new_points[k] = e;
       k++;
     });
@@ -567,6 +577,19 @@ function MeasurementData (dataObject, Lt) {
     if (measurementOptions.subAnnual) {
       this.earlywood = !this.earlywood;
     };
+
+    // second_points set to empty array if shifting backwards
+    // thus above did nothing
+    if (second_points.length == 0) {
+      for (var j = i; j >= 0; j--) {
+        var pt = new_points[j];
+        if (pt.year || pt.year == 0) {
+          pt.year--
+        }
+        // Lt.visualAsset.markers[j].bindTooltip('HEY', { permanent: true }).openTooltip();
+      }
+    }
+
     if (!this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) { // add year if forward
       if (direction == forwardInTime) {
         this.year++
@@ -977,20 +1000,6 @@ function VisualAsset (Lt) {
       Object.values(Lt.data.points).map((e, i) => {
         if (e != undefined) {
           this.newLatLng(Lt.data.points, i, e.latLng);
-
-          // marker tool tips
-          if (Lt.data.points[i].year && Lt.measurementOptions.subAnnual) {
-            var descFor = (Lt.data.points[i].earlywood) ? ', early' : ', late';
-            var descBac = (Lt.data.points[i].earlywood) ? ', late' : ', early';
-            var desc = (Lt.preferences.forwardDirection) ? descFor : descBac;
-            this.markers[i].bindTooltip(String(Lt.data.points[i].year) + desc, { direction: 'top' });
-          } else if (Lt.data.points[i].year) {
-            this.markers[i].bindTooltip(String(Lt.data.points[i].year), { direction: 'top' });
-          } else if (Lt.data.points[i].start) {
-            this.markers[i].bindTooltip('Start', { direction: 'top' });
-          } else if (Lt.data.points[i].break) {
-            this.markers[i].bindTooltip('Break', { direction: 'top' });
-          }
         }
       });
     }
@@ -1108,6 +1117,20 @@ function VisualAsset (Lt) {
 
     this.markers[i] = marker;   //add created marker to marker_list
 
+    // marker tool tips
+    if ((pts[i].year || pts[i].year == 0) && Lt.measurementOptions.subAnnual) {
+      var descFor = (pts[i].earlywood) ? ', early' : ', late';
+      var descBac = (pts[i].earlywood) ? ', late' : ', early';
+      var desc = (Lt.preferences.forwardDirection) ? descFor : descBac;
+      this.markers[i].bindTooltip(String(pts[i].year) + desc, { direction: 'top' });
+    } else if (pts[i].year || pts[i].year == 0) {
+      this.markers[i].bindTooltip(String(pts[i].year), { direction: 'top' });
+    } else if (pts[i].start) {
+      this.markers[i].bindTooltip('Start', { direction: 'top' });
+    } else if (Lt.data.points[i].break) {
+      this.markers[i].bindTooltip('Break', { direction: 'top' });
+    }
+
     //tell marker what to do when being dragged
     this.markers[i].on('drag', (e) => {
       if (!pts[i].start) {
@@ -1115,7 +1138,7 @@ function VisualAsset (Lt) {
         this.lines[i] =
             L.polyline([this.lines[i]._latlngs[0], e.target._latlng],
             { color: this.lines[i].options.color,
-              opacity: '.75', weight: '5'});
+              opacity: '.5', weight: '5'});
         this.lineLayer.addLayer(this.lines[i]);
       }
       if (this.lines[i + 1] !== undefined) {
@@ -1123,7 +1146,7 @@ function VisualAsset (Lt) {
         this.lines[i + 1] =
             L.polyline([e.target._latlng, this.lines[i + 1]._latlngs[1]],
             { color: this.lines[i + 1].options.color,
-              opacity: '.75',
+              opacity: '.5',
               weight: '5'
             });
         this.lineLayer.addLayer(this.lines[i + 1]);
@@ -1132,7 +1155,7 @@ function VisualAsset (Lt) {
         this.lines[i + 2] =
             L.polyline([e.target._latlng, this.lines[i + 2]._latlngs[1]],
             { color: this.lines[i + 2].options.color,
-              opacity: '.75',
+              opacity: '.5',
               weight: '5' });
         this.lineLayer.addLayer(this.lines[i + 2]);
       }
@@ -2566,6 +2589,9 @@ function Button(icon, toolTip, enable, disable) {
     if (icon == 'expand') { // only used for mouse line toggle
       var icon = 'compress';
       var title = 'Disable h-bar path guide';
+    } else if (icon == 'last_page') {
+      var icon = 'first_page';
+      var title = 'Shift earlier points back one year'
     } else {
       var icon = 'clear';
       var title = 'Cancel';
@@ -3374,6 +3400,30 @@ function InsertPoint(Lt) {
     Lt.viewer.getContainer().style.cursor = 'default';
   };
 };
+
+/**
+ * Choose direction ponts are shifted when point inserted
+ * @constructor
+ * @param {Ltreering} Lt - Leaflet treering object
+ */
+function ShiftDirection (Lt) {
+  this.shift_forwards = false;
+  this.btn = new Button(
+    'last_page',
+    'Shift earlier points forward on year',
+    () => {
+            this.shift_forwards = true;
+            this.btn.state('active');
+            this.active = true;
+          },
+    () => {
+            this.shift_forwards = false;
+            this.btn.state('inactive');
+            this.active = false;
+          }
+  );
+
+}
 
 /**
  * Insert a new start point where a measurement point exists
