@@ -14,7 +14,7 @@
  * @param {string} basePath - this is a path to the treering image folder
  * @param {object} options -
  */
-function LTreering (viewer, basePath, options) {
+function LTreering (viewer, basePath, options, base_layer, gl_layer) {
   this.viewer = viewer;
   this.basePath = basePath;
 
@@ -116,8 +116,8 @@ function LTreering (viewer, basePath, options) {
   this.tools = [this.viewData, this.calibration, this.dating, this.createPoint, this.createBreak, this.deletePoint, this.cut, this.insertPoint, this.convertToStartPoint, this.insertZeroGrowth, this.insertBreak, this.annotationAsset, this.imageAdjustment, this.measurementOptions];
 
   this.baseLayer = {
-    'Tree Ring': baseLayer,
-    'GL Layer': layer
+    'Tree Ring': base_layer,
+    'GL Layer': gl_layer
   };
 
   this.overlay = {
