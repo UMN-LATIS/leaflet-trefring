@@ -487,7 +487,7 @@ function MeasurementData (dataObject, Lt) {
       return;
     };
 
-    var new_points = this.points;
+    var new_points = this.points.slice().filter( pt => pt );
     if (Lt.shiftDirection.shift_forwards) {
       var second_points = this.points.slice().splice(i);
     } else {
@@ -544,6 +544,7 @@ function MeasurementData (dataObject, Lt) {
     var tempK = k;
     k++;
 
+    // second_points set to empty array if shifting backwards thus below does nothing
     second_points.map(e => {
       if(!e) {
        return;
@@ -572,25 +573,38 @@ function MeasurementData (dataObject, Lt) {
       k++;
     });
 
+    // loops for shifting earlier points backwards
+    if (second_points.length == 0) {
+      for (var j = i; j >= 0; j--) {
+        var pt = new_points[j];
+        for (var l = j + 1; l < new_points.length; l++) { // find next measurement point, not start or break point
+          var nextPt_withYear = new_points[l];
+          if (nextPt_withYear.year) {
+            break;
+          }
+        }
+        if (pt.year || pt.year == 0) {
+          if (measurementOptions.subAnnual) {
+            pt.earlywood = (nextPt_withYear.earlywood) ? false : true;
+            if (direction == forwardInTime) {
+              pt.earlywood ? pt.year = nextPt_withYear.year : pt.year--;
+            } else if (direction == backwardInTime) {
+              pt.earlywood ? pt.year = nextPt_withYear.year : pt.year++;
+            }
+          } else { // annual measurment conditions
+            (direction == forwardInTime) ? pt.year-- : pt.year++;
+          }
+        }
+      }
+    }
+
     this.points = new_points;
-    this.index = k;
+    this.index = new_points.length;
     if (measurementOptions.subAnnual) {
       this.earlywood = !this.earlywood;
     };
 
-    // second_points set to empty array if shifting backwards
-    // thus above did nothing
-    if (second_points.length == 0) {
-      for (var j = i; j >= 0; j--) {
-        var pt = new_points[j];
-        if (pt.year || pt.year == 0) {
-          pt.year--
-        }
-        // Lt.visualAsset.markers[j].bindTooltip('HEY', { permanent: true }).openTooltip();
-      }
-    }
-
-    if (!this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) { // add year if forward
+    if (this.points[this.index - 1] && !this.points[this.index - 1].earlywood || !measurementOptions.subAnnual) { // add year if forward
       if (direction == forwardInTime) {
         this.year++
       } else {
@@ -1121,7 +1135,7 @@ function VisualAsset (Lt) {
     if ((pts[i].year || pts[i].year == 0) && Lt.measurementOptions.subAnnual) {
       var descFor = (pts[i].earlywood) ? ', early' : ', late';
       var descBac = (pts[i].earlywood) ? ', late' : ', early';
-      var desc = (Lt.preferences.forwardDirection) ? descFor : descBac;
+      var desc = (Lt.measurementOptions.forwardDirection) ? descFor : descBac;
       this.markers[i].bindTooltip(String(pts[i].year) + desc, { direction: 'top' });
     } else if (pts[i].year || pts[i].year == 0) {
       this.markers[i].bindTooltip(String(pts[i].year), { direction: 'top' });
