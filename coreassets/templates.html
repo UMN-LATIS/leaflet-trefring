@@ -29,8 +29,12 @@
    </div>
 </script>
 
+<script id="font-awesome-icon-template" type="text/x-handlebars-template">
+  <i class= "{{icon_class}}" aria-hidden="true"></i>
+</script>
+
 <script id="button-icon-template" type="text/x-handlebars-template">
-  <i class="material-icons md-18"> {{icon}} </i>
+  <i class="material-icons md-18"> {{icon_string}} </i>
 </script>
 
 <script id="calibration-template" type="text/x-handlebars-template">
@@ -39,6 +43,14 @@
 
 <script id="dating-template" type="text/x-handlebars-template">
   <input type="number" style="border:none;width:50px;" value= {{date_year}} id="year_input"></input>
+</script>
+
+<script id="start-point-popup-template" type="text/x-handlebars-template">
+  <input type="number" style="border:none; width:50px;" value="0" id="year_input"></input>
+</script>
+
+<script id="view-data-default-template" type="text/x-handlebars-template">
+  <h5>No Measurement Data</h5>
 </script>
 
 <script id="string-setup-data-template" type="text/x-handlebars-template">
@@ -53,6 +65,10 @@
     <i class="material-icons md-18-data-view">delete</i></button></div><table><tr>
   <th style="width: 45%;">Year<br><br></th>
   <th style="width: 70%;">Width (mm)</th></tr>
+</script>
+
+<script id="concat-string-content-A-template" type="text/x-handlebars-template">
+  <tr><td> {{y}}-</td><td>N/A</td></tr>
 </script>
 
 <script id="string-setup-no-data-template" type="text/x-handlebars-template">
@@ -119,14 +135,14 @@
   <div><p id="meta-data-bottom-text" class="meta-data-text-box"></p></div>
 </script>
 
-<script id="keyboard-shortcuts-dialog-template" type="text/x-handlebars-template">
-  <div id="keyboardShortcutDiv"></div>
-</script>
-
 <script id="assign-row-color-subannual-template" type="text/x-handlebars-template">
-  <tr style="color:' + row_color + ';">
-    <td> {{row_year}} {{row_wood}} </td><td> {{length}} </td></tr>
+  <tr style="color:{{row_color}};"><td> {{row_year}} {{row_wood}} </td><td> {{length}} </td></tr>
 </script>
 
-<script id="-template" type="text/x-handlebars-template">
+<script id="assign-row-color-annual-template" type="text/x-handlebars-template">
+  <tr style="color:{{row_color}};"><td> {{row_year}} </td><td> {{length}} </td></tr>
+</script>
+
+<script id="empty-div-template" type="text/x-handlebars-template">
+  <div id="{{div_name}}"></div>
 </script>

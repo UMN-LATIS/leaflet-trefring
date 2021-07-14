@@ -1517,7 +1517,13 @@ function AnnotationAsset(Lt) {
 
       var optionDeleteBtn = document.createElement('button');
       optionDeleteBtn.className = 'annotation-btn';
-      optionDeleteBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+
+      // handlebars from templates.html
+      let content = document.getElementById("font-awesome-icon-template").innerHTML;
+      let template = Handlebars.compile(content);
+      let html = template({ icon_class: "fa fa-times" });
+
+      optionDeleteBtn.innerHTML = html;
       $(optionDeleteBtn).click(() => {
         // remove div & option description/code from this.description & this.code
         let descriptionTextarea = newOptionDiv.getElementsByTagName('DIV')[0].getElementsByTagName('TEXTAREA')[0];
@@ -1687,7 +1693,13 @@ function AnnotationAsset(Lt) {
 
       let deleteAttributeBtn = document.createElement('button');
       deleteAttributeBtn.className = 'annotation-btn attribute-btn';
-      deleteAttributeBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+
+      // handlebars from templates.html
+      let content_A = document.getElementById("font-awesome-icon-template").innerHTML;
+      let template_A = Handlebars.compile(content_A);
+      let html_A = template_A({ icon_class: "fa fa-times" });
+
+      deleteAttributeBtn.innerHTML = html_A;
       $(deleteAttributeBtn).click((e) => {
         var divToDelete = e.target.parentNode.parentNode; // user will click <i> image not button
         for (let checkboxDiv of divToDelete.getElementsByTagName('DIV')) {
@@ -1713,7 +1725,13 @@ function AnnotationAsset(Lt) {
 
       let editAttributeBtn = document.createElement('button');
       editAttributeBtn.className = 'annotation-btn attribute-btn';
-      editAttributeBtn.innerHTML = '<i class="fa fa-pencil" aria-hidden="true"></i>';
+
+      // handlebars from templates.html
+      let content_B = document.getElementById("font-awesome-icon-template").innerHTML;
+      let template_B = Handlebars.compile(content_B);
+      let html_B = template_B({ icon_class: "fa fa-pencil" });
+
+      editAttributeBtn.innerHTML = html_B;
       $(editAttributeBtn).click((e) => {
         // edits saved with createAttributesDialog save button
         this.createAttributesDialog(attributeIndex);
@@ -1886,7 +1904,12 @@ function AnnotationAsset(Lt) {
 
     // how marker reacts when moussed over
     $(this.markers[index]).mouseover(() => {
-      this.markers[index].bindPopup('<div id="mouseover-popup-div"></div>', { minWidth:160, closeButton:false }).openPopup();
+      // handlebars from templates.html
+      let content = document.getElementById("empty-div-template").innerHTML;
+      let template = Handlebars.compile(content);
+      let html = template( {div_name: "mouseover-popup-div"} )
+
+      this.markers[index].bindPopup(html, { minWidth:160, closeButton:false }).openPopup();
 
       var popupDiv = document.getElementById('mouseover-popup-div');
 
@@ -2089,7 +2112,13 @@ function AnnotationAsset(Lt) {
 
     var copyLinkBtn = document.createElement('button');
     copyLinkBtn.className = 'annotation-link-btn';
-    copyLinkBtn.innerHTML = '<i class="fa fa-clone" aria-hidden="true"></i>';
+
+    // handlebars from templates.html
+    let content_C = document.getElementById("font-awesome-icon-template").innerHTML;
+    let template_C = Handlebars.compile(content_C);
+    let html_C = template_C({ icon_class: "fa fa-clone" });
+
+    copyLinkBtn.innerHTML = html_C;
     $(copyLinkBtn).click(() => {
       window.copyToClipboard(parsedURL);
     });
@@ -2134,7 +2163,13 @@ function AnnotationAsset(Lt) {
     // add a new attribute options
     var openAttributeEditButton = document.createElement('button');
     openAttributeEditButton.className = 'annotation-btn';
-    openAttributeEditButton.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+
+    // handlebars from templates.html
+    let content = document.getElementById("font-awesome-icon-template").innerHTML;
+    let template = Handlebars.compile(content);
+    let html = template({ icon_class: "fa fa-plus" });
+
+    openAttributeEditButton.innerHTML = html;
     $(openAttributeEditButton).click(() => {
       if (this.dialogAttributesWindow) {
         this.dialogAttributesWindow.destroy();
@@ -2553,9 +2588,15 @@ function ScaleBarCanvas (Lt) {
  */
 function Button(icon, toolTip, enable, disable) {
   var states = [];
+
+  // handlebars from templates.html
+  let content_A = document.getElementById("button-icon-template").innerHTML;
+  let template_A = Handlebars.compile(content_A);
+  let html_A = template_A({ icon_string: icon });
+
   states.push({
     stateName: 'inactive',
-    icon: '<i class="material-icons md-18">' + icon + '</i>',
+    icon: html_A,
     title: toolTip,
     onClick: enable
   });
@@ -2567,9 +2608,15 @@ function Button(icon, toolTip, enable, disable) {
       var icon = 'clear';
       var title = 'Cancel';
     }
+
+    // handlebars from templates.html
+    let content_B = document.getElementById("button-icon-template").innerHTML;
+    let template_B = Handlebars.compile(content_B);
+    let html_B = template_B({ icon_string: icon });
+
     states.push({
       stateName: 'active',
-      icon: '<i class="material-icons md-18">' + icon + '</i>',
+      icon: html_B,
       title: title,
       onClick: disable
     })
@@ -2588,11 +2635,21 @@ function Button(icon, toolTip, enable, disable) {
 function ButtonBar(Lt, btns, icon, toolTip) {
   this.btns = btns;
 
+  // handlebars from templates.html
+  let content_A = document.getElementById("button-icon-template").innerHTML;
+  let template_A = Handlebars.compile(content_A);
+  let html_A = template_A({ icon_string: icon });
+
+  // handlebars from templates.html
+  let content_B = document.getElementById("button-icon-template").innerHTML;
+  let template_B = Handlebars.compile(content_B);
+  let html_B = template_B({ icon_string: "expand_less" });
+
   this.btn = L.easyButton({
     states: [
       {
         stateName: 'collapse',
-        icon: '<i class="material-icons md-18">'+icon+'</i>',
+        icon: html_A,
         title: toolTip,
         onClick: () => {
           Lt.disableTools();
@@ -2602,7 +2659,7 @@ function ButtonBar(Lt, btns, icon, toolTip) {
       },
       {
         stateName: 'expand',
-        icon: '<i class="material-icons md-18">expand_less</i>',
+        icon: html_B,
         title: 'Collapse',
         onClick: () => {
           this.collapse();
@@ -2745,9 +2802,11 @@ function Redo(Lt) {
  */
 function Calibration(Lt) {
   this.active = false;
-  this.popup = L.popup({closeButton: false}).setContent(
-              '<input type="number" style="border:none; width:50px;"' +
-              'value="10" id="length"></input> mm')
+
+  // handlebars from templates.html
+  let content = document.getElementById("calibration-template").innerHTML;
+
+  this.popup = L.popup({closeButton: false}).setContent(content)
   this.btn = new Button(
     'space_bar',
     'Calibrate pixels per millimeter by measuring a known distance\n(This will override image resolution metadata from Elevator!)',
@@ -2859,10 +2918,14 @@ function Dating(Lt) {
    */
   Dating.prototype.action = function(i) {
     if (Lt.data.points[i].year != undefined) {
+
+      // handlebars from templates.html
+      let content = document.getElementById("dating-template").innerHTML;
+      let template = Handlebars.compile(content);
+      let html = template({ date_year: Lt.data.points[i].year });
+
       var popup = L.popup({closeButton: false})
-          .setContent(
-          '<input type="number" style="border:none;width:50px;" value="' +
-          Lt.data.points[i].year + '" id="year_input"></input>')
+          .setContent(html)
           .setLatLng(Lt.data.points[i].latLng)
           .openOn(Lt.viewer);
 
@@ -3000,9 +3063,11 @@ function CreatePoint(Lt) {
 
       if (this.startPoint) {
         if (Lt.data.points.length <= 1) { // only pop up for first start point
-          var popup = L.popup({closeButton: false}).setContent(
-              '<input type="number" style="border:none; width:50px;" \
-              value="0" id="year_input"></input>')
+
+          // handlebars from templates.html
+          let content = document.getElementById("start-point-popup-template").innerHTML;
+
+          var popup = L.popup({closeButton: false}).setContent(content)
               .setLatLng(latLng)
               .openOn(Lt.viewer);
 
@@ -3563,6 +3628,8 @@ function InsertBreak(Lt) {
         Lt.visualAsset.newLatLng(new_points, k, latLng);
         k++;
 
+        // TODO: use handlebars once fixed
+
         var popup = L.popup({closeButton: false}).setContent(
             '<input type="number" style="border:none;width:50px;"' +
             'value="' + second_points[0].year +
@@ -3641,8 +3708,11 @@ function ViewData(Lt) {
     () => { this.disable() }
   );
 
+  // handlebars from templates.html
+  let content = document.getElementById("view-data-default-template").innerHTML;
+
   this.dialog = L.control.dialog({'size': [200, 235], 'anchor': [50, 0], 'initOpen': false})
-    .setContent('<h5>No Measurement Data</h5>')
+    .setContent(content)
 
     .addTo(Lt.viewer);
 
@@ -4120,24 +4190,10 @@ function ViewData(Lt) {
     if (pts[0] != undefined) {
       var y = pts[1].year;
 
-      stringSetup = '<div class ="dataWindow"><div class="button-set">' +
-      '<button id="copy-data-button"' +
-      'class="icon-button" title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      '><i class="material-icons md-18-data-view">content_copy</i></button><br>  ' +
-      '<button id="download-tab-button"' +
-      'class ="text-button" title="Download Measurements, Tab Delimited Format"' +
-      '>TAB</button><br>  '+
-      '<button id="download-csv-button"' +
-      'class="text-button" title="Download Measurements, Common Separated Column Format"' +
-      '>CSV</button><br>  '+
-      '<button id="download-ltrr-button"' +
-      'class ="text-button" title="Download Measurements, LTRR Ring Width Format"' +
-      '>RWL</button><br>  '+
-      '<button id="delete-button"' +
-      'class="icon-button delete" title="Delete All Measurement Point Data"' +
-      '><i class="material-icons md-18-data-view">delete</i></button></div><table><tr>' +
-      '<th style="width: 45%;">Year<br><br></th>' +
-      '<th style="width: 70%;">Width (mm)</th></tr>';
+      // handlebars from templates.html
+      let content_A = document.getElementById("string-setup-data-template").innerHTML;
+
+      stringSetup = content_A;
 
       var break_point = false;
       var last_latLng;
@@ -4167,8 +4223,12 @@ function ViewData(Lt) {
           break_point = true;
         } else {
           while (e.year > y) {
-            stringContent = stringContent.concat('<tr><td>' + y +
-                '-</td><td>N/A</td></tr>');
+            // handlebars from templates.html
+            let content_B = document.getElementById("concat-string-content-A-template").innerHTML;
+            let template_B = Handlebars.compile(content_B);
+            let html_B = template_B( {y: y} )
+
+            stringContent = stringContent.concat(html_B);
             y++;
           }
           length = Math.round(this.distance(last_latLng, e.latLng) * 1000) / 1000;
@@ -4241,20 +4301,10 @@ function ViewData(Lt) {
       });
       this.dialog.setContent(stringSetup + stringContent + '</table><div>');
     } else {
-      stringSetup = '<div class ="button-set"><button id="copy-data-button" class="icon-button disabled"  title="Copy Data to Clipboard, Tab Delimited Column Format"'+
-      'disabled><i class="material-icons md-18-data-view">content_copy</i></button><br>'+
-      '<button id="download-ltrr-button"' +
-      'class ="text-button disabled" title="Download Measurements, LTRR Ring Width Format"' +
-      'disabled>RWL</button><br>'+
-      '<button id="download-csv-button" class="text-button disabled" title="Download Measurements, Common Separated Column Format"' +
-      'disabled>CSV</button><br>'+
-      '<button id="download-tab-button"' +
-      'class ="text-button disabled" title="Download Measurements, Tab Delimited Format"' +
-      'disabled>TAB</button><br>'+
-      '<button id="delete-button"' +
-      'class="icon-button delete" title="Delete All Measurement Point Data"' +
-      '><i class="material-icons md-18-data-view">delete</i></button></div>' +
-          '<h5>No Measurement Data</h5>';
+      // handlebars from templates.html
+      let content_D = document.getElementById("string-setup-no-data-template").innerHTML;
+
+      stringSetup = content_D;
       this.dialog.setContent(stringSetup);
     }
     this.dialog.lock();
@@ -4283,15 +4333,10 @@ function ViewData(Lt) {
          }
        );
     $('#delete-button').click(() => {
-      this.dialog.setContent(
-          '<p>This action will delete all data points.' +
-          'Annotations will not be effected.' +
-          'Are you sure you want to continue?</p>' +
-          '<p><button id="confirm-delete"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>confirm</button><button id="cancel-delete"' +
-          'class="mdc-button mdc-button--unelevated mdc-button-compact"' +
-          '>cancel</button></p>');
+      // handlebars from templates.html
+      let content_E = document.getElementById("data-view-delete-template").innerHTML;
+
+      this.dialog.setContent(content_E);
 
       $('#confirm-delete').click(() => {
         Lt.undo.push();
@@ -4361,29 +4406,14 @@ function ImageAdjustment(Lt) {
     () => { this.disable() }
   );
 
+  // handlebars from templates.html
+  let content = document.getElementById("image-adjustment-template").innerHTML;
+
   this.dialog = L.control.dialog({
     'size': [340, 280],
     'anchor': [50, 5],
     'initOpen': false
-  }).setContent(
-    '<div><label style="text-align:center;display:block;">Brightness</label> \
-    <input class="imageSlider" id="brightness-slider" value=100 min=0 max=300 type=range> \
-    <label style="text-align:center;display:block;">Contrast</label> \
-    <input class="imageSlider" id="contrast-slider" type=range min=50 max=350 value=100></div> \
-    <label style="text-align:center;display:block;">Saturation</label> \
-    <input class="imageSlider" id="saturation-slider" type=range min=0 max=350 value=100></div> \
-    <label style="text-align:center;display:block;">Hue Rotation</label> \
-    <input class="imageSlider" id="hue-slider" type=range min=0 max=360 value=0> \
-     <label style="text-align:center;display:block;">Sharpness</label> \
-    <input class="imageSlider" id="sharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <label style="text-align:center;display:block;">Emboss</label> \
-    <input class="imageSlider" id="emboss-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <label style="text-align:center;display:block;">edgeDetect</label> \
-    <input class="imageSlider" id="edgeDetect-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <label style="text-align:center;display:block;">unsharpen</label> \
-    <input class="imageSlider" id="unsharpness-slider" value=0 min=0 max=1 step=0.05 type=range> \
-    <div class = "checkbox" style = "text-align:center; margin-left:auto; margin-right:auto; margin-top: 5px;display:block;"> <label> <input type = "checkbox" id = "invert-checkbox" > Invert </label></div> \
-    <button id="reset-button" style="margin-left:auto; margin-right:auto; margin-top: 5px;display:block;" class="mdc-button mdc-button--unelevated mdc-button-compact">reset</button></div>').addTo(Lt.viewer);
+  }).setContent(content).addTo(Lt.viewer);
 
   /**
    * Update the image filter to reflect slider values
@@ -4529,23 +4559,14 @@ function MeasurementOptions(Lt) {
   * @function displayDialog
   */
 MeasurementOptions.prototype.displayDialog = function () {
+  // handlebars from templates.html
+  let content = document.getElementById("measurement-options-dialog-template").innerHTML;
+
   return L.control.dialog({
      'size': [510, 420],
      'anchor': [50, 5],
      'initOpen': false
-   }).setContent(
-     '<div><h4 style="text-align:left">Select Preferences for Time-Series Measurement:</h4></div> \
-     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><h4>Measurement Direction:</h4></div> \
-      <div><input type="radio" name="direction" id="forward_radio"> Measure forward in time (e.g., 1257 &rArr; 1258 &rArr; 1259 ... 2020)</input> \
-       <br><input type="radio" name="direction" id="backward_radio"> Measure backward in time (e.g., 2020 &rArr; 2019 &rArr; 2018 ... 1257)</input></div> \
-     <br> \
-      <div><h4>Measurement Interval:</h4></div> \
-      <div><input type="radio" name="increment" id="annual_radio"> One increment per year (e.g., total-ring width)</input> \
-       <br><input type="radio" name="increment" id="subannual_radio"> Two increments per year (e.g., earlywood- & latewood-ring width)</input></div> \
-     <hr style="height:2px;border-width:0;color:gray;background-color:gray"> \
-      <div><p style="text-align:right;font-size:20px">&#9831; &#9831; &#9831;  &#9831; &#9831; &#9831; &#9831; &#9831; &#9831; &#9831;<button type="button" id="confirm-button" class="preferences-button"> Save & close </button></p></div> \
-      <div><p style="text-align:left;font-size:12px">Please note: Once measurements are initiated, these preferences are set. To modify, delete all existing points for this asset and initiate a new set of measurements.</p></div>').addTo(Lt.viewer);
+   }).setContent(content).addTo(Lt.viewer);
   };
 
   /**
@@ -4822,14 +4843,19 @@ function MetaDataText (Lt) {
   MetaDataText.prototype.initialize = function () {
     if (window.name.includes('popout')) {
       var metaDataTopDiv = document.createElement('div');
-      metaDataTopDiv.innerHTML =
-                '<div><p id="meta-data-top-text" class="meta-data-text-box"></p></div>'
+
+      // handlebars from templates.html
+      let content_A = document.getElementById("meta-data-top-div-template").innerHTML;
+
+      metaDataTopDiv.innerHTML = content_A;
       document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataTopDiv);
     };
 
+    // handlebars from templates.html
+    let content_B = document.getElementById("meta-data-bottom-div-template").innerHTML;
+
     var metaDataBottomDiv = document.createElement('div');
-    metaDataBottomDiv.innerHTML =
-              '<div><p id="meta-data-bottom-text" class="meta-data-text-box"></p></div>'
+    metaDataBottomDiv.innerHTML = content_B;
     document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(metaDataBottomDiv);
   };
 
@@ -5182,7 +5208,12 @@ function KeyboardShortCutDialog (Lt) {
       this.dialog.setContent('');
     };
 
-    this.dialog.setContent('<div id="keyboardShortcutDiv"></div>');
+    // handlebars from template.html
+    let content = document.getElementById("empty-div-template").innerHTML;
+    let template = Handlebars.compile(content);
+    let html = template( {div_name: "keyboardShortcutDiv"} );
+
+    this.dialog.setContent(html);
 
     let mainDiv = document.getElementById('keyboardShortcutDiv');
 
@@ -5360,12 +5391,23 @@ function Helper(Lt) {
          }
        }
 
-       stringContent = '<tr style="color:' + row_color + ';">';
-       stringContent = stringContent.concat('<td>' + e.year + wood + '</td><td>'+ lengthAsAString + '</td></tr>');
+       // handlebars from template.html
+       let content_A = document.getElementById("assign-row-color-subannual-template").innerHTML;
+       let template_A = Handlebars.compile(content_A);
+       let html_A = template_A( {row_color: row_color, row_year: e.year, row_wood: wood, length: lengthAsAString} );
+
+       stringContent = html_A;
      } else {
        y++;
-       row_color = e.year%10===0? 'red':'#00d2e6';
-       stringContent = ('<tr style="color:' + row_color +';">' + '<td>' + e.year + '</td><td>'+ lengthAsAString + '</td></tr>');
+
+       row_color = e.year % 10===0 ? 'red':'#00d2e6';
+
+       // handlebars from template.html
+       let content_B = document.getElementById("assign-row-color-annual-template").innerHTML;
+       let template_B = Handlebars.compile(content_B);
+       let html_B = template_B( {row_color: row_color, row_year: e.year, length: lengthAsAString} );
+
+       stringContent = html_B;
      }
      return stringContent;
    }

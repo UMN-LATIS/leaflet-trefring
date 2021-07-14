@@ -133,9 +133,9 @@ void main(void){
 
 		// add templates to body before interface loaded
 		$.get("templates.html", function (data) {
-			$("body").append(data)
+			$("body").append(data);
+			var treering = new LTreering(map, "../", coreData);
+			treering.loadInterface();
 		});
 
-		var treering = new LTreering(map, "../", coreData);
-		treering.loadInterface();
 	</script>
