@@ -2352,7 +2352,6 @@ function ScaleBarCanvas (Lt) {
   var nativeWindowWidth = Lt.viewer.getContainer().clientWidth;
 
   // handlebars from template.html
-  let a = document.getElementById("scale-bar-template")
   let content = document.getElementById("scale-bar-template").innerHTML;
   let template = Handlebars.compile(content);
   let html = template( {width: nativeWindowWidth} );
