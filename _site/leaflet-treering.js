@@ -1406,20 +1406,16 @@ function AnnotationAsset(Lt) {
     let size = this.annotationDialogSize || [284, 265];
     let anchor = this.annotationDialogAnchor || [50, 5];
 
+    // handlebars from template.html
+    let content = document.getElementById("annotation-dialog-window-template").innerHTML;
+
     this.dialogAnnotationWindow = L.control.dialog({
       'minSize': [284, 265],
       'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
       'size': size,
       'anchor': anchor,
       'initOpen': true
-    }).setContent(
-      '<div id="tab" class="tab"> \
-        <button class="tabLinks" id="summary-btn">Summary</button> \
-        <button class="tabLinks" id="edit-summary-btn">Edit</button> \
-      </div> \
-      <div id="summary-tab" class="tabContent"></div> \
-      <div id="edit-summary-tab" class="tabContent"></div>',
-    ).addTo(Lt.viewer);
+    }).setContent(content).addTo(Lt.viewer);
 
     // remember annotation size/location each times its resized/moved
     $(this.dialogAnnotationWindow._map).on('dialog:resizeend', () => { this.annotationDialogSize = this.dialogAnnotationWindow.options.size } );
@@ -1491,23 +1487,16 @@ function AnnotationAsset(Lt) {
     let size = this.attributesDialogSize || [273, 215];
     let anchor = this.attributesDialogAnchor || [50, 294];
 
+    // handlebars from template.html
+    let content = document.getElementById("attributes-dialog-window-template").innerHTML;
+
     this.dialogAttributesWindow = L.control.dialog({
       'minSize': [273, 215],
       'maxSize': [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
       'size': size,
       'anchor': anchor,
       'initOpen': true
-    }).setContent(
-      '<div id="attributes-options"> \
-        <label class="attribute-label" id="title-label" for="title-input">Title: </label> \
-        <button class="annotation-btn" id="create-option"><i class="fa fa-plus" aria-hidden="true"></i></button> \
-        <textarea class="attribute-textbox" id="title-input" placeholder="Title."></textarea> \
-      </div> \
-      <hr id="attributes-hr"> \
-      <div> \
-        <p id="attributes-warning"> Use ESC to exit without saving. </p> \
-      </div>'
-    ).addTo(Lt.viewer);
+    }).setContent(content).addTo(Lt.viewer);
 
     // remember annotation size/location each times its resized/moved
     $(this.dialogAttributesWindow._map).on('dialog:resizeend', () => { this.attributesDialogSize = this.dialogAttributesWindow.options.size; console.log(this.attributesDialogSize);} );
@@ -2088,7 +2077,12 @@ function AnnotationAsset(Lt) {
     };
 
     var linkTitle = document.createElement('h5');
-    linkTitle.innerHTML = '<a href=' + String(parsedURL) + '> Annotation GeoLink</a>';
+    // handlebars from template.html
+    let content = document.getElementById("link-template").innerHTML;
+    let template = Handlebars.compile(content);
+    let html = template( {url: String(parsedURL), title: 'Annotation GeoLink'} );
+
+    linkTitle.innerHTML = html;
     linkTitle.className = 'annotation-title';
     linkTitle.id = 'link-title';
     summaryLinkDiv.appendChild(linkTitle)
@@ -2322,10 +2316,13 @@ function ScaleBarCanvas (Lt) {
   var scaleBarDiv = document.createElement('div');
   var nativeWindowWidth = Lt.viewer.getContainer().clientWidth;
 
-  scaleBarDiv.innerHTML =
-      '<div id="scale-bar-div"> \
-       <canvas id="scale-bar-canvas" width="' + nativeWindowWidth + '" height="100"></canvas> \
-       </div>';
+  // handlebars from template.html
+  let a = document.getElementById("scale-bar-template")
+  let content = document.getElementById("scale-bar-template").innerHTML;
+  let template = Handlebars.compile(content);
+  let html = template( {width: nativeWindowWidth} );
+
+  scaleBarDiv.innerHTML = html;
   document.getElementsByClassName('leaflet-bottom leaflet-left')[0].appendChild(scaleBarDiv);
 
   var canvas = document.getElementById("scale-bar-canvas");
