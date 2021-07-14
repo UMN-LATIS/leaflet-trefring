@@ -12081,29 +12081,9 @@ function Popout(Lt) {
   }
 
   PopoutPlots.prototype.updatePlot = function (new_data) {
-    var div = Lt.popoutPlots.win.document.getElementById('plot');
-
-    var w = div.clientWidth;
-    var h = div.clientHeight;
-
-    // need layout w/ specified width & height or visual flash occurs
-    var update_layout = {
-     title: Lt.meta.assetName + ' Time Series',
-     autosize: false,
-     width: w,
-     height: h,
-     xaxis: {
-       title: 'Year',
-     },
-     yaxis: {
-       title: 'Width (mm)',
-     },
-     showlegend: false,
-    }
-
-    Plotly.react(div, new_data, update_layout, this.config);
+    // must use plotly function in plot.html or bugs occur
+    this.win.react(new_data, this.layout, this.config);
     this.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
-    this.plot_layout_static = true;
     this.shownData = new_data;
 
     // recolor color inputs to match data update
@@ -12122,7 +12102,6 @@ function Popout(Lt) {
   PopoutPlots.prototype.createListeners = function () {
     this.data_pre_highlight_hover = [];
     this.data_pre_highlight_checkbox = [];
-    this.plot_layout_static = false;
 
     function updateData (elem, new_data, option, change) {
       this.shownData = new_data;
@@ -12153,10 +12132,6 @@ function Popout(Lt) {
       var wrapperWidth = $(wrapperDiv).width();
       $(plotDiv).width( wrapperWidth - $(optionsDiv).width() - (5 * wrapperWidth / 100) );
 
-      if (Lt.popoutPlots.plot_layout_static) {
-        Plotly.relayout(plotDiv, this.layout); // reset layout if set static by updatePlot()
-        Lt.popoutPlots.plot_layout_static = false;
-      }
       Lt.popoutPlots.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
 
     });
