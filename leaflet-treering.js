@@ -3070,12 +3070,14 @@ function Popout(Lt) {
       spline_data.push(pt_obj);
     }
 
+    console.log(spline_data)
+
     var year_freq = 20;
     var lambda = 9.9784 * Math.log(year_freq) + 3.975;
 
-    const spline = smoothingSpline(spline_data, { lambda: lambda });
+    // const spline = smoothingSpline(spline_data, { lambda: lambda });
+    // spline.points = [ {x: x0, y: y0}, {x: x1, y: y1}, ... ]
 
-    console.log(spline);
 
   }
 
