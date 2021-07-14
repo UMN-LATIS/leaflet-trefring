@@ -2995,262 +2995,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.spline = function (x, y, nyrs = y.length / 2, f = 0.5) {
-    // based on ffcsaps function for cubic splines in dplR (R package)
-
-    // base R functions below
-    // returns an array of the indexes which would sort the inputted array
-    function order (a) {
-      var a_sort = JSON.parse(JSON.stringify(a)).sort();
-      var a_index = [];
-      for (let i of a_sort) {
-        let index = a.indexOf(i);
-        a_index.push(index);
-      }
-      return a_index
-    }
-
-    // returns array of values which are greater than inputted integer from inputted array
-    function pmax (a, int) {
-      var a_max = [];
-      for (let i of a) {
-        if (i > int) {
-          a_max.push(i);
-        } else {
-          a_max.push(int);
-        }
-      }
-      return a_max
-    }
-
-    // returns array with inputted array ordered by inputted index array
-    // ie : a = [4, 5, 6], ind = [1, 2, 0] => a_new = [5, 6, 4]
-    function array_as_index (a, ind) {
-      var a_new = new Array(a.length);
-      for (let i = 0; i < a.length; i++) {
-        a_new[i] = a[ind[i]];
-      }
-      return a_new
-    }
-
-    // performs inputted operation on first array
-    function array_operation (a1, a2, operator) {
-      switch (operator) {
-        case '+': var a_new = a1.map( function (e, i) {
-                    return e + a2[i]
-                  }); break;
-        case '-': var a_new = a1.map( function (e, i) {
-                    return e - a2[i]
-                  }); break;
-        case '*': var a_new = a1.map( function (e, i) {
-                    return e * a2[i]
-                  }); break;
-        case '=': var a_new = a1.map( function (e, i) {
-                    return e = a2[i]
-                  }); break;
-      }
-      return a_new
-    }
-
-    // return array of indexes which meet criteria
-    // ie : a = [4, 5, 6], int = 4, which(a, int, '>') => a_index = [1, 2]
-    function which (a, int, operator) {
-      var a_index = [];
-      switch (operator) {
-        case '>': for (let i = 0; i < a.length; i++) {
-                    if (a[i] > int) {
-                      a_index.push(i);
-                    };
-                  }; break;
-        case '<=': for (let i = 0; i < a.length; i++) {
-                    if (a[i] <= int) {
-                      a_index.push(i);
-                    };
-                  }; break;
-      }
-      return a_index
-    }
-
-    // returns an array of index values equal to the length of the inputted array
-    function seq_along (a) {
-      var seq_al = [];
-      for (let i in a) {
-        seq_al.push(parseInt(i) + 1);
-      }
-      return seq_al
-    }
-
-    // retuns an array of index values equal to the length of from => to
-    function seq (from, to) {
-      var seq_ = [];
-      for (var i = from; i <= to; i++) {
-        seq_.push(i);
-      }
-      return seq_
-    }
-
-    // returns an array with nested arrays representing a matrix structure
-    // [[1, 2], [3, 4]] = 1 3
-    //                    2 4
-    function matrix (ele, r, c) {
-      var outer_shell = [];
-      for (var i = 0; i < c; i++) {
-        var inner_shell = [];
-        for (var j = 0; j < r; j++) {
-          inner_shell.push(ele);
-        }
-        outer_shell.push(inner_shell);
-      }
-      return outer_shell
-    }
-
-    // returns maximum value of inputted values
-    function max (x1, x2) {
-      if (x1 > x2) {
-        return x1
-      } else {
-        return x2
-      }
-    }
-
-    // returns minimum value of inputted values
-    function min (x1, x2) {
-      if (x1 < x2) {
-        return x1
-      } else {
-        return x2
-      }
-    }
-
-    spdiags(cbind(c(diff.xi[-c(1, zz1)], 0), 2 * (diff.xi[-1] + diff.xi[-zz1]), c(0, diff.xi[-c(1, 2)])), arg2, zz2)
-    // returns an array of combined arrays
-    function cbind(a1, a2, a3) {
-      var a_comb = [];
-      if (a1 != 0 && a2 != 0 && a3 != 0) {
-        a1.push(...a2, ...a3);
-        a_comb = a1;
-      } else {
-
-      }
-    }
-
-    // R functions from package below
-    function ffsorted (meshsites, sites) {
-      var index = order(meshsites.concat(sites));
-      return array_operation(which(index, meshsites.length, '>'), seq_along(sites), '-');
-    }
-
-    function ffsorted2 (meshsites, sites) {
-      var index = order(meshsites.concat(sites));
-      return array_operation(which(index, sites.length, '<='), seq(0, sites.length - 1), '-');
-    }
-
-    function ffppual (breaks, c1, c2, c3, c4, x, left) {
-      if (left) {
-        var x2 = JSON.parse(JSON.stringify(x)).sort();
-        var ix = order(x);
-      } else {
-        var x2 = JSON.parse(JSON.stringify(x));
-      }
-
-      var n = breaks.length;
-
-      if (left) {
-        var breaks_new = breaks.splice(n - 1, 1);
-        var index = pmax(ffsorted(breaks_new, x2), 1);
-      } else {
-        var index = ffsorted2(breaks[-1], x2);
-      }
-
-      // operation in R : x2 <- x2 - breaks[index]
-      x2 = array_operation(x2, array_as_index(breaks, index), '-');
-      // operation in R : v <- x2 * (x2 * (x2 * c1[index] + c2[index]) + c3[index]) + c4[index]
-      var par1a = array_operation(array_operation(x2, array_as_index(c1, index), '*'), array_as_index(c2, index), '+'); // inner most parenthesis
-      var par2a = array_operation(array_operation(x2, par1a, '*'), array_as_index(c3, index), '+'); // 2cd parenthesis pair
-      var v = array_operation(array_operation(x2, par2a, '*'), array_as_index(c4, index), '+');
-      if (left) {
-        var v_rearr = array_as_index(v, ix);
-        v = array_operation(v_rearr, v, '=');
-      }
-      return v
-    }
-
-    function spdiags (b, d, n) {
-      var n_d = d.length;
-      var a = matrix(0, n_d * n, 3);
-      var count = 0;
-      for (k in seq(n_d)) {
-        var diag = d[k];
-        var i = seq(max(1, 1 - diag), min(n, n - diag));
-        var n_i = i.length;
-        var j = i + diag;
-        if (n_i > 0) {
-          row_idx = seq(count + 1, n_i);
-          a[1][row_idx] = i;
-          a[2][row_idx] = j;
-          a[3][row_idx] = b[k][j];
-          count = count + n_i;
-        }
-      }
-
-      // operation in R : A <- A[A[, 3] != 0, , drop = FALSE]
-      for (let t = 0; t < a[3].length; t++) {
-        if (a[3][t] == 0) {
-          for (let s = 0; s < a.length; s++) {
-            a[s].splice(t, 1);
-          }
-        }
-      }
-
-      // operation in R : A[order(A[, 2], A[, 1]), , drop = FALSE]
-      ...
-
-      return a
-    }
-
-    var n = x2.length;
-    var y2 = JSON.parse(JSON.stringify(y));
-    var x2 = JSON.parse(JSON.stringify(x));
-
-    if (n < 3) {
-      alert('Must be at least 3 data points');
-      return { x: [], y: [] }
-    }
-    if (typeof(f) != 'number' || f.length != 1 || f < 0 || f > 1) {
-      alert ('"f" must be a number between 0 and 1');
-      return { x: [], y: [] }
-    }
-    if (typeof(nyrs) || nyrs.length != 1 || nyrs <= 1) {
-      alert('"nyrs" must be a number greater than 1');
-      return { x: [], y: [] }
-    }
-
-    var ix = order(x2);
-    var zz1 = n - 1;
-    var xi = array_as_index(x2, ix);
-
-    // operation in R : diff.xi <- diff(xi)
-    var diff = [];
-    for (let i = 1; i < xi.length; i++) {
-      diff.push(xi[i] - xi[i - 1]);
-    }
-
-    for (let i of diff) {
-      if (i == 0) {
-        alert('Abscissa and ordinate vector must be of the same length');
-        return { x: [], y: [] }
-      }
-    }
-
-    var arg2 = [-1, 0, 1];
-    var odx = 1 / diff;
-
-
-
-
-  }
-
-  PopoutPlots.prototype.median = function (shapes, colors, data) {
+  PopoutPlots.prototype.median = function (data) {
     // auto spaghetti plot
     // 1) find median width (across all data) per year
     var longestDataLength = 0;
@@ -3312,9 +3057,26 @@ function Popout(Lt) {
     medianSet.years = medianYears;
     medianSet.name = 'Median';
     medianSet.color = '#000000'; // black
-    data.push(medianSet);
 
-    return data
+    return medianSet
+  }
+
+  PopoutPlots.prototype.spline = function (data) {
+    var spline_data = [];
+    for (i in data.widths) {
+      let pt_obj = new Object();
+      pt_obj.x = parseInt(data.years[i]); // ring width
+      pt_obj.y = parseFloat(parseFloat(data.widths[i]).toFixed(4)); // year
+      spline_data.push(pt_obj);
+    }
+
+    var year_freq = 20;
+    var lambda = 9.9784 * Math.log(year_freq) + 3.975;
+
+    const spline = smoothingSpline(spline_data, { lambda: lambda });
+
+    console.log(spline);
+
   }
 
   PopoutPlots.prototype.prepData_forPlotting = function (allData) {
@@ -3365,7 +3127,9 @@ function Popout(Lt) {
   } else { // spaghetti plot & finding median line
     var shapes = [];
     var colors = [ '#1f78b4' ]; // blue
-    allData = this.median(shapes, colors, allData);
+    var median = this.median(allData);
+    this.spline(median)
+    allData.push(median);
   }
 
     var data = [];

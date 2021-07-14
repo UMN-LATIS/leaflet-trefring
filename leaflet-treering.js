@@ -2995,7 +2995,7 @@ function Popout(Lt) {
 
   };
 
-  PopoutPlots.prototype.median = function (shapes, colors, data) {
+  PopoutPlots.prototype.median = function (data) {
     // auto spaghetti plot
     // 1) find median width (across all data) per year
     var longestDataLength = 0;
@@ -3057,9 +3057,26 @@ function Popout(Lt) {
     medianSet.years = medianYears;
     medianSet.name = 'Median';
     medianSet.color = '#000000'; // black
-    data.push(medianSet);
 
-    return data
+    return medianSet
+  }
+
+  PopoutPlots.prototype.spline = function (data) {
+    var spline_data = [];
+    for (i in data.widths) {
+      let pt_obj = new Object();
+      pt_obj.x = parseInt(data.years[i]); // ring width
+      pt_obj.y = parseFloat(parseFloat(data.widths[i]).toFixed(4)); // year
+      spline_data.push(pt_obj);
+    }
+
+    var year_freq = 20;
+    var lambda = 9.9784 * Math.log(year_freq) + 3.975;
+
+    const spline = smoothingSpline(spline_data, { lambda: lambda });
+
+    console.log(spline);
+
   }
 
   PopoutPlots.prototype.prepData_forPlotting = function (allData) {
@@ -3110,7 +3127,9 @@ function Popout(Lt) {
   } else { // spaghetti plot & finding median line
     var shapes = [];
     var colors = [ '#1f78b4' ]; // blue
-    allData = this.median(shapes, colors, allData);
+    var median = this.median(allData);
+    this.spline(median)
+    allData.push(median);
   }
 
     var data = [];
