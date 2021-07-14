@@ -11894,7 +11894,7 @@ function Popout(Lt) {
     var color = (color_loc == "line") ? ({color: '#ff0000', width: 4}) : ('#ff0000');
     if (color_loc == "line") {
       splineSet.mode = 'lines';
-      splineSet.type = 'scattergl';
+      splineSet.type = 'scatter';
     };
     splineSet[color_loc] = color;
 
@@ -11961,7 +11961,7 @@ function Popout(Lt) {
       let dataObj = new Object();
       dataObj.y = set.widths;
       dataObj.x = set.years;
-      dataObj.type = 'scattergl';
+      dataObj.type = 'scatter';
       if (shapes.length == 0) { // shapes array has length 0 when creating a spaghetti plot
         dataObj.mode = 'lines';
         dataObj.opacity = 0.5
@@ -11998,7 +11998,7 @@ function Popout(Lt) {
   }
 
   PopoutPlots.prototype.addPlot_andOptions_toWindow = function (data) {
-    var layout = {
+    this.layout = {
      title: Lt.meta.assetName + ' Time Series',
      autosize: true,
      xaxis: {
@@ -12014,14 +12014,14 @@ function Popout(Lt) {
      responsive: true,
      scrollZoom: true,
      displayModeBar: true,
-     modeBarButtonsToRemove: ['lasso2d', 'zoomIn2d', 'zoomOut2d'],
+     modeBarButtonsToRemove: ['autoscale2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'select2d'],
      editable: true,
    }
 
    this.shownData = JSON.parse(JSON.stringify(data));
-   this.win.createPlot(data, layout, this.config);
+   this.win.createPlot(data, this.layout, this.config);
    this.createDataOptions(data);
-   this.createListeners(layout);
+   this.createListeners();
 
   }
 
@@ -12099,7 +12099,7 @@ function Popout(Lt) {
        title: 'Width (mm)',
      },
      showlegend: false,
-   }
+    }
 
     Plotly.react(div, new_data, update_layout, this.config);
     this.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
@@ -12119,7 +12119,7 @@ function Popout(Lt) {
     }
   }
 
-  PopoutPlots.prototype.createListeners = function (layout) {
+  PopoutPlots.prototype.createListeners = function () {
     this.data_pre_highlight_hover = [];
     this.data_pre_highlight_checkbox = [];
     this.plot_layout_static = false;
@@ -12154,7 +12154,7 @@ function Popout(Lt) {
       $(plotDiv).width( wrapperWidth - $(optionsDiv).width() - (5 * wrapperWidth / 100) );
 
       if (Lt.popoutPlots.plot_layout_static) {
-        Plotly.relayout(plotDiv, layout); // reset layout if set static by updatePlot()
+        Plotly.relayout(plotDiv, this.layout); // reset layout if set static by updatePlot()
         Lt.popoutPlots.plot_layout_static = false;
       }
       Lt.popoutPlots.win.dispatchEvent(new Event('resize')); // plot will reformat when window resize event called
